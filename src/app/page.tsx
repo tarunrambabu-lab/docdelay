@@ -3,10 +3,18 @@
 // The chosen doctor lives in the web address, e.g. /?doctor=doc-ortho
 // Clicking a doctor is just a link. The only browser-side part is the
 // "Mark doctor unavailable" pop-up (see MarkUnavailableButton.tsx).
+// Each red banner links to the call simulator (app/calls/[id]/page.tsx).
 
 import Link from "next/link";
-import { getDoctors, getHospital, getTodaysAppointments, getUnavailabilities } from "@/hms/mockHms";
+import {
+  getAppointmentsInWindow,
+  getDoctors,
+  getHospital,
+  getTodaysAppointments,
+  getUnavailabilities,
+} from "@/hms/mockHms";
 import type { Language } from "@/hms/types";
+import { callSummary, statusColors } from "@/lib/status";
 import { formatTime } from "@/lib/time";
 import { resetDemoAction } from "./actions";
 import MarkUnavailableButton from "./MarkUnavailableButton";
@@ -26,7 +34,13 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const { doctor } = await searchParams;
   const selected = doctors.find((d) => d.id === doctor) ?? doctors[0];
   const appointments = await getTodaysAppointments(selected.id);
-  const unavailabilities = await getUnavailabilities();
+  // Each unavailability, together with the appointments inside its window.
+  const unavailabilities = await Promise.all(
+    (await getUnavailabilities()).map(async (u) => ({
+      ...u,
+      appointments: await getAppointmentsInWindow(u.id),
+    })),
+  );
   const affectedCount = appointments.filter((a) => a.status !== "Scheduled").length;
 
   const today = new Date().toLocaleDateString("en-IN", {
@@ -43,15 +57,36 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         <div className="mb-6 space-y-2">
           {unavailabilities.map((u) => {
             const doctorName = doctors.find((d) => d.id === u.doctorId)?.name;
+            const statuses = u.appointments.map((a) => a.status);
+            const stillToCall = statuses.filter((s) => s === "Affected – needs contact").length;
+            const summary = callSummary(statuses); // "" until someone is called
             return (
               <div
                 key={u.id}
                 role="alert"
-                className="rounded-xl border border-red-200 bg-red-600 px-4 py-3 text-sm font-medium text-white shadow-sm"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-600 px-4 py-3 text-sm text-white shadow-sm"
               >
-                {doctorName} unavailable from {formatTime(u.fromTime)} to {formatTime(u.untilTime)}{" "}
-                ({u.reason}). {u.affectedCount} {u.affectedCount === 1 ? "patient" : "patients"}{" "}
-                affected.
+                <div>
+                  <p className="font-medium">
+                    {doctorName} unavailable from {formatTime(u.fromTime)} to{" "}
+                    {formatTime(u.untilTime)} ({u.reason}). {u.affectedCount}{" "}
+                    {u.affectedCount === 1 ? "patient" : "patients"} affected.
+                  </p>
+                  {summary && (
+                    <p className="mt-0.5 text-red-100">
+                      {summary}
+                      {stillToCall > 0 && ` · ${stillToCall} still to call`}
+                    </p>
+                  )}
+                </div>
+                {stillToCall > 0 && (
+                  <Link
+                    href={`/calls/${u.id}`}
+                    className="rounded-lg bg-white px-3 py-1.5 font-medium text-red-700 shadow-sm hover:bg-red-50"
+                  >
+                    Start calling patients
+                  </Link>
+                )}
               </div>
             );
           })}
@@ -158,9 +193,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                     </td>
                     <td className="px-5 py-3">
                       <span
-                        className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
-                          affected ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-700"
-                        }`}
+                        className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[a.status]}`}
                       >
                         {a.status}
                       </span>

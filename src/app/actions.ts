@@ -1,12 +1,17 @@
 "use server";
 
-// Server Actions: code that runs on the server when a form is submitted.
+// Server Actions: code that runs on the server when a form or button is used.
 // They check the input, then ask the hms module to change the data.
 // (They never touch the data files themselves.)
 
 import { refresh } from "next/cache";
-import { getDoctor, markDoctorUnavailable, resetDemo } from "@/hms/mockHms";
-import { UNAVAILABILITY_REASONS, type UnavailabilityReason } from "@/hms/types";
+import { getDoctor, markDoctorUnavailable, recordCallResult, resetDemo } from "@/hms/mockHms";
+import {
+  CALL_RESULTS,
+  UNAVAILABILITY_REASONS,
+  type CallResult,
+  type UnavailabilityReason,
+} from "@/hms/types";
 import { isValidTime } from "@/lib/time";
 
 // What the "unavailable" form gets back: nothing yet, success, or an error.
@@ -44,6 +49,13 @@ export async function markUnavailableAction(
 
   refresh(); // reload the page's data so the banner and statuses appear
   return { ok: true };
+}
+
+// Save the patient's answer from the call simulator, then show the next patient.
+export async function recordCallAction(appointmentId: string, result: string): Promise<void> {
+  if (!CALL_RESULTS.includes(result as CallResult)) return; // ignore anything unexpected
+  await recordCallResult(appointmentId, result as CallResult);
+  refresh();
 }
 
 export async function resetDemoAction(): Promise<void> {

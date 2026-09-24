@@ -20,6 +20,7 @@ import startingData from "./mockData.json";
 import type {
   Appointment,
   AppointmentWithPatient,
+  CallResult,
   Doctor,
   Hospital,
   Patient,
@@ -61,6 +62,23 @@ function saveState(state: HmsState): void {
   fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2) + "\n");
 }
 
+// Does this appointment START inside the doctor's unavailable window?
+// (from ≤ start < until — someone booked exactly at "until" is fine.)
+function isInWindow(
+  appt: Appointment,
+  window: Pick<Unavailability, "doctorId" | "fromTime" | "untilTime">,
+): boolean {
+  return (
+    appt.doctorId === window.doctorId &&
+    appt.startTime >= window.fromTime &&
+    appt.startTime < window.untilTime
+  );
+}
+
+function withPatient(appt: Appointment): AppointmentWithPatient {
+  return { ...appt, patient: patients.find((p) => p.id === appt.patientId)! };
+}
+
 // ---------- Reading ----------
 
 export async function getHospital(): Promise<Hospital> {
@@ -76,16 +94,11 @@ export async function getDoctor(doctorId: string): Promise<Doctor | undefined> {
 }
 
 // Today's appointments for one doctor, earliest first, with patient details.
-export async function getTodaysAppointments(
-  doctorId: string,
-): Promise<AppointmentWithPatient[]> {
+export async function getTodaysAppointments(doctorId: string): Promise<AppointmentWithPatient[]> {
   return loadState()
     .appointments.filter((a) => a.doctorId === doctorId)
     .sort((a, b) => a.startTime.localeCompare(b.startTime)) // "09:15" < "10:00" works as text
-    .map((a) => ({
-      ...a,
-      patient: patients.find((p) => p.id === a.patientId)!,
-    }));
+    .map(withPatient);
 }
 
 // Every doctor unavailability recorded today, in the order they were added.
@@ -93,11 +106,29 @@ export async function getUnavailabilities(): Promise<Unavailability[]> {
   return loadState().unavailabilities;
 }
 
+export async function getUnavailability(id: string): Promise<Unavailability | undefined> {
+  return loadState().unavailabilities.find((u) => u.id === id);
+}
+
+// All appointments inside one unavailable window (whatever their status now),
+// earliest first, with patient details.
+export async function getAppointmentsInWindow(
+  unavailabilityId: string,
+): Promise<AppointmentWithPatient[]> {
+  const state = loadState();
+  const window = state.unavailabilities.find((u) => u.id === unavailabilityId);
+  if (!window) return [];
+  return state.appointments
+    .filter((a) => isInWindow(a, window))
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+    .map(withPatient);
+}
+
 // ---------- Changing ----------
 
 // Record that a doctor is unavailable between two times today.
-// Every appointment that STARTS inside the window (from ≤ start < until)
-// becomes "Affected – needs contact".
+// Every appointment that starts inside the window becomes
+// "Affected – needs contact".
 export async function markDoctorUnavailable(input: {
   doctorId: string;
   reason: UnavailabilityReason;
@@ -108,9 +139,7 @@ export async function markDoctorUnavailable(input: {
 
   let affectedCount = 0;
   for (const appt of state.appointments) {
-    const inWindow =
-      appt.startTime >= input.fromTime && appt.startTime < input.untilTime;
-    if (appt.doctorId === input.doctorId && inWindow) {
+    if (isInWindow(appt, input)) {
       appt.status = "Affected – needs contact";
       affectedCount++;
     }
@@ -125,6 +154,25 @@ export async function markDoctorUnavailable(input: {
 
   saveState(state);
   return unavailability;
+}
+
+// Save what a patient answered on a call: add a line to the appointment's
+// call log and change its status to the answer.
+// Only patients still waiting for a call can be recorded — this stops a
+// double-click from logging the same call twice. Returns false if skipped.
+export async function recordCallResult(
+  appointmentId: string,
+  result: CallResult,
+): Promise<boolean> {
+  const state = loadState();
+  const appt = state.appointments.find((a) => a.id === appointmentId);
+  if (!appt || appt.status !== "Affected – needs contact") return false;
+
+  appt.callLog = [...(appt.callLog ?? []), { calledAt: new Date().toISOString(), result }];
+  appt.status = result;
+
+  saveState(state);
+  return true;
 }
 
 // Put everything back to the starting data.
