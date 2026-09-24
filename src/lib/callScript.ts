@@ -70,3 +70,22 @@ export function callScript(d: CallScriptDetails): string {
     }
   }
 }
+
+// What DocDelay says after the patient presses "1 – Later today".
+// newTime is e.g. "2:15 PM", or null if there was no room today.
+// (Tamil and Hindi need native-speaker review — see note at the top.)
+export function laterTodayReply(language: Language, newTime: string | null): string {
+  if (newTime) {
+    return {
+      English: `Thank you. Your new time is ${newTime} today.`,
+      Tamil: `நன்றி. உங்கள் புதிய நேரம் இன்று ${newTime}.`,
+      Hindi: `धन्यवाद। आपका नया समय आज ${newTime} है।`,
+    }[language];
+  }
+  return {
+    English: "Sorry, there is no free time left today. Our front desk will call you shortly.",
+    Tamil:
+      "மன்னிக்கவும், இன்று நேரம் எதுவும் இல்லை. எங்கள் வரவேற்பு மேசையிலிருந்து விரைவில் உங்களை அழைப்பார்கள்.",
+    Hindi: "माफ़ कीजिए, आज कोई समय खाली नहीं है। हमारा फ्रंट डेस्क जल्द ही आपको कॉल करेगा।",
+  }[language];
+}

@@ -7,7 +7,8 @@
 //
 // Where the data lives:
 //   - mockData.json      = the untouched starting data (never changed by the app)
-//   - data/hms-state.json = today's CURRENT state (statuses, unavailabilities).
+//   - data/hms-state.json = today's CURRENT state (statuses, times,
+//     unavailabilities, simulated text messages).
 //     It's created from mockData.json the first time it's needed, and
 //     "Reset demo" deletes it so we start fresh.
 //
@@ -24,9 +25,13 @@ import type {
   Doctor,
   Hospital,
   Patient,
+  SmsMessage,
   Unavailability,
   UnavailabilityReason,
 } from "./types";
+import { planLaterToday, SLOT_MINUTES } from "@/lib/reschedulingRules";
+import { timeChangedSms } from "@/lib/smsText";
+import { formatTime, fromMinutes, toMinutes } from "@/lib/time";
 
 // Hospital, doctors and patients never change, so we read them straight
 // from the starting data. (Tell TypeScript the JSON matches our types.)
@@ -40,6 +45,7 @@ const patients = startingData.patients as Patient[];
 interface HmsState {
   appointments: Appointment[];
   unavailabilities: Unavailability[];
+  messages: SmsMessage[]; // simulated text messages ("SMS outbox")
 }
 
 const STATE_FILE = path.join(process.cwd(), "data", "hms-state.json");
@@ -49,12 +55,14 @@ function startingState(): HmsState {
     // structuredClone makes a full copy, so the starting data stays untouched.
     appointments: structuredClone(startingData.appointments) as Appointment[],
     unavailabilities: [],
+    messages: [],
   };
 }
 
 function loadState(): HmsState {
   if (!fs.existsSync(STATE_FILE)) return startingState();
-  return JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+  // "messages: []" first, so a state file saved before messages existed still works.
+  return { messages: [], ...JSON.parse(fs.readFileSync(STATE_FILE, "utf8")) };
 }
 
 function saveState(state: HmsState): void {
@@ -110,25 +118,32 @@ export async function getUnavailability(id: string): Promise<Unavailability | un
   return loadState().unavailabilities.find((u) => u.id === id);
 }
 
-// All appointments inside one unavailable window (whatever their status now),
-// earliest first, with patient details.
-export async function getAppointmentsInWindow(
+// All appointments affected by one "doctor unavailable" event (whatever
+// their status or time is now), earliest first, with patient details.
+export async function getAffectedAppointments(
   unavailabilityId: string,
 ): Promise<AppointmentWithPatient[]> {
-  const state = loadState();
-  const window = state.unavailabilities.find((u) => u.id === unavailabilityId);
-  if (!window) return [];
-  return state.appointments
-    .filter((a) => isInWindow(a, window))
+  return loadState()
+    .appointments.filter((a) => a.unavailabilityId === unavailabilityId)
     .sort((a, b) => a.startTime.localeCompare(b.startTime))
     .map(withPatient);
+}
+
+export async function getAppointment(id: string): Promise<AppointmentWithPatient | undefined> {
+  const appt = loadState().appointments.find((a) => a.id === id);
+  return appt && withPatient(appt);
+}
+
+// All simulated text messages, newest first.
+export async function getMessages(): Promise<SmsMessage[]> {
+  return [...loadState().messages].reverse();
 }
 
 // ---------- Changing ----------
 
 // Record that a doctor is unavailable between two times today.
 // Every appointment that starts inside the window becomes
-// "Affected – needs contact".
+// "Affected – needs contact" and remembers which event affected it.
 export async function markDoctorUnavailable(input: {
   doctorId: string;
   reason: UnavailabilityReason;
@@ -136,20 +151,18 @@ export async function markDoctorUnavailable(input: {
   untilTime: string;
 }): Promise<Unavailability> {
   const state = loadState();
+  const id = `unavail-${Date.now()}`;
 
   let affectedCount = 0;
   for (const appt of state.appointments) {
     if (isInWindow(appt, input)) {
       appt.status = "Affected – needs contact";
+      appt.unavailabilityId = id;
       affectedCount++;
     }
   }
 
-  const unavailability: Unavailability = {
-    id: `unavail-${Date.now()}`,
-    ...input,
-    affectedCount,
-  };
+  const unavailability: Unavailability = { id, ...input, affectedCount };
   state.unavailabilities.push(unavailability);
 
   saveState(state);
@@ -157,7 +170,8 @@ export async function markDoctorUnavailable(input: {
 }
 
 // Save what a patient answered on a call: add a line to the appointment's
-// call log and change its status to the answer.
+// call log and change its status. "Later today" also finds a new time
+// straight away (see rescheduleLaterToday below).
 // Only patients still waiting for a call can be recorded — this stops a
 // double-click from logging the same call twice. Returns false if skipped.
 export async function recordCallResult(
@@ -169,10 +183,93 @@ export async function recordCallResult(
   if (!appt || appt.status !== "Affected – needs contact") return false;
 
   appt.callLog = [...(appt.callLog ?? []), { calledAt: new Date().toISOString(), result }];
-  appt.status = result;
+
+  if (result === "Wants later today") {
+    rescheduleLaterToday(state, appt);
+  } else {
+    appt.status = result;
+  }
 
   saveState(state);
   return true;
+}
+
+// Give a patient who pressed "1 – Later today" a new time, following the
+// rules in lib/reschedulingRules.ts. Changes `state`; the caller saves it.
+function rescheduleLaterToday(state: HmsState, appt: Appointment): void {
+  const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId);
+  const doctorsAppointments = state.appointments.filter((a) => a.doctorId === appt.doctorId);
+  const plan = unavailability
+    ? planLaterToday(appt, doctorsAppointments, unavailability.untilTime)
+    : ({ kind: "no room" } as const); // shouldn't happen, but be safe
+
+  if (plan.kind === "no room") {
+    appt.status = "Needs staff call";
+    appt.note = "No room today";
+    return;
+  }
+
+  // The patient first, then (if there was a push) everyone who moves back.
+  moveAppointment(
+    state,
+    appt,
+    plan.newStartTime,
+    "Patient chose a later time today",
+    unavailability!,
+  );
+  appt.status = "Rescheduled – later today";
+
+  if (plan.kind === "push") {
+    for (const p of plan.pushed) {
+      const other = state.appointments.find((a) => a.id === p.appointmentId)!;
+      moveAppointment(
+        state,
+        other,
+        p.newStartTime,
+        "Pushed back 15 minutes to make room for a rescheduled patient",
+        unavailability!,
+      );
+      // Only plain bookings become "Time moved". Someone already
+      // "Rescheduled – later today" keeps that status (their new time still shows).
+      if (other.status === "Scheduled") other.status = "Time moved";
+    }
+  }
+}
+
+// Change an appointment's time: note it in its history and "send" the
+// patient a text message with the new time. Changes `state`; the caller saves it.
+function moveAppointment(
+  state: HmsState,
+  appt: Appointment,
+  newStartTime: string,
+  why: string,
+  unavailability: Unavailability,
+): void {
+  const now = new Date().toISOString();
+  appt.timeHistory = [
+    ...(appt.timeHistory ?? []),
+    { changedAt: now, oldStartTime: appt.startTime, newStartTime, why },
+  ];
+  appt.startTime = newStartTime;
+  appt.endTime = fromMinutes(toMinutes(newStartTime) + SLOT_MINUTES);
+
+  const patient = patients.find((p) => p.id === appt.patientId)!;
+  const doctor = doctors.find((d) => d.id === appt.doctorId)!;
+  state.messages.push({
+    id: `sms-${state.messages.length + 1}`,
+    sentAt: now,
+    appointmentId: appt.id,
+    toName: patient.name,
+    toPhone: patient.phone,
+    language: patient.preferredLanguage,
+    text: timeChangedSms({
+      language: patient.preferredLanguage,
+      hospitalName: hospital.name,
+      doctorName: doctor.name,
+      reason: unavailability.reason,
+      newTime: formatTime(newStartTime),
+    }),
+  });
 }
 
 // Put everything back to the starting data.

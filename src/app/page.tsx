@@ -4,12 +4,14 @@
 // Clicking a doctor is just a link. The only browser-side part is the
 // "Mark doctor unavailable" pop-up (see MarkUnavailableButton.tsx).
 // Each red banner links to the call simulator (app/calls/[id]/page.tsx).
+// The header links to the simulated text messages (app/messages/page.tsx).
 
 import Link from "next/link";
 import {
-  getAppointmentsInWindow,
+  getAffectedAppointments,
   getDoctors,
   getHospital,
+  getMessages,
   getTodaysAppointments,
   getUnavailabilities,
 } from "@/hms/mockHms";
@@ -38,10 +40,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const unavailabilities = await Promise.all(
     (await getUnavailabilities()).map(async (u) => ({
       ...u,
-      appointments: await getAppointmentsInWindow(u.id),
+      appointments: await getAffectedAppointments(u.id),
     })),
   );
-  const affectedCount = appointments.filter((a) => a.status !== "Scheduled").length;
+  const affectedCount = appointments.filter((a) => a.unavailabilityId).length;
+  const messageCount = (await getMessages()).length;
 
   const today = new Date().toLocaleDateString("en-IN", {
     weekday: "long",
@@ -100,8 +103,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           <h1 className="text-2xl font-semibold text-slate-900">{hospital.name}</h1>
           <p className="text-sm text-slate-500">{hospital.city}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <p className="text-sm text-slate-600">{today}</p>
+          <Link
+            href="/messages"
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+          >
+            Messages{messageCount > 0 && ` (${messageCount})`}
+          </Link>
           {/* Puts all appointments back to the starting data */}
           <form action={resetDemoAction}>
             <button
@@ -197,6 +206,16 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                       >
                         {a.status}
                       </span>
+                      {/* If the time changed: first booked time → current time */}
+                      {a.timeHistory && (
+                        <p className="mt-1 whitespace-nowrap text-xs text-slate-500">
+                          was {formatTime(a.timeHistory[0].oldStartTime)} → now{" "}
+                          <span className="font-medium text-slate-800">
+                            {formatTime(a.startTime)}
+                          </span>
+                        </p>
+                      )}
+                      {a.note && <p className="mt-1 text-xs text-orange-700">{a.note}</p>}
                     </td>
                   </tr>
                 );
