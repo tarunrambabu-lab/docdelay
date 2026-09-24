@@ -4,8 +4,24 @@
 
 export type Language = "English" | "Tamil" | "Hindi";
 
-// For now every appointment is "Scheduled". More statuses come later.
-export type AppointmentStatus = "Scheduled";
+export type AppointmentStatus = "Scheduled" | "Affected – needs contact";
+
+export const UNAVAILABILITY_REASONS = [
+  "Emergency surgery",
+  "Personal emergency",
+  "Other",
+] as const;
+export type UnavailabilityReason = (typeof UNAVAILABILITY_REASONS)[number];
+
+// A stretch of time today when a doctor can't see patients.
+export interface Unavailability {
+  id: string;
+  doctorId: string;
+  reason: UnavailabilityReason;
+  fromTime: string; // "HH:MM"
+  untilTime: string; // "HH:MM"
+  affectedCount: number; // how many appointments fell inside the window
+}
 
 export interface Hospital {
   id: string;

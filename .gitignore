@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# DocDelay: current demo state (recreated from src/hms/mockData.json)
+/data/

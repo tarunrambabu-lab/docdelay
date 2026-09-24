@@ -1,23 +1,15 @@
 // Front-desk dashboard (the home page).
 //
 // The chosen doctor lives in the web address, e.g. /?doctor=doc-ortho
-// Clicking a doctor is just a link, so this page needs no browser-side code.
+// Clicking a doctor is just a link. The only browser-side part is the
+// "Mark doctor unavailable" pop-up (see MarkUnavailableButton.tsx).
 
 import Link from "next/link";
-import {
-  getDoctors,
-  getHospital,
-  getTodaysAppointments,
-} from "@/hms/mockHms";
+import { getDoctors, getHospital, getTodaysAppointments, getUnavailabilities } from "@/hms/mockHms";
 import type { Language } from "@/hms/types";
-
-// Turn "13:45" into "1:45 PM".
-function formatTime(time: string): string {
-  const [hours, minutes] = time.split(":").map(Number);
-  const suffix = hours >= 12 ? "PM" : "AM";
-  const hours12 = hours % 12 === 0 ? 12 : hours % 12;
-  return `${hours12}:${String(minutes).padStart(2, "0")} ${suffix}`;
-}
+import { formatTime } from "@/lib/time";
+import { resetDemoAction } from "./actions";
+import MarkUnavailableButton from "./MarkUnavailableButton";
 
 // A different colour for each language, so it's easy to scan.
 const languageColors: Record<Language, string> = {
@@ -34,6 +26,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const { doctor } = await searchParams;
   const selected = doctors.find((d) => d.id === doctor) ?? doctors[0];
   const appointments = await getTodaysAppointments(selected.id);
+  const unavailabilities = await getUnavailabilities();
+  const affectedCount = appointments.filter((a) => a.status !== "Scheduled").length;
 
   const today = new Date().toLocaleDateString("en-IN", {
     weekday: "long",
@@ -44,6 +38,26 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+      {/* Red banners: one for each time a doctor was marked unavailable */}
+      {unavailabilities.length > 0 && (
+        <div className="mb-6 space-y-2">
+          {unavailabilities.map((u) => {
+            const doctorName = doctors.find((d) => d.id === u.doctorId)?.name;
+            return (
+              <div
+                key={u.id}
+                role="alert"
+                className="rounded-xl border border-red-200 bg-red-600 px-4 py-3 text-sm font-medium text-white shadow-sm"
+              >
+                {doctorName} unavailable from {formatTime(u.fromTime)} to {formatTime(u.untilTime)}{" "}
+                ({u.reason}). {u.affectedCount} {u.affectedCount === 1 ? "patient" : "patients"}{" "}
+                affected.
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Header */}
       <header className="mb-8 flex flex-wrap items-end justify-between gap-2">
         <div>
@@ -51,7 +65,18 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           <h1 className="text-2xl font-semibold text-slate-900">{hospital.name}</h1>
           <p className="text-sm text-slate-500">{hospital.city}</p>
         </div>
-        <p className="text-sm text-slate-600">{today}</p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-slate-600">{today}</p>
+          {/* Puts all appointments back to the starting data */}
+          <form action={resetDemoAction}>
+            <button
+              type="submit"
+              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+            >
+              Reset demo
+            </button>
+          </form>
+        </div>
       </header>
 
       {/* Doctor picker */}
@@ -78,9 +103,17 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
       {/* Appointment list */}
       <section className="rounded-xl border border-slate-200 bg-white">
-        <div className="flex items-baseline justify-between border-b border-slate-200 px-5 py-4">
-          <h2 className="font-semibold text-slate-900">Today&apos;s appointments</h2>
-          <p className="text-sm text-slate-500">{appointments.length} booked</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+          <div>
+            <h2 className="font-semibold text-slate-900">Today&apos;s appointments</h2>
+            <p className="text-sm text-slate-500">
+              {appointments.length} booked
+              {affectedCount > 0 && (
+                <span className="text-red-600"> · {affectedCount} affected</span>
+              )}
+            </p>
+          </div>
+          <MarkUnavailableButton doctor={selected} />
         </div>
 
         {/* On small screens the table scrolls sideways instead of squashing. */}
@@ -96,30 +129,45 @@ export default async function Home({ searchParams }: PageProps<"/">) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {appointments.map((a) => (
-                <tr key={a.id} className="hover:bg-slate-50">
-                  <td className="whitespace-nowrap px-5 py-3 font-medium tabular-nums text-slate-900">
-                    {formatTime(a.startTime)}
-                  </td>
-                  <td className="px-5 py-3">
-                    <p className="text-slate-900">{a.patient.name}</p>
-                    <p className="text-xs tabular-nums text-slate-500">{a.patient.phone}</p>
-                  </td>
-                  <td className="px-5 py-3 text-slate-700">{a.reason}</td>
-                  <td className="px-5 py-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs ring-1 ${languageColors[a.patient.preferredLanguage]}`}
+              {appointments.map((a) => {
+                const affected = a.status === "Affected – needs contact";
+                return (
+                  <tr
+                    key={a.id}
+                    // Affected rows get a red tint and a red stripe on the left.
+                    className={affected ? "bg-red-50" : "hover:bg-slate-50"}
+                  >
+                    <td
+                      className={`whitespace-nowrap px-5 py-3 font-medium tabular-nums text-slate-900 ${
+                        affected ? "shadow-[inset_4px_0_0_var(--color-red-500)]" : ""
+                      }`}
                     >
-                      {a.patient.preferredLanguage}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
-                      {a.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+                      {formatTime(a.startTime)}
+                    </td>
+                    <td className="px-5 py-3">
+                      <p className="text-slate-900">{a.patient.name}</p>
+                      <p className="text-xs tabular-nums text-slate-500">{a.patient.phone}</p>
+                    </td>
+                    <td className="px-5 py-3 text-slate-700">{a.reason}</td>
+                    <td className="px-5 py-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs ring-1 ${languageColors[a.patient.preferredLanguage]}`}
+                      >
+                        {a.patient.preferredLanguage}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <span
+                        className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
+                          affected ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        {a.status}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

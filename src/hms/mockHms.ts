@@ -1,27 +1,67 @@
 // The FAKE hospital system (HMS).
 //
-// This is the ONLY file that reads hospital data. The rest of the app
-// calls the functions below and never touches mockData.json directly.
+// This is the ONLY file that reads or changes hospital data. The rest of the
+// app calls the functions below and never touches the data files directly.
 // To connect a real HMS later, write a new file with the same functions
 // (same names, same return types) and switch the imports over to it.
+//
+// Where the data lives:
+//   - mockData.json      = the untouched starting data (never changed by the app)
+//   - data/hms-state.json = today's CURRENT state (statuses, unavailabilities).
+//     It's created from mockData.json the first time it's needed, and
+//     "Reset demo" deletes it so we start fresh.
 //
 // The functions are "async" even though the fake data is instant,
 // because a real HMS will be reached over the network.
 
-import data from "./mockData.json";
+import fs from "node:fs";
+import path from "node:path";
+import startingData from "./mockData.json";
 import type {
   Appointment,
   AppointmentWithPatient,
   Doctor,
   Hospital,
   Patient,
+  Unavailability,
+  UnavailabilityReason,
 } from "./types";
 
-// Tell TypeScript the JSON file matches our shared types.
-const hospital = data.hospital as Hospital;
-const doctors = data.doctors as Doctor[];
-const patients = data.patients as Patient[];
-const appointments = data.appointments as Appointment[];
+// Hospital, doctors and patients never change, so we read them straight
+// from the starting data. (Tell TypeScript the JSON matches our types.)
+const hospital = startingData.hospital as Hospital;
+const doctors = startingData.doctors as Doctor[];
+const patients = startingData.patients as Patient[];
+
+// ---------- Saving and loading the current state ----------
+
+// Everything that CAN change during the day.
+interface HmsState {
+  appointments: Appointment[];
+  unavailabilities: Unavailability[];
+}
+
+const STATE_FILE = path.join(process.cwd(), "data", "hms-state.json");
+
+function startingState(): HmsState {
+  return {
+    // structuredClone makes a full copy, so the starting data stays untouched.
+    appointments: structuredClone(startingData.appointments) as Appointment[],
+    unavailabilities: [],
+  };
+}
+
+function loadState(): HmsState {
+  if (!fs.existsSync(STATE_FILE)) return startingState();
+  return JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+}
+
+function saveState(state: HmsState): void {
+  fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
+  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2) + "\n");
+}
+
+// ---------- Reading ----------
 
 export async function getHospital(): Promise<Hospital> {
   return hospital;
@@ -39,11 +79,55 @@ export async function getDoctor(doctorId: string): Promise<Doctor | undefined> {
 export async function getTodaysAppointments(
   doctorId: string,
 ): Promise<AppointmentWithPatient[]> {
-  return appointments
-    .filter((a) => a.doctorId === doctorId)
+  return loadState()
+    .appointments.filter((a) => a.doctorId === doctorId)
     .sort((a, b) => a.startTime.localeCompare(b.startTime)) // "09:15" < "10:00" works as text
     .map((a) => ({
       ...a,
       patient: patients.find((p) => p.id === a.patientId)!,
     }));
+}
+
+// Every doctor unavailability recorded today, in the order they were added.
+export async function getUnavailabilities(): Promise<Unavailability[]> {
+  return loadState().unavailabilities;
+}
+
+// ---------- Changing ----------
+
+// Record that a doctor is unavailable between two times today.
+// Every appointment that STARTS inside the window (from ≤ start < until)
+// becomes "Affected – needs contact".
+export async function markDoctorUnavailable(input: {
+  doctorId: string;
+  reason: UnavailabilityReason;
+  fromTime: string;
+  untilTime: string;
+}): Promise<Unavailability> {
+  const state = loadState();
+
+  let affectedCount = 0;
+  for (const appt of state.appointments) {
+    const inWindow =
+      appt.startTime >= input.fromTime && appt.startTime < input.untilTime;
+    if (appt.doctorId === input.doctorId && inWindow) {
+      appt.status = "Affected – needs contact";
+      affectedCount++;
+    }
+  }
+
+  const unavailability: Unavailability = {
+    id: `unavail-${Date.now()}`,
+    ...input,
+    affectedCount,
+  };
+  state.unavailabilities.push(unavailability);
+
+  saveState(state);
+  return unavailability;
+}
+
+// Put everything back to the starting data.
+export async function resetDemo(): Promise<void> {
+  fs.rmSync(STATE_FILE, { force: true });
 }
