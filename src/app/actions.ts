@@ -12,6 +12,7 @@ import {
   markDoctorUnavailable,
   recordCallResult,
   resetDemo,
+  sendPendingUpdates,
 } from "@/hms/mockHms";
 import {
   CALL_RESULTS,
@@ -74,5 +75,11 @@ export async function recordCallAction(appointmentId: string, result: string): P
 
 export async function resetDemoAction(): Promise<void> {
   await resetDemo();
+  refresh();
+}
+
+// "Send" all pending text updates (simulated — nothing is really sent).
+export async function sendUpdatesAction(): Promise<void> {
+  await sendPendingUpdates();
   refresh();
 }

@@ -8,7 +8,7 @@
 // Where the data lives:
 //   - mockData.json      = the untouched starting data (never changed by the app)
 //   - data/hms-state.json = today's CURRENT state (statuses, times,
-//     unavailabilities, simulated text messages).
+//     unavailabilities, pending updates, simulated text messages).
 //     It's created from mockData.json the first time it's needed, and
 //     "Reset demo" deletes it so we start fresh.
 //
@@ -25,6 +25,8 @@ import type {
   Doctor,
   Hospital,
   Patient,
+  PendingUpdate,
+  PendingUpdateWithDetails,
   SmsMessage,
   Unavailability,
   UnavailabilityReason,
@@ -45,7 +47,8 @@ const patients = startingData.patients as Patient[];
 interface HmsState {
   appointments: Appointment[];
   unavailabilities: Unavailability[];
-  messages: SmsMessage[]; // simulated text messages ("SMS outbox")
+  pendingUpdates: PendingUpdate[]; // texts waiting to be sent (one per appointment)
+  messages: SmsMessage[]; // simulated text messages that were "sent" ("SMS outbox")
 }
 
 const STATE_FILE = path.join(process.cwd(), "data", "hms-state.json");
@@ -55,14 +58,19 @@ function startingState(): HmsState {
     // structuredClone makes a full copy, so the starting data stays untouched.
     appointments: structuredClone(startingData.appointments) as Appointment[],
     unavailabilities: [],
+    pendingUpdates: [],
     messages: [],
   };
 }
 
 function loadState(): HmsState {
   if (!fs.existsSync(STATE_FILE)) return startingState();
-  // "messages: []" first, so a state file saved before messages existed still works.
-  return { messages: [], ...JSON.parse(fs.readFileSync(STATE_FILE, "utf8")) };
+  // Empty lists first, so a state file saved by an older version still works.
+  return {
+    pendingUpdates: [],
+    messages: [],
+    ...JSON.parse(fs.readFileSync(STATE_FILE, "utf8")),
+  };
 }
 
 function saveState(state: HmsState): void {
@@ -134,7 +142,16 @@ export async function getAppointment(id: string): Promise<AppointmentWithPatient
   return appt && withPatient(appt);
 }
 
-// All simulated text messages, newest first.
+// Texts waiting to be sent, oldest change first, with appointment details.
+export async function getPendingUpdates(): Promise<PendingUpdateWithDetails[]> {
+  const state = loadState();
+  return state.pendingUpdates.map((u) => ({
+    ...u,
+    appointment: withPatient(state.appointments.find((a) => a.id === u.appointmentId)!),
+  }));
+}
+
+// All simulated text messages that were "sent", newest first.
 export async function getMessages(): Promise<SmsMessage[]> {
   return [...loadState().messages].reverse();
 }
@@ -236,8 +253,9 @@ function rescheduleLaterToday(state: HmsState, appt: Appointment): void {
   }
 }
 
-// Change an appointment's time: note it in its history and "send" the
-// patient a text message with the new time. Changes `state`; the caller saves it.
+// Change an appointment's time: note it in its history and keep ONE pending
+// update for the patient with their latest time (nothing is sent yet — see
+// sendPendingUpdates). Changes `state`; the caller saves it.
 function moveAppointment(
   state: HmsState,
   appt: Appointment,
@@ -253,23 +271,49 @@ function moveAppointment(
   appt.startTime = newStartTime;
   appt.endTime = fromMinutes(toMinutes(newStartTime) + SLOT_MINUTES);
 
-  const patient = patients.find((p) => p.id === appt.patientId)!;
-  const doctor = doctors.find((d) => d.id === appt.doctorId)!;
-  state.messages.push({
-    id: `sms-${state.messages.length + 1}`,
-    sentAt: now,
+  // Replace this patient's pending update (if any) with the latest time.
+  state.pendingUpdates = state.pendingUpdates.filter((u) => u.appointmentId !== appt.id);
+  state.pendingUpdates.push({
     appointmentId: appt.id,
-    toName: patient.name,
-    toPhone: patient.phone,
-    language: patient.preferredLanguage,
-    text: timeChangedSms({
-      language: patient.preferredLanguage,
-      hospitalName: hospital.name,
-      doctorName: doctor.name,
-      reason: unavailability.reason,
-      newTime: formatTime(newStartTime),
-    }),
+    newStartTime,
+    reason: unavailability.reason,
+    updatedAt: now,
   });
+}
+
+// "Send" every pending update: turn each into a text message in the outbox
+// (in the patient's language) and clear the pending list. Nothing is really
+// sent. If a patient is moved again later, they get a new pending update.
+// Returns how many messages were "sent".
+export async function sendPendingUpdates(): Promise<number> {
+  const state = loadState();
+  const now = new Date().toISOString();
+
+  for (const update of state.pendingUpdates) {
+    const appt = state.appointments.find((a) => a.id === update.appointmentId)!;
+    const patient = patients.find((p) => p.id === appt.patientId)!;
+    const doctor = doctors.find((d) => d.id === appt.doctorId)!;
+    state.messages.push({
+      id: `sms-${state.messages.length + 1}`,
+      sentAt: now,
+      appointmentId: appt.id,
+      toName: patient.name,
+      toPhone: patient.phone,
+      language: patient.preferredLanguage,
+      text: timeChangedSms({
+        language: patient.preferredLanguage,
+        hospitalName: hospital.name,
+        doctorName: doctor.name,
+        reason: update.reason,
+        newTime: formatTime(update.newStartTime),
+      }),
+    });
+  }
+
+  const sent = state.pendingUpdates.length;
+  state.pendingUpdates = [];
+  saveState(state);
+  return sent;
 }
 
 // Put everything back to the starting data.

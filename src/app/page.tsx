@@ -12,6 +12,7 @@ import {
   getDoctors,
   getHospital,
   getMessages,
+  getPendingUpdates,
   getTodaysAppointments,
   getUnavailabilities,
 } from "@/hms/mockHms";
@@ -45,6 +46,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   );
   const affectedCount = appointments.filter((a) => a.unavailabilityId).length;
   const messageCount = (await getMessages()).length;
+  const pendingUpdates = await getPendingUpdates();
 
   const today = new Date().toLocaleDateString("en-IN", {
     weekday: "long",
@@ -62,6 +64,10 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             const doctorName = doctors.find((d) => d.id === u.doctorId)?.name;
             const statuses = u.appointments.map((a) => a.status);
             const stillToCall = statuses.filter((s) => s === "Affected – needs contact").length;
+            // Texts for this doctor's patients that haven't been "sent" yet.
+            const waiting = pendingUpdates.filter(
+              (p) => p.appointment.doctorId === u.doctorId,
+            ).length;
             const summary = callSummary(statuses); // "" until someone is called
             return (
               <div
@@ -80,6 +86,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                       {summary}
                       {stillToCall > 0 && ` · ${stillToCall} still to call`}
                     </p>
+                  )}
+                  {waiting > 0 && (
+                    <Link href="/messages" className="mt-0.5 block text-red-100 underline">
+                      ✉ {waiting} {waiting === 1 ? "update" : "updates"} waiting to be sent
+                    </Link>
                   )}
                 </div>
                 {stillToCall > 0 && (

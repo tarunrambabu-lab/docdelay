@@ -89,6 +89,21 @@ export interface AppointmentWithPatient extends Appointment {
   patient: Patient;
 }
 
+// A text message waiting to be sent. There is at most ONE per appointment,
+// and it always holds the latest new time — so a patient who is moved several
+// times gets a single message with their final time.
+export interface PendingUpdate {
+  appointmentId: string;
+  newStartTime: string; // "HH:MM" — the latest time
+  reason: UnavailabilityReason; // why the doctor was unavailable (for the wording)
+  updatedAt: string; // ISO date-time of the latest change
+}
+
+// A pending update with the appointment and patient details attached.
+export interface PendingUpdateWithDetails extends PendingUpdate {
+  appointment: AppointmentWithPatient;
+}
+
 // A simulated text message (nothing is really sent).
 export interface SmsMessage {
   id: string;
