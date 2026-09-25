@@ -7,6 +7,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import {
+  chooseOffer,
   getAppointment,
   getDoctor,
   markDoctorUnavailable,
@@ -59,14 +60,32 @@ export async function markUnavailableAction(
   return { ok: true };
 }
 
-// Save the patient's answer from the call simulator, then show the next patient.
-// For "Later today" the hms finds a new time straight away, and we open the
-// "answered" view so the phone card can tell the patient their new time.
+// Save the patient's answer from the call simulator.
+// - If they got a new time today, open the "answered" view so the phone card
+//   can tell them their new time.
+// - If they're now being offered other days ("2", or "1" with no room today),
+//   the same patient stays on screen with the offers.
+// - Otherwise the next patient is shown.
 export async function recordCallAction(appointmentId: string, result: string): Promise<void> {
   if (!CALL_RESULTS.includes(result as CallResult)) return; // ignore anything unexpected
-  const saved = await recordCallResult(appointmentId, result as CallResult);
+  await recordCallResult(appointmentId, result as CallResult);
 
-  if (saved && result === "Wants later today") {
+  const appt = await getAppointment(appointmentId);
+  if (appt?.status === "Rescheduled – later today") {
+    redirect(`/calls/${appt.unavailabilityId}?answered=${appointmentId}`);
+  }
+  refresh();
+}
+
+// The patient picked an other-day offer (0 = A, 1 = B, …) or null for
+// "None of these – call me". If booked, the phone card confirms the new day.
+export async function chooseOfferAction(
+  appointmentId: string,
+  choice: number | null,
+): Promise<void> {
+  const outcome = await chooseOffer(appointmentId, choice);
+
+  if (outcome === "booked") {
     const appt = await getAppointment(appointmentId);
     redirect(`/calls/${appt?.unavailabilityId}?answered=${appointmentId}`);
   }

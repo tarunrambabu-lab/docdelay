@@ -8,7 +8,11 @@
 // The wording avoids "he"/"she" for the doctor ("the doctor expects to be
 // back…"), so we never have to guess anyone's pronouns.
 
-import type { Language, UnavailabilityReason } from "@/hms/types";
+import type { Language, SlotOffer, UnavailabilityReason } from "@/hms/types";
+import { formatDate, formatTime } from "@/lib/time";
+
+// Letters used for the offers: A) … B) … C) …
+export const OFFER_LETTERS = ["A", "B", "C", "D", "E"];
 
 export interface CallScriptDetails {
   language: Language;
@@ -71,21 +75,67 @@ export function callScript(d: CallScriptDetails): string {
   }
 }
 
-// What DocDelay says after the patient presses "1 – Later today".
-// newTime is e.g. "2:15 PM", or null if there was no room today.
+// What DocDelay says after the patient presses "1 – Later today" and gets
+// a new time, e.g. newTime = "2:15 PM".
 // (Tamil and Hindi need native-speaker review — see note at the top.)
-export function laterTodayReply(language: Language, newTime: string | null): string {
-  if (newTime) {
-    return {
-      English: `Thank you. Your new time is ${newTime} today.`,
-      Tamil: `நன்றி. உங்கள் புதிய நேரம் இன்று ${newTime}.`,
-      Hindi: `धन्यवाद। आपका नया समय आज ${newTime} है।`,
-    }[language];
-  }
+export function laterTodayReply(language: Language, newTime: string): string {
   return {
-    English: "Sorry, there is no free time left today. Our front desk will call you shortly.",
-    Tamil:
-      "மன்னிக்கவும், இன்று நேரம் எதுவும் இல்லை. எங்கள் வரவேற்பு மேசையிலிருந்து விரைவில் உங்களை அழைப்பார்கள்.",
-    Hindi: "माफ़ कीजिए, आज कोई समय खाली नहीं है। हमारा फ्रंट डेस्क जल्द ही आपको कॉल करेगा।",
+    English: `Thank you. Your new time is ${newTime} today.`,
+    Tamil: `நன்றி. உங்கள் புதிய நேரம் இன்று ${newTime}.`,
+    Hindi: `धन्यवाद। आपका नया समय आज ${newTime} है।`,
+  }[language];
+}
+
+// Reads out the other-day offers, e.g. "We can offer: A) Mon 28 Sep, 10:15 AM,
+// B) …". If the patient pressed 1 but today was full, it starts with an apology.
+// (Tamil and Hindi need native-speaker review — see note at the top.)
+export function otherDayOffersScript(
+  language: Language,
+  offers: SlotOffer[],
+  noRoomToday: boolean,
+): string {
+  const list = offers
+    .map(
+      (o, i) =>
+        `${OFFER_LETTERS[i]}) ${formatDate(o.dayOffset, language)}, ${formatTime(o.startTime)}`,
+    )
+    .join(", ");
+  // "A, B or C" (with the word for "or" in each language); just "A" if there's one offer.
+  const letters = (or: string) => {
+    const l = OFFER_LETTERS.slice(0, offers.length);
+    return l.length === 1 ? l[0] : `${l.slice(0, -1).join(", ")} ${or} ${l.at(-1)}`;
+  };
+
+  switch (language) {
+    case "English":
+      return (
+        (noRoomToday ? "Sorry, there is no free time left today. " : "") +
+        `We can offer: ${list}. ` +
+        `Please choose ${letters("or")}. If none of these suit you, our front desk will call you.`
+      );
+    case "Tamil":
+      return (
+        (noRoomToday ? "மன்னிக்கவும், இன்று நேரம் எதுவும் இல்லை. " : "") +
+        `நாங்கள் வழங்கக்கூடிய நேரங்கள்: ${list}. ` +
+        `${letters("அல்லது")} இல் ஒன்றைத் தேர்ந்தெடுக்கவும். இவை எதுவும் பொருந்தவில்லை என்றால், எங்கள் வரவேற்பு மேசையிலிருந்து உங்களை அழைப்பார்கள்.`
+      );
+    case "Hindi":
+      return (
+        (noRoomToday ? "माफ़ कीजिए, आज कोई समय खाली नहीं है। " : "") +
+        `हम ये समय दे सकते हैं: ${list}। ` +
+        `${letters("या")} में से एक चुनें। अगर इनमें से कोई भी ठीक नहीं है, तो हमारा फ्रंट डेस्क आपको कॉल करेगा।`
+      );
+  }
+}
+
+// What DocDelay says after the patient picks one of the other-day offers.
+// (Tamil and Hindi need native-speaker review — see note at the top.)
+export function anotherDayReply(language: Language, dayOffset: number, time: string): string {
+  const date = formatDate(dayOffset, language);
+  const at = formatTime(time);
+  return {
+    English: `Thank you. Your new appointment is on ${date} at ${at}.`,
+    Tamil: `நன்றி. உங்கள் புதிய சந்திப்பு ${date} அன்று ${at} மணிக்கு.`,
+    Hindi: `धन्यवाद। आपकी नई अपॉइंटमेंट ${date} को ${at} पर है।`,
   }[language];
 }

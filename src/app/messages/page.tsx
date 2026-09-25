@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { getMessages, getPendingUpdates } from "@/hms/mockHms";
 import type { Language } from "@/hms/types";
-import { formatTime } from "@/lib/time";
+import { formatTime, formatWhen } from "@/lib/time";
 import { sendUpdatesAction } from "../actions";
 
 const languageCodes: Record<Language, string> = { English: "en", Tamil: "ta", Hindi: "hi" };
@@ -55,7 +55,11 @@ export default async function MessagesPage() {
           <ul className="divide-y divide-slate-100 rounded-xl border border-amber-200 bg-amber-50">
             {pending.map((u) => {
               const { patient } = u.appointment;
-              const firstTime = u.appointment.timeHistory?.[0]?.oldStartTime;
+              const first = u.appointment.timeHistory?.[0];
+              // Show the day too when the patient moved to another day.
+              const otherDay = first ? first.oldDayOffset !== u.newDayOffset : false;
+              const show = (dayOffset: number, time: string) =>
+                otherDay ? formatWhen(dayOffset, time) : formatTime(time);
               return (
                 <li
                   key={u.appointmentId}
@@ -67,10 +71,10 @@ export default async function MessagesPage() {
                     <span className="text-slate-400">· {patient.preferredLanguage}</span>
                   </p>
                   <p className="text-slate-600">
-                    {firstTime && <>was {formatTime(firstTime)} → </>}
+                    {first && <>was {show(first.oldDayOffset, first.oldStartTime)} → </>}
                     new time{" "}
                     <span className="font-semibold text-slate-900">
-                      {formatTime(u.newStartTime)}
+                      {show(u.newDayOffset, u.newStartTime)}
                     </span>
                   </p>
                 </li>

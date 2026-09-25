@@ -17,8 +17,8 @@ export type CallResult = (typeof CALL_RESULTS)[number];
 export type AppointmentStatus =
   | "Scheduled"
   | "Affected – needs contact"
-  | "Rescheduled – later today" // patient pressed 1 and got a new time
-  | "Wants another day"
+  | "Rescheduled – later today" // patient pressed 1 and got a new time today
+  | "Rescheduled – another day" // patient picked one of the other-day offers
   | "Cancelled"
   | "Needs staff call"
   | "No answer"
@@ -28,14 +28,23 @@ export type AppointmentStatus =
 export interface CallLogEntry {
   calledAt: string; // when the call happened (ISO date-time)
   result: CallResult;
+  detail?: string; // extra info, e.g. "Picked B: Tue 29 Sep, 9:45 AM"
 }
 
 // One line in an appointment's time-change history.
 export interface TimeChange {
   changedAt: string; // ISO date-time
+  oldDayOffset: number;
   oldStartTime: string; // "HH:MM"
+  newDayOffset: number;
   newStartTime: string; // "HH:MM"
   why: string;
+}
+
+// An open slot on another day, offered to a patient on the phone.
+export interface SlotOffer {
+  dayOffset: number;
+  startTime: string; // "HH:MM"
 }
 
 export const UNAVAILABILITY_REASONS = ["Emergency surgery", "Personal emergency", "Other"] as const;
@@ -74,7 +83,8 @@ export interface Appointment {
   id: string;
   doctorId: string;
   patientId: string;
-  startTime: string; // "HH:MM", 24-hour clock, always today
+  dayOffset: number; // 0 = today, 1 = tomorrow, … (up to 7)
+  startTime: string; // "HH:MM", 24-hour clock
   endTime: string; // "HH:MM"
   reason: string;
   status: AppointmentStatus;
@@ -82,6 +92,9 @@ export interface Appointment {
   note?: string; // e.g. "No room today"
   callLog?: CallLogEntry[]; // only there once the patient has been called
   timeHistory?: TimeChange[]; // only there once its time has changed
+  // Other-day slots offered on the phone, waiting for the patient to pick one.
+  offers?: SlotOffer[];
+  offersBecause?: "asked" | "no room today"; // pressed 2, or pressed 1 but today was full
 }
 
 // An appointment with its patient's details attached — handy for screens.
@@ -94,6 +107,7 @@ export interface AppointmentWithPatient extends Appointment {
 // times gets a single message with their final time.
 export interface PendingUpdate {
   appointmentId: string;
+  newDayOffset: number; // the latest day
   newStartTime: string; // "HH:MM" — the latest time
   reason: UnavailabilityReason; // why the doctor was unavailable (for the wording)
   updatedAt: string; // ISO date-time of the latest change

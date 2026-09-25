@@ -6,9 +6,12 @@
 // simply the earliest one still marked "Affected – needs contact".
 // When nobody is left, we show the summary.
 //
-// After a patient presses "1 – Later today", the address becomes
-// /calls/<id>?answered=<appointment id>, and the phone card tells that
-// patient their new time before moving on.
+// Pressing "2 – Another day" (or "1" when there's no room today) keeps the
+// same patient on screen with 3 other-day offers (A / B / C).
+//
+// When a patient gets a new time (later today, or an offer they picked), the
+// address becomes /calls/<id>?answered=<appointment id>, and the phone card
+// tells that patient their new time before moving on.
 
 import Link from "next/link";
 import {
@@ -19,10 +22,16 @@ import {
   getUnavailability,
 } from "@/hms/mockHms";
 import type { AppointmentWithPatient, Language } from "@/hms/types";
-import { callScript, laterTodayReply } from "@/lib/callScript";
-import { callSummary } from "@/lib/status";
+import {
+  anotherDayReply,
+  callScript,
+  laterTodayReply,
+  otherDayOffersScript,
+} from "@/lib/callScript";
+import { callSummary, describeTimeChange } from "@/lib/status";
 import { formatTime } from "@/lib/time";
 import AnswerButtons from "./AnswerButtons";
+import OfferButtons from "./OfferButtons";
 
 export default async function CallSimulator({ params, searchParams }: PageProps<"/calls/[id]">) {
   const { id } = await params;
@@ -49,11 +58,12 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
   const calledCount = appointments.length - toCall.length;
   const dashboardLink = `/?doctor=${doctor.id}`;
 
-  // Did a patient just press "1 – Later today"? Then show them their answer.
+  // Did a patient just get a new time? Then tell them.
   const justAnswered = typeof answered === "string" ? await getAppointment(answered) : undefined;
   const showReply =
     justAnswered?.unavailabilityId === id &&
-    justAnswered.callLog?.at(-1)?.result === "Wants later today";
+    (justAnswered.status === "Rescheduled – later today" ||
+      justAnswered.status === "Rescheduled – another day");
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
@@ -69,7 +79,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
       </header>
 
       {showReply ? (
-        // ----- The patient pressed "1": tell them their new time -----
+        // ----- The patient got a new time: tell them -----
         <>
           <p className="mb-3 text-sm font-medium text-slate-500">
             Patient {calledCount} of {appointments.length}
@@ -78,28 +88,23 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
             <PhoneCard
               appointment={justAnswered}
               label="On call"
-              message={laterTodayReply(
-                justAnswered.patient.preferredLanguage,
+              message={
                 justAnswered.status === "Rescheduled – later today"
-                  ? formatTime(justAnswered.startTime)
-                  : null, // no room today
-              )}
+                  ? laterTodayReply(
+                      justAnswered.patient.preferredLanguage,
+                      formatTime(justAnswered.startTime),
+                    )
+                  : anotherDayReply(
+                      justAnswered.patient.preferredLanguage,
+                      justAnswered.dayOffset,
+                      justAnswered.startTime,
+                    )
+              }
             />
             <div>
-              <h2 className="mb-3 text-sm font-medium text-slate-500">
-                The patient pressed “1 – Later today”
-              </h2>
-              <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 text-sm">
-                {justAnswered.status === "Rescheduled – later today" ? (
-                  <p className="text-emerald-800">
-                    Rescheduled: was {formatTime(justAnswered.timeHistory![0].oldStartTime)} → now{" "}
-                    <strong>{formatTime(justAnswered.startTime)}</strong>
-                  </p>
-                ) : (
-                  <p className="text-orange-800">
-                    No room today. Status set to “Needs staff call”.
-                  </p>
-                )}
+              <h2 className="mb-3 text-sm font-medium text-slate-500">{justAnswered.status}</h2>
+              <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 text-sm text-emerald-800">
+                {describeTimeChange(justAnswered)}
               </div>
               <Link
                 href={`/calls/${id}`}
@@ -119,23 +124,49 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
           <div className="grid gap-6 md:grid-cols-[1fr_320px]">
             <PhoneCard
               appointment={current}
-              label="Calling…"
-              message={callScript({
-                language: current.patient.preferredLanguage,
-                patientName: current.patient.name,
-                hospitalName: hospital.name,
-                doctorName: doctor.name,
-                reason: unavailability.reason,
-                appointmentTime: formatTime(current.startTime),
-                untilTime: formatTime(unavailability.untilTime),
-              })}
+              label={current.offers ? "On call" : "Calling…"}
+              message={
+                current.offers
+                  ? otherDayOffersScript(
+                      current.patient.preferredLanguage,
+                      current.offers,
+                      current.offersBecause === "no room today",
+                    )
+                  : callScript({
+                      language: current.patient.preferredLanguage,
+                      patientName: current.patient.name,
+                      hospitalName: hospital.name,
+                      doctorName: doctor.name,
+                      reason: unavailability.reason,
+                      appointmentTime: formatTime(current.startTime),
+                      untilTime: formatTime(unavailability.untilTime),
+                    })
+              }
             />
             {/* Right: you play the patient */}
-            <div>
-              <h2 className="mb-3 text-sm font-medium text-slate-500">The patient answers…</h2>
-              {/* key = new buttons for each patient */}
-              <AnswerButtons key={current.id} appointmentId={current.id} />
-            </div>
+            {current.offers ? (
+              <div>
+                <h2 className="mb-3 text-sm font-medium text-slate-500">
+                  {current.offersBecause === "no room today"
+                    ? "Pressed “1 – Later today”, but there’s no room today"
+                    : "Pressed “2 – Another day”"}{" "}
+                  — the patient chooses…
+                </h2>
+                {/* Why there was no room (e.g. the 45-minute fairness rule) */}
+                {current.offersBecause === "no room today" && (
+                  <p className="mb-3 rounded-lg bg-orange-50 px-3 py-2 text-xs text-orange-800">
+                    {current.callLog?.at(-1)?.detail}
+                  </p>
+                )}
+                <OfferButtons key={current.id} appointmentId={current.id} offers={current.offers} />
+              </div>
+            ) : (
+              <div>
+                <h2 className="mb-3 text-sm font-medium text-slate-500">The patient answers…</h2>
+                {/* key = new buttons for each patient */}
+                <AnswerButtons key={current.id} appointmentId={current.id} />
+              </div>
+            )}
           </div>
         </>
       ) : (
