@@ -6,6 +6,7 @@
 // Nothing is really sent.
 
 import Link from "next/link";
+import { connection } from "next/server";
 import { getMessages, getPendingUpdates } from "@/hms/mockHms";
 import type { Language } from "@/hms/types";
 import { formatTime, formatWhen } from "@/lib/time";
@@ -14,6 +15,10 @@ import { sendUpdatesAction } from "../actions";
 const languageCodes: Record<Language, string> = { English: "en", Tamil: "ta", Hindi: "hi" };
 
 export default async function MessagesPage() {
+  // Always read the latest messages when the page is opened. (Without this, a
+  // production build would bake in whatever messages existed at build time.)
+  await connection();
+
   const pending = await getPendingUpdates();
   const messages = await getMessages(); // newest first
 
