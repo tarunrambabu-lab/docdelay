@@ -1,5 +1,7 @@
 # DocDelay
 
+**▶ Live demo: [docdelay-three.vercel.app](https://docdelay-three.vercel.app)** — every visitor gets their own private demo; press "Reset demo" to start over.
+
 **When a doctor is suddenly pulled into emergency surgery, DocDelay finds every affected patient, calls them in their own language, and rebooks them — later today or on another day — so nobody is left waiting in the lobby.**
 
 > **MVP — all hospital, doctor and patient data is fictional; calls and texts are simulated.**
