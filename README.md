@@ -63,7 +63,7 @@ The Tamil and Hindi wording was written for this demo and is marked in the code 
 You'll need [Node.js](https://nodejs.org) 20.9 or newer.
 
 ```bash
-git clone https://github.com/<your-username>/docdelay.git
+git clone https://github.com/tarunrambabu-lab/docdelay.git
 cd docdelay
 npm install
 npm run dev
