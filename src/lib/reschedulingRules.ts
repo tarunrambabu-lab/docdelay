@@ -43,7 +43,7 @@ export const OFFERS_TO_MAKE = 3; // how many other-day slots to offer
 // Is the hospital closed on this day? (Today is always treated as open,
 // so the demo works on any day.)
 export function isClosedDay(dayOffset: number): boolean {
-  return dayOffset > 0 && CLOSED_WEEKDAYS.includes(dateForDayOffset(dayOffset).getDay());
+  return dayOffset > 0 && CLOSED_WEEKDAYS.includes(dateForDayOffset(dayOffset).getUTCDay());
 }
 
 // The time a patient was first booked for, before any changes.

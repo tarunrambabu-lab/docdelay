@@ -18,11 +18,12 @@ import {
   getPendingUpdates,
   getUnavailabilities,
   isClosed,
+  isDemoNearlyFull,
 } from "@/hms/mockHms";
 import type { Language } from "@/hms/types";
 import { DAYS_TO_SEARCH } from "@/lib/reschedulingRules";
 import { callSummary, describeTimeChange, statusColors } from "@/lib/status";
-import { formatDate, formatTime } from "@/lib/time";
+import { formatDate, formatTime, HOSPITAL_TIME_ZONE } from "@/lib/time";
 import { resetDemoAction } from "./actions";
 import MarkUnavailableButton from "./MarkUnavailableButton";
 
@@ -76,8 +77,10 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const affectedCount = selectedDay === 0 ? rows.filter(({ a }) => a.unavailabilityId).length : 0;
   const messageCount = (await getMessages()).length;
   const pendingUpdates = await getPendingUpdates();
+  const demoNearlyFull = await isDemoNearlyFull();
 
   const today = new Date().toLocaleDateString("en-IN", {
+    timeZone: HOSPITAL_TIME_ZONE,
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -86,6 +89,13 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+      {/* Each visitor's demo is kept in a small cookie, which can fill up. */}
+      {demoNearlyFull && (
+        <p className="mb-4 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800">
+          This demo has a lot of history. Press “Reset demo” to start fresh.
+        </p>
+      )}
+
       {/* Red banners: one for each time a doctor was marked unavailable */}
       {unavailabilities.length > 0 && (
         <div className="mb-6 space-y-2">

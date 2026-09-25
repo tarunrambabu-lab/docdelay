@@ -56,7 +56,7 @@ The Tamil and Hindi wording was written for this demo and is marked in the code 
 - [Next.js 16](https://nextjs.org) (App Router, Server Components, Server Actions)
 - React 19 + TypeScript
 - Tailwind CSS 4
-- Local JSON storage — no database or cloud services. Starting data lives in `src/hms/mockData.json`; the current demo state is saved to `data/hms-state.json` (git-ignored).
+- No database or cloud services. Starting data lives in `src/hms/mockData.json`. Each visitor's demo is kept in a small cookie in their own browser — it stores the list of steps they took (not the data), and the server replays them on every request — so every visitor gets a private demo and "Reset demo" just clears the cookie.
 
 ## Run it locally
 
@@ -88,6 +88,7 @@ The demo data is always relative to *today*, so it works on any day.
 src/
   hms/
     mockHms.ts           ← the only code that reads/writes hospital data (swap for a real HMS)
+    visitorState.ts      ← keeps each visitor's demo steps in a cookie
     mockData.json        ← fictional hospital, doctors, patients, 8 days of appointments
     types.ts             ← shared data shapes
   lib/

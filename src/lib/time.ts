@@ -31,10 +31,18 @@ export function isValidTime(time: string): boolean {
 // ---------- Days ----------
 // Appointments store a "dayOffset": 0 = today, 1 = tomorrow, and so on.
 
-// The real calendar date for a dayOffset (using this computer's clock).
+// The hospital's time zone. "Today" always means today in the hospital,
+// even when the server runs somewhere else (e.g. Vercel servers use UTC).
+export const HOSPITAL_TIME_ZONE = "Asia/Kolkata";
+
+// The calendar date for a dayOffset, as a Date at midnight UTC.
+// Read it with getUTCDay() / getUTCDate() / getUTCMonth(), or format it with
+// timeZone: "UTC" — never with the local-time methods.
 export function dateForDayOffset(dayOffset: number): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset);
+  // Today's date in the hospital, e.g. "2026-09-26" ("en-CA" gives YYYY-MM-DD).
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: HOSPITAL_TIME_ZONE });
+  const [year, month, day] = today.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + dayOffset));
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -44,10 +52,15 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 export function formatDate(dayOffset: number, language: Language = "English"): string {
   const date = dateForDayOffset(dayOffset);
   if (language === "English") {
-    return `${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
+    return `${WEEKDAYS[date.getUTCDay()]} ${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]}`;
   }
   const locale = language === "Tamil" ? "ta-IN" : "hi-IN";
-  return date.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
+  return date.toLocaleDateString(locale, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  });
 }
 
 // (0, "10:00") → "Today 10:00 AM";  (2, "10:15") → "Mon 28 Sep, 10:15 AM"

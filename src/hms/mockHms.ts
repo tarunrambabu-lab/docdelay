@@ -6,19 +6,18 @@
 // (same names, same return types) and switch the imports over to it.
 //
 // Where the data lives:
-//   - mockData.json      = the untouched starting data (never changed by the app).
+//   - mockData.json = the untouched starting data (never changed by the app).
 //     It holds today and the next 7 days; each appointment has a "dayOffset"
 //     (0 = today, 1 = tomorrow, …), so the demo always starts "today".
-//   - data/hms-state.json = the CURRENT state (statuses, times,
-//     unavailabilities, pending updates, simulated text messages).
-//     It's created from mockData.json the first time it's needed, and
-//     "Reset demo" deletes it so we start fresh.
+//   - Each visitor's CURRENT state (statuses, times, unavailabilities, pending
+//     updates, simulated text messages) is rebuilt on every request from the
+//     list of steps they took, kept in a cookie in their own browser
+//     (see visitorState.ts). So every visitor gets their own demo, and
+//     "Reset demo" just forgets their steps.
 //
 // The functions are "async" even though the fake data is instant,
 // because a real HMS will be reached over the network.
 
-import fs from "node:fs";
-import path from "node:path";
 import startingData from "./mockData.json";
 import type {
   Appointment,
@@ -34,6 +33,7 @@ import type {
   Unavailability,
   UnavailabilityReason,
 } from "./types";
+import { clearSteps, isNearlyFull, readSteps, writeSteps, type DemoStep } from "./visitorState";
 import {
   findOtherDaySlots,
   isClosedDay,
@@ -51,7 +51,7 @@ const hospital = startingData.hospital as Hospital;
 const doctors = startingData.doctors as Doctor[];
 const patients = startingData.patients as Patient[];
 
-// ---------- Saving and loading the current state ----------
+// ---------- Each visitor's current state ----------
 
 // Everything that CAN change.
 interface HmsState {
@@ -60,8 +60,6 @@ interface HmsState {
   pendingUpdates: PendingUpdate[]; // texts waiting to be sent (one per appointment)
   messages: SmsMessage[]; // simulated text messages that were "sent" ("SMS outbox")
 }
-
-const STATE_FILE = path.join(process.cwd(), "data", "hms-state.json");
 
 function startingState(): HmsState {
   return {
@@ -73,20 +71,31 @@ function startingState(): HmsState {
   };
 }
 
-function loadState(): HmsState {
-  if (!fs.existsSync(STATE_FILE)) return startingState();
-  const saved = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
-  // A state file saved before appointments had days can't be used: start fresh.
-  if (saved.appointments.some((a: Appointment) => a.dayOffset === undefined)) {
-    return startingState();
+// Rebuild a demo: start from the starting data and redo every step in order.
+function replay(steps: DemoStep[]): HmsState {
+  const state = startingState();
+  for (const step of steps) {
+    switch (step.kind) {
+      case "unavailable":
+        applyUnavailable(state, step);
+        break;
+      case "call":
+        applyCall(state, step);
+        break;
+      case "offer":
+        applyOffer(state, step);
+        break;
+      case "send":
+        applySend(state, step);
+        break;
+    }
   }
-  // Empty lists first, so a state file saved by an older version still works.
-  return { pendingUpdates: [], messages: [], ...saved };
+  return state;
 }
 
-function saveState(state: HmsState): void {
-  fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
-  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2) + "\n");
+// This visitor's current state.
+async function loadState(): Promise<HmsState> {
+  return replay(await readSteps());
 }
 
 // Does this appointment START inside the doctor's unavailable window?
@@ -139,8 +148,8 @@ export async function getAppointmentsForDay(
   dayOffset: number,
 ): Promise<AppointmentWithPatient[]> {
   if (isClosedDay(dayOffset)) return [];
-  return loadState()
-    .appointments.filter((a) => a.doctorId === doctorId && a.dayOffset === dayOffset)
+  return (await loadState()).appointments
+    .filter((a) => a.doctorId === doctorId && a.dayOffset === dayOffset)
     .sort(byDayAndTime)
     .map(withPatient);
 }
@@ -151,8 +160,8 @@ export async function getAppointmentsMovedAwayFrom(
   doctorId: string,
   dayOffset: number,
 ): Promise<AppointmentWithPatient[]> {
-  return loadState()
-    .appointments.filter(
+  return (await loadState()).appointments
+    .filter(
       (a) =>
         a.doctorId === doctorId &&
         a.dayOffset !== dayOffset &&
@@ -163,11 +172,11 @@ export async function getAppointmentsMovedAwayFrom(
 
 // Every doctor unavailability recorded today, in the order they were added.
 export async function getUnavailabilities(): Promise<Unavailability[]> {
-  return loadState().unavailabilities;
+  return (await loadState()).unavailabilities;
 }
 
 export async function getUnavailability(id: string): Promise<Unavailability | undefined> {
-  return loadState().unavailabilities.find((u) => u.id === id);
+  return (await loadState()).unavailabilities.find((u) => u.id === id);
 }
 
 // All appointments affected by one "doctor unavailable" event (whatever
@@ -175,20 +184,20 @@ export async function getUnavailability(id: string): Promise<Unavailability | un
 export async function getAffectedAppointments(
   unavailabilityId: string,
 ): Promise<AppointmentWithPatient[]> {
-  return loadState()
-    .appointments.filter((a) => a.unavailabilityId === unavailabilityId)
+  return (await loadState()).appointments
+    .filter((a) => a.unavailabilityId === unavailabilityId)
     .sort(byDayAndTime)
     .map(withPatient);
 }
 
 export async function getAppointment(id: string): Promise<AppointmentWithPatient | undefined> {
-  const appt = loadState().appointments.find((a) => a.id === id);
+  const appt = (await loadState()).appointments.find((a) => a.id === id);
   return appt && withPatient(appt);
 }
 
 // Texts waiting to be sent, oldest change first, with appointment details.
 export async function getPendingUpdates(): Promise<PendingUpdateWithDetails[]> {
-  const state = loadState();
+  const state = await loadState();
   return state.pendingUpdates.map((u) => ({
     ...u,
     appointment: withPatient(state.appointments.find((a) => a.id === u.appointmentId)!),
@@ -197,22 +206,47 @@ export async function getPendingUpdates(): Promise<PendingUpdateWithDetails[]> {
 
 // All simulated text messages that were "sent", newest first.
 export async function getMessages(): Promise<SmsMessage[]> {
-  return [...loadState().messages].reverse();
+  return [...(await loadState()).messages].reverse();
 }
 
 // ---------- Changing ----------
 
+// Is this visitor's demo history nearly too big for its cookie?
+// (Then they should press "Reset demo".)
+export async function isDemoNearlyFull(): Promise<boolean> {
+  return isNearlyFull();
+}
+
+// Each change below has two parts:
+//   - an exported function the app calls: it rebuilds the visitor's demo,
+//     makes the change, and saves the new step in the visitor's cookie;
+//   - an "apply…" function that makes the change to a state. The same apply
+//     function is used again every time the demo is rebuilt from the steps,
+//     so it must only use the step's own time (step.at), never "now".
+
 // Record that a doctor is unavailable between two times today.
-// Every appointment that starts inside the window becomes
-// "Affected – needs contact" and remembers which event affected it.
+// Returns null if it couldn't be saved (the visitor's demo is full).
 export async function markDoctorUnavailable(input: {
   doctorId: string;
   reason: UnavailabilityReason;
   fromTime: string;
   untilTime: string;
-}): Promise<Unavailability> {
-  const state = loadState();
-  const id = `unavail-${Date.now()}`;
+}): Promise<Unavailability | null> {
+  const steps = await readSteps();
+  const step: DemoStep = { kind: "unavailable", at: Date.now(), ...input };
+  const unavailability = applyUnavailable(replay(steps), step);
+  return (await writeSteps([...steps, step])) ? unavailability : null;
+}
+
+// Every appointment that starts inside the window becomes
+// "Affected – needs contact" and remembers which event affected it.
+function applyUnavailable(
+  state: HmsState,
+  step: Extract<DemoStep, { kind: "unavailable" }>,
+): Unavailability {
+  const { doctorId, reason, fromTime, untilTime, at } = step;
+  const input = { doctorId, reason, fromTime, untilTime };
+  const id = `unavail-${at}`;
 
   let affectedCount = 0;
   for (const appt of state.appointments) {
@@ -225,8 +259,6 @@ export async function markDoctorUnavailable(input: {
 
   const unavailability: Unavailability = { id, ...input, affectedCount };
   state.unavailabilities.push(unavailability);
-
-  saveState(state);
   return unavailability;
 }
 
@@ -237,20 +269,27 @@ export async function markDoctorUnavailable(input: {
 //   - "Another day" offers other days.
 // Only patients still waiting for a call (and not already looking at offers)
 // can be recorded — this stops a double-click from logging the same call twice.
-// Returns false if skipped.
+// Returns false if skipped (or the visitor's demo is full).
 export async function recordCallResult(
   appointmentId: string,
   result: CallResult,
 ): Promise<boolean> {
-  const state = loadState();
+  const steps = await readSteps();
+  const step: DemoStep = { kind: "call", at: Date.now(), appointmentId, result };
+  if (!applyCall(replay(steps), step)) return false;
+  return writeSteps([...steps, step]);
+}
+
+function applyCall(state: HmsState, step: Extract<DemoStep, { kind: "call" }>): boolean {
+  const { appointmentId, result, at } = step;
   const appt = state.appointments.find((a) => a.id === appointmentId);
   if (!appt || appt.status !== "Affected – needs contact" || appt.offers) return false;
 
-  const logEntry: CallLogEntry = { calledAt: new Date().toISOString(), result };
+  const logEntry: CallLogEntry = { calledAt: new Date(at).toISOString(), result };
   appt.callLog = [...(appt.callLog ?? []), logEntry];
 
   if (result === "Wants later today") {
-    const noRoomBecause = rescheduleLaterToday(state, appt);
+    const noRoomBecause = rescheduleLaterToday(state, appt, at);
     if (noRoomBecause) {
       logEntry.detail = `No room today: ${noRoomBecause}`;
       offerOtherDays(state, appt, "no room today");
@@ -260,8 +299,6 @@ export async function recordCallResult(
   } else {
     appt.status = result;
   }
-
-  saveState(state);
   return true;
 }
 
@@ -273,14 +310,25 @@ export async function chooseOffer(
   appointmentId: string,
   choice: number | null,
 ): Promise<"booked" | "none" | "taken" | "skipped"> {
-  const state = loadState();
+  const steps = await readSteps();
+  const step: DemoStep = { kind: "offer", at: Date.now(), appointmentId, choice };
+  const outcome = applyOffer(replay(steps), step);
+  if (outcome === "skipped") return outcome;
+  return (await writeSteps([...steps, step])) ? outcome : "skipped";
+}
+
+function applyOffer(
+  state: HmsState,
+  step: Extract<DemoStep, { kind: "offer" }>,
+): "booked" | "none" | "taken" | "skipped" {
+  const { appointmentId, choice, at } = step;
   const appt = state.appointments.find((a) => a.id === appointmentId);
   if (!appt?.offers || appt.status !== "Affected – needs contact") return "skipped";
 
   const log = (detail: string) =>
     (appt.callLog = [
       ...(appt.callLog ?? []),
-      { calledAt: new Date().toISOString(), result: "Wants another day", detail },
+      { calledAt: new Date(at).toISOString(), result: "Wants another day", detail },
     ]);
 
   if (choice === null) {
@@ -289,7 +337,6 @@ export async function chooseOffer(
     delete appt.offers;
     delete appt.offersBecause;
     log("None of these – call me");
-    saveState(state);
     return "none";
   }
 
@@ -302,7 +349,6 @@ export async function chooseOffer(
   );
   if (!isSlotFree(thatDay, toMinutes(offer.startTime))) {
     offerOtherDays(state, appt, appt.offersBecause ?? "asked");
-    saveState(state);
     return "taken";
   }
 
@@ -314,19 +360,19 @@ export async function chooseOffer(
     offer.startTime,
     "Patient chose another day",
     unavailability,
+    at,
   );
   appt.status = "Rescheduled – another day";
   delete appt.offers;
   delete appt.offersBecause;
   log(`Picked ${OFFER_LETTERS[choice]}: ${formatWhen(offer.dayOffset, offer.startTime)}`);
-  saveState(state);
   return "booked";
 }
 
 // Give a patient who pressed "1 – Later today" a new time today, following the
 // rules in lib/reschedulingRules.ts. Changes `state`; the caller saves it.
 // Returns null if it worked, or the reason there was no room today.
-function rescheduleLaterToday(state: HmsState, appt: Appointment): string | null {
+function rescheduleLaterToday(state: HmsState, appt: Appointment, at: number): string | null {
   const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId);
   if (!unavailability) return "unknown unavailability"; // shouldn't happen
   const todaysAppointments = state.appointments.filter(
@@ -344,6 +390,7 @@ function rescheduleLaterToday(state: HmsState, appt: Appointment): string | null
     plan.newStartTime,
     "Patient chose a later time today",
     unavailability,
+    at,
   );
   appt.status = "Rescheduled – later today";
 
@@ -357,6 +404,7 @@ function rescheduleLaterToday(state: HmsState, appt: Appointment): string | null
         p.newStartTime,
         "Pushed back 15 minutes to make room for a rescheduled patient",
         unavailability,
+        at,
       );
       // Only plain bookings become "Time moved". Someone already
       // "Rescheduled – later today" keeps that status (their new time still shows).
@@ -401,8 +449,9 @@ function moveAppointment(
   newStartTime: string,
   why: string,
   unavailability: Unavailability,
+  at: number, // when it happened (the step's time)
 ): void {
-  const now = new Date().toISOString();
+  const now = new Date(at).toISOString();
   appt.timeHistory = [
     ...(appt.timeHistory ?? []),
     {
@@ -434,8 +483,15 @@ function moveAppointment(
 // sent. If a patient is moved again later, they get a new pending update.
 // Returns how many messages were "sent".
 export async function sendPendingUpdates(): Promise<number> {
-  const state = loadState();
-  const now = new Date().toISOString();
+  const steps = await readSteps();
+  const step: DemoStep = { kind: "send", at: Date.now() };
+  const sent = applySend(replay(steps), step);
+  if (sent === 0) return 0;
+  return (await writeSteps([...steps, step])) ? sent : 0;
+}
+
+function applySend(state: HmsState, step: Extract<DemoStep, { kind: "send" }>): number {
+  const now = new Date(step.at).toISOString();
 
   for (const update of state.pendingUpdates) {
     const appt = state.appointments.find((a) => a.id === update.appointmentId)!;
@@ -461,11 +517,10 @@ export async function sendPendingUpdates(): Promise<number> {
 
   const sent = state.pendingUpdates.length;
   state.pendingUpdates = [];
-  saveState(state);
   return sent;
 }
 
-// Put everything back to the starting data.
+// Put this visitor's demo back to the starting data.
 export async function resetDemo(): Promise<void> {
-  fs.rmSync(STATE_FILE, { force: true });
+  await clearSteps();
 }

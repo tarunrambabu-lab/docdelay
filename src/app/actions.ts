@@ -49,12 +49,15 @@ export async function markUnavailableAction(
     return { error: "“Expected until” must be later than “From”." };
   }
 
-  await markDoctorUnavailable({
+  const saved = await markDoctorUnavailable({
     doctorId,
     reason: reason as UnavailabilityReason,
     fromTime,
     untilTime,
   });
+  if (!saved) {
+    return { error: "This demo has too much history. Press “Reset demo” to start again." };
+  }
 
   refresh(); // reload the page's data so the banner and statuses appear
   return { ok: true };
