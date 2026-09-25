@@ -7,15 +7,10 @@
 > **MVP — all hospital, doctor and patient data is fictional; calls and texts are simulated.**
 > No real phone calls are made and no real text messages are sent. Phone numbers are placeholders (`+91 90000 00001`, …).
 
-<!--
-  SCREENSHOTS (hidden until added): save the images in docs/screenshots/ with
-  these names, then delete this comment's opening and closing lines.
-
 ![Front-desk dashboard with a doctor marked unavailable](docs/screenshots/dashboard.png)
-![Call simulator reading the message in Tamil](docs/screenshots/call-simulator.png)
+![Call simulator calling an affected patient](docs/screenshots/call-simulator.png)
 ![Patient offered three other-day slots](docs/screenshots/another-day-offers.png)
 ![Messages page with pending updates](docs/screenshots/messages.png)
--->
 
 ---
 
