@@ -226,10 +226,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
               label="On call"
               message={
                 justAnswered.status === "Rescheduled – later today"
-                  ? laterTodayReply(
-                      justAnswered.patient.preferredLanguage,
-                      formatTime(justAnswered.startTime),
-                    )
+                  ? laterTodayReply(justAnswered.patient.preferredLanguage, justAnswered.startTime)
                   : anotherDayReply(
                       justAnswered.patient.preferredLanguage,
                       justAnswered.dayOffset,

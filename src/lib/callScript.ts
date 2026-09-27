@@ -76,9 +76,11 @@ export function callScript(d: CallScriptDetails): string {
 }
 
 // What DocDelay says after the patient presses "1 – Later today" and gets
-// a new time, e.g. newTime = "2:15 PM".
+// a new time. Takes the raw time ("14:15") and always writes it with AM/PM
+// ("2:15 PM"), in every language.
 // (Tamil and Hindi need native-speaker review — see note at the top.)
-export function laterTodayReply(language: Language, newTime: string): string {
+export function laterTodayReply(language: Language, startTime: string): string {
+  const newTime = formatTime(startTime);
   return {
     English: `Thank you. Your new time is ${newTime} today.`,
     Tamil: `நன்றி. உங்கள் புதிய நேரம் இன்று ${newTime}.`,
@@ -128,7 +130,8 @@ export function otherDayOffersScript(
   }
 }
 
-// What DocDelay says after the patient picks one of the other-day offers.
+// What DocDelay says after the patient picks one of the other-day offers
+// (the time is always written with AM/PM).
 // (Tamil and Hindi need native-speaker review — see note at the top.)
 export function anotherDayReply(language: Language, dayOffset: number, time: string): string {
   const date = formatDate(dayOffset, language);

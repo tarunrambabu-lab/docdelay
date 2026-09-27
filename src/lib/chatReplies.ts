@@ -72,6 +72,16 @@ export function noMatchPrefix(language: Language): string {
   }[language];
 }
 
+// Put in front of other-day offers when the patient asked for a time TODAY
+// and no empty slot fits (chosen times are only booked within normal hours).
+export function noFreeTodayPrefix(language: Language): string {
+  return {
+    English: "Sorry, nothing is free today at that time.",
+    Tamil: "மன்னிக்கவும், இன்று அந்த நேரத்தில் இடம் இல்லை.",
+    Hindi: "माफ़ कीजिए, आज उस समय कोई जगह खाली नहीं है।",
+  }[language];
+}
+
 // Put in front of fresh offers when the chosen slot was taken meanwhile.
 export function slotTakenPrefix(language: Language): string {
   return {

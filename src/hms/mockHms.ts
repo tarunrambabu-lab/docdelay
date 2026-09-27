@@ -44,6 +44,7 @@ import {
   originalTimeOf,
   pickClosest,
   pickOffers,
+  NORMAL_DAY_END,
   planLaterToday,
   SLOT_MINUTES,
   type SlotQuery,
@@ -59,6 +60,7 @@ import {
 import {
   askTodayOrAnotherDay,
   cancelledReply,
+  noFreeTodayPrefix,
   noMatchPrefix,
   slotTakenPrefix,
   staffWillCallReply,
@@ -527,7 +529,7 @@ function applySend(state: HmsState, step: Extract<DemoStep, { kind: "send" }>): 
         doctorName: doctor.name,
         reason: update.reason,
         newDayOffset: update.newDayOffset,
-        newTime: formatTime(update.newStartTime),
+        newStartTime: update.newStartTime,
       }),
     });
   }
@@ -607,7 +609,9 @@ function applyBook(
 //     open day, within opening hours, and — today — from the doctor's return
 //     time on. So nobody else is ever moved, and if two patients pick the
 //     same slot, the first one wins and the second is refused;
-//   - if the patient asked for a time (`wish`), the slot must be within it.
+//   - if the patient asked for a time (`wish`), the slot must be within it;
+//   - a chosen slot must END by NORMAL_DAY_END (5:00 PM). Slots after that are
+//     only ever created by the "later today" push, never booked here.
 function bookSlotIn(
   state: HmsState,
   appt: Appointment,
@@ -631,6 +635,9 @@ function bookSlotIn(
   }
 
   const today = slot.dayOffset === 0;
+  if (toMinutes(slot.startTime) + SLOT_MINUTES > toMinutes(NORMAL_DAY_END)) {
+    return { ok: false, reason: "Chosen times must be within normal hours (until 5:00 PM)." };
+  }
   moveAppointment(
     state,
     appt,
@@ -819,7 +826,7 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
           appt.id,
         );
         if (slot && bookSlotIn(state, appt, slot, step.at, todayWish).ok) {
-          say(laterTodayReply(language, formatTime(slot.startTime)));
+          say(laterTodayReply(language, slot.startTime));
           log("Wants later today", `new time ${formatTime(slot.startTime)} today (empty slot)`);
           return true;
         }
@@ -836,7 +843,7 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
         }
         appt.offers = offers;
         appt.offersBecause = "asked";
-        say(`${noMatchPrefix(language)} ${otherDayOffersScript(language, offers, false)}`);
+        say(`${noFreeTodayPrefix(language)} ${otherDayOffersScript(language, offers, false)}`);
         return true;
       }
 
@@ -850,7 +857,7 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
       const noRoomBecause = rescheduleLaterToday(state, appt, step.at);
       if (!noRoomBecause) {
         dropOffers();
-        say(laterTodayReply(language, formatTime(appt.startTime)));
+        say(laterTodayReply(language, appt.startTime));
         log("Wants later today", `new time ${formatTime(appt.startTime)} today`);
         return true;
       }
@@ -887,7 +894,7 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
       if (bookSlotIn(state, appt, offer, step.at).ok) {
         say(
           offer.dayOffset === 0
-            ? laterTodayReply(language, formatTime(offer.startTime))
+            ? laterTodayReply(language, offer.startTime)
             : anotherDayReply(language, offer.dayOffset, offer.startTime),
         );
         log(

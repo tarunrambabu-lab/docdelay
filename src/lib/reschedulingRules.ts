@@ -19,8 +19,10 @@
 //
 // A SPECIFIC time later today ("after 4", "evening", "today after 4"):
 //   Only EMPTY slots at or after that time (and within it, e.g. "before 11"),
-//   from the doctor's return time on, within normal opening hours. Nobody is
-//   ever pushed to fit a chosen time. If no empty slot fits, the patient is
+//   from the doctor's return time on, and ending by NORMAL_DAY_END (5:00 PM).
+//   Slots after 5 PM are only ever created by pushing (a plain "later today"),
+//   so e.g. "after 6" today finds nothing. Nobody is ever pushed to fit a
+//   chosen time. If no empty slot fits, the patient is
 //   told so and offered other days at that time. (firstEmptySlotToday below,
 //   and the bookSlot check in the hms module, both follow this.)
 //
