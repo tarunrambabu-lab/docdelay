@@ -28,6 +28,8 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - AI chat: in one turn the AI may check slots more than once; all slots offered in that turn are kept (up to 5, A–E). E.g. "kal subah ya parso shaam" also got a day-after-tomorrow morning option.
 - AI chat: Tamil/Hindi replies may mix in English words (e.g. "Thursday") around the exact slot text.
 - AI chat: the prompt (≈2,300 tokens) is below the minimum size for prompt caching on Haiku 4.5, so each call pays full input price (≈$0.003 per API call).
+- AI chat: the "two unclear replies in a row → staff call" rule is followed by the AI from its instructions; the hms module does not count unclear AI replies itself.
+- AI chat: besides the patient's first name, language and original time, the AI is also told the doctor's name, the reason for the delay and the doctor's return time (no patient data).
 
 ## Done
 
