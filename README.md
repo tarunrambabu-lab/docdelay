@@ -115,3 +115,7 @@ Smaller items are tracked in [BACKLOG.md](BACKLOG.md).
 ## Built with Claude Code
 
 Built with [Claude Code](https://claude.com/claude-code) as an AI pair-programmer: I described each stage and its product rules; Claude Code wrote and tested the code, and I reviewed and steered the decisions. The project's working rules for the AI are in [CLAUDE.md](CLAUDE.md).
+
+---
+
+© 2026 Tarun Ramesh Babu. All rights reserved. This code is shared for portfolio viewing only and may not be copied, reused or redistributed without permission.
