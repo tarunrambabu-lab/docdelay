@@ -9,7 +9,7 @@
 
 import type { Language } from "@/hms/types";
 import { DAY_START, NORMAL_DAY_END } from "@/lib/reschedulingRules";
-import { formatTimeFor } from "@/lib/time";
+import { formatDate, formatTimeFor } from "@/lib/time";
 
 // The fixed line for ANY health concern. Never change it into advice.
 export function urgentReply(language: Language): string {
@@ -106,6 +106,44 @@ export function doctorBackNoneTodayPrefix(
     English: `${doctorName} is back at ${t}, but nothing is free today after that.`,
     Tamil: `${doctorName} ${t} மணிக்கு திரும்பி வருவார், ஆனால் அதன் பிறகு இன்று இடம் இல்லை.`,
     Hindi: `${doctorName} के ${t} तक वापस आने की उम्मीद है, लेकिन उसके बाद आज कोई जगह खाली नहीं है।`,
+  }[language];
+}
+
+// …and when the asked time ENDS before the doctor is back ("before 11",
+// doctor back at 11:00): nothing today — other days before that time follow.
+export function doctorBackNothingBeforePrefix(
+  language: Language,
+  doctorName: string,
+  backAt: string,
+  endsAt: string,
+): string {
+  const back = formatTimeFor(backAt, language);
+  const end = formatTimeFor(endsAt, language);
+  return {
+    English: `${doctorName} is back at ${back}, so nothing is free before ${end} today.`,
+    Tamil: `${doctorName} ${back} மணிக்கு திரும்பி வருவார், எனவே இன்று ${end} க்கு முன் இடம் இல்லை.`,
+    Hindi: `${doctorName} के ${back} तक वापस आने की उम्मीद है, इसलिए आज ${end} से पहले कोई जगह खाली नहीं है।`,
+  }[language];
+}
+
+// Put in front of the nearest other days when the day the patient named has
+// nothing at the time they asked for.
+export function dayFullPrefix(language: Language, dayOffset: number): string {
+  const day = formatDate(dayOffset, language);
+  return {
+    English: `${day} is full at that time.`,
+    Tamil: `${day} அன்று அந்த நேரத்தில் இடம் இல்லை.`,
+    Hindi: `${day} को उस समय कोई जगह खाली नहीं है।`,
+  }[language];
+}
+
+// …and when the day the patient named is a day the clinic is closed.
+export function dayClosedPrefix(language: Language, dayOffset: number): string {
+  const day = formatDate(dayOffset, language);
+  return {
+    English: `The clinic is closed on ${day}.`,
+    Tamil: `${day} அன்று மருத்துவமனை மூடப்பட்டிருக்கும்.`,
+    Hindi: `${day} को क्लिनिक बंद रहता है।`,
   }[language];
 }
 

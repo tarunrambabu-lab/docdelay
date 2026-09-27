@@ -36,6 +36,7 @@ import {
 } from "@/lib/callScript";
 import { callSummary, describeTimeChange, statusColors } from "@/lib/status";
 import { formatTime } from "@/lib/time";
+import { doctorNameFor } from "@/lib/names";
 import { activeEngine } from "@/lib/understanding";
 import ChatTranscript from "@/app/ChatTranscript";
 import AnswerButtons from "./AnswerButtons";
@@ -92,7 +93,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
           language: current.patient.preferredLanguage,
           patientName: current.patient.name,
           hospitalName: hospital.name,
-          doctorName: doctor.name,
+          doctorName: doctorNameFor(doctor, current.patient.preferredLanguage),
           reason: unavailability.reason,
           appointmentTime: current.startTime,
           untilTime: unavailability.untilTime,

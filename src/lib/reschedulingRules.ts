@@ -26,12 +26,17 @@
 //   told so and offered other days at that time. (emptySlotsToday below, and
 //   the bookSlot check in the hms module, both follow this.)
 //   The patient is offered up to OFFERS_TO_MAKE such slots (A/B/C) to pick from.
-//   - If the asked time is BEFORE the doctor's return (see wishStartsAt), the
-//     earliest empty slots from the return time are offered instead.
+//   - If the asked time STARTS before the doctor's return (see wishStartsAt),
+//     slots are offered from the return time — but never past the END of
+//     the asked time (see wishEndsAt): "before 11" with the doctor back at
+//     11:00 means nothing today, and other days before 11 are offered.
 //   - If the asked time is outside clinic hours (see isOutsideClinicHours,
 //     e.g. "after 6", "before 8"), the closest slots are offered, one per day.
 //
-// Other-day offers are ALWAYS one per day, earliest days first.
+// Other-day offers are one per day, earliest days first — EXCEPT when the
+// patient names a day ("Monday afternoon"): then up to OFFERS_TO_MAKE slots
+// on THAT day (see pickOnDay). Only if that day has nothing are the nearest
+// other days offered, one per day (pickClosestPerDay with `aroundDay`).
 //
 // "2 – Another day" (and "no room today"):
 //   Offer OFFERS_TO_MAKE open slots with the same doctor over the next
@@ -275,25 +280,40 @@ export function pickOffers(
 // The free slots closest to a wished-for time, ONE PER DAY, earliest days
 // first (like the other-day offers). Used when nothing matches exactly, or
 // when the asked time is outside clinic hours.
+// With `aroundDay`, the days NEAREST to that day come first instead (for
+// "Thursday is full at that time").
 export function pickClosestPerDay(
   free: SlotOffer[],
   time: string,
   count = OFFERS_TO_MAKE,
+  aroundDay?: number,
 ): SlotOffer[] {
   const target = toMinutes(time);
-  const days = [...new Set(free.map((s) => s.dayOffset))].sort((a, b) => a - b);
+  const closeness = (a: SlotOffer, b: SlotOffer) =>
+    Math.abs(toMinutes(a.startTime) - target) - Math.abs(toMinutes(b.startTime) - target) ||
+    a.startTime.localeCompare(b.startTime);
+  const distance = (day: number) => (aroundDay === undefined ? day : Math.abs(day - aroundDay));
+  const days = [...new Set(free.map((s) => s.dayOffset))].sort(
+    (a, b) => distance(a) - distance(b) || a - b,
+  );
   return days
     .slice(0, count)
-    .map(
-      (day) =>
-        free
-          .filter((s) => s.dayOffset === day)
-          .sort(
-            (a, b) =>
-              Math.abs(toMinutes(a.startTime) - target) -
-                Math.abs(toMinutes(b.startTime) - target) || a.startTime.localeCompare(b.startTime),
-          )[0],
-    );
+    .map((day) => free.filter((s) => s.dayOffset === day).sort(closeness)[0])
+    .sort((a, b) => a.dayOffset - b.dayOffset);
+}
+
+// Up to `count` free slots on ONE day (the one the patient named), closest to
+// the wished-for time, shown in time order.
+export function pickOnDay(free: SlotOffer[], time: string, count = OFFERS_TO_MAKE): SlotOffer[] {
+  const target = toMinutes(time);
+  return [...free]
+    .sort(
+      (a, b) =>
+        Math.abs(toMinutes(a.startTime) - target) - Math.abs(toMinutes(b.startTime) - target) ||
+        a.startTime.localeCompare(b.startTime),
+    )
+    .slice(0, count)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
 }
 
 // The earliest time a wish allows: "after 4" → 16:00, "afternoon" → 12:00,
@@ -303,6 +323,17 @@ export function wishStartsAt(wish: TimeWish): string {
   if (wish.timeOfDay === "afternoon") return MORNING_ENDS;
   if (wish.timeOfDay === "evening") return EVENING_STARTS;
   return DAY_START;
+}
+
+// The latest time a wish allows a slot to END: "before 11" → 11:00,
+// "morning" → 12:00, "afternoon" → 16:00; undefined if it has no end.
+export function wishEndsAt(wish: TimeWish): string | undefined {
+  const ends = [
+    wish.before,
+    wish.timeOfDay === "morning" ? MORNING_ENDS : undefined,
+    wish.timeOfDay === "afternoon" ? EVENING_STARTS : undefined,
+  ].filter((t): t is string => t !== undefined);
+  return ends.sort()[0];
 }
 
 // Is the asked time completely outside clinic hours (DAY_START–NORMAL_DAY_END,

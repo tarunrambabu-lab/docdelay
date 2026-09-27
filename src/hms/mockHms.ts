@@ -41,7 +41,9 @@ import {
   findOtherDaySlots,
   emptySlotsToday,
   isOutsideClinicHours,
+  wishEndsAt,
   wishStartsAt,
+  pickOnDay,
   isClosedDay,
   listFreeSlots,
   originalTimeOf,
@@ -64,6 +66,9 @@ import {
   askTodayOrAnotherDay,
   cancelledReply,
   clinicHoursIntro,
+  dayClosedPrefix,
+  dayFullPrefix,
+  doctorBackNothingBeforePrefix,
   doctorBackIntro,
   doctorBackNoneTodayPrefix,
   noFreeTodayPrefix,
@@ -74,6 +79,7 @@ import {
   urgentReply,
 } from "@/lib/chatReplies";
 import { describeUnderstanding } from "@/lib/understanding/describe";
+import { doctorNameFor } from "@/lib/names";
 import type { Preferences, Understanding } from "@/lib/understanding/types";
 import { timeChangedSms } from "@/lib/smsText";
 import { formatTime, formatWhen, fromMinutes, toMinutes } from "@/lib/time";
@@ -532,7 +538,7 @@ function applySend(state: HmsState, step: Extract<DemoStep, { kind: "send" }>): 
       text: timeChangedSms({
         language: patient.preferredLanguage,
         hospitalName: hospital.name,
-        doctorName: doctor.name,
+        doctorName: doctorNameFor(doctor, patient.preferredLanguage),
         reason: update.reason,
         newDayOffset: update.newDayOffset,
         newStartTime: update.newStartTime,
@@ -675,37 +681,56 @@ export async function sendChatMessage(
   return writeSteps([...steps, step]);
 }
 
-// Other-day offers for a chat request — always ONE PER DAY, earliest days
-// first, from the wished-for day (if any) on:
-//   - "matched":       real free slots matching the wish;
-//   - "outside hours": the wish is outside clinic hours (e.g. "after 6") →
-//                      the closest free slots to it;
-//   - "no match":      nothing matches (or not on the wished-for day) → the
-//                      closest free slots to it.
+// Other-day offers for a chat request:
+//   - a NAMED day ("Monday afternoon"): up to 3 slots on that day matching
+//     the time ("matched"); if it has none → "day full" (or "day closed") and
+//     the NEAREST other days, one per day;
+//   - otherwise one per day, earliest days first: "matched" if slots match
+//     the time, else "no match" with the closest free slots;
+//   - "outside hours": the time is outside clinic hours (e.g. "after 6") →
+//     the closest free slots, one per day, from the named day (if any) on.
 // An empty list means the doctor has no free slot at all in the coming days.
 function chatOffers(
   state: HmsState,
   appt: Appointment,
   wish: Preferences,
-): { note: "matched" | "outside hours" | "no match"; offers: SlotOffer[] } {
+): {
+  note: "matched" | "day full" | "day closed" | "outside hours" | "no match";
+  offers: SlotOffer[];
+} {
   const doctorsAppointments = state.appointments.filter((a) => a.doctorId === appt.doctorId);
-  const exclude = { excludeAppointmentId: appt.id };
+  const free = (query: SlotQuery) =>
+    listFreeSlots(doctorsAppointments, query, { excludeAppointmentId: appt.id });
+  const allDays = Array.from({ length: DAYS_TO_SEARCH }, (_, i) => i + 1); // 1 … DAYS_TO_SEARCH
   const day = wish.dayOffset;
-  const firstDay = day !== undefined && day > 0 ? day : 1;
-  const days = Array.from({ length: DAYS_TO_SEARCH - firstDay + 1 }, (_, i) => firstDay + i);
+  const named = day !== undefined && day > 0 && day <= DAYS_TO_SEARCH ? day : undefined;
   const anchor = anchorTime(wish, originalTimeOf(appt));
   const time = { timeOfDay: wish.timeOfDay, after: wish.after, before: wish.before };
-  const anyFree = () => listFreeSlots(doctorsAppointments, { days }, exclude);
 
   if (isOutsideClinicHours(time)) {
-    return { note: "outside hours", offers: pickClosestPerDay(anyFree(), anchor) };
+    const fromDay = allDays.filter((d) => d >= (named ?? 1));
+    return { note: "outside hours", offers: pickClosestPerDay(free({ days: fromDay }), anchor) };
   }
-  const matching = listFreeSlots(doctorsAppointments, { days, ...time }, exclude);
-  const wishedDayMatched = day === undefined || matching.some((s) => s.dayOffset === day);
-  if (matching.length > 0 && wishedDayMatched) {
+
+  if (named !== undefined) {
+    // The named day first: up to 3 slots on it.
+    const onDay = isClosedDay(named) ? [] : free({ days: [named], ...time });
+    if (onDay.length > 0) return { note: "matched", offers: pickOnDay(onDay, anchor) };
+    // Nothing there: the nearest other days, one per day (at the asked time if possible).
+    const otherDays = allDays.filter((d) => d !== named);
+    const matching = free({ days: otherDays, ...time });
+    const pool = matching.length > 0 ? matching : free({ days: otherDays });
+    return {
+      note: isClosedDay(named) ? "day closed" : "day full",
+      offers: pickClosestPerDay(pool, anchor, undefined, named),
+    };
+  }
+
+  const matching = free({ days: allDays, ...time });
+  if (matching.length > 0 && day === undefined) {
     return { note: "matched", offers: pickOffers(matching, anchor) };
   }
-  return { note: "no match", offers: pickClosestPerDay(anyFree(), anchor) };
+  return { note: "no match", offers: pickClosestPerDay(free({ days: allDays }), anchor) };
 }
 
 // One chat turn. Replies use the existing wording in the patient's language
@@ -719,6 +744,7 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
   const patient = patients.find((p) => p.id === appt.patientId)!;
   const doctor = doctors.find((d) => d.id === appt.doctorId)!;
   const language = patient.preferredLanguage;
+  const doctorName = doctorNameFor(doctor, language); // e.g. "டாக்டர் மீரா கிருஷ்ணன் (Dr. Meera Krishnan)"
   const when = new Date(step.at).toISOString();
   const u = step.understanding;
   const say = (text: string) => appt.chat!.push({ at: when, from: "docdelay", text });
@@ -742,7 +768,7 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
             language,
             patientName: patient.name,
             hospitalName: hospital.name,
-            doctorName: doctor.name,
+            doctorName,
             reason: unavailability.reason,
             appointmentTime: appt.startTime,
             untilTime: unavailability.untilTime,
@@ -855,15 +881,13 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
           );
         }
 
-        // Asked for a time before the doctor is back ("after 3", back at
-        // 4:30): the earliest empty slots from the return time instead.
+        // Slots always respect the WHOLE asked time — its start is covered
+        // anyway (slots start at the doctor's return), and its end is never
+        // passed: "before 11" never offers 11:00 or later.
+        // If the asked time starts before the doctor is back ("after 3", back
+        // at 4:30), the reply says when the doctor is back.
         const beforeReturn = toMinutes(wishStartsAt(todayWish)) < toMinutes(back);
-        const today = emptySlotsToday(
-          doctorsAppointments,
-          back,
-          beforeReturn ? {} : todayWish,
-          appt.id,
-        );
+        const today = emptySlotsToday(doctorsAppointments, back, todayWish, appt.id);
         if (today.length > 0) {
           return offerThese(
             today,
@@ -871,7 +895,7 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
               language,
               today,
               false,
-              beforeReturn ? doctorBackIntro(language, doctor.name, back) : undefined,
+              beforeReturn ? doctorBackIntro(language, doctorName, back) : undefined,
             ),
             beforeReturn
               ? "asked time is before the doctor is back"
@@ -881,9 +905,13 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
 
         // Nothing empty today: say so, and offer other days at the asked time.
         const { offers } = chatOffers(state, appt, todayWish);
-        const prefix = beforeReturn
-          ? doctorBackNoneTodayPrefix(language, doctor.name, back)
-          : noFreeTodayPrefix(language);
+        const endsAt = wishEndsAt(todayWish);
+        const prefix =
+          endsAt && toMinutes(back) >= toMinutes(endsAt)
+            ? doctorBackNothingBeforePrefix(language, doctorName, back, endsAt) // "before 11", back at 11
+            : beforeReturn
+              ? doctorBackNoneTodayPrefix(language, doctorName, back)
+              : noFreeTodayPrefix(language);
         return offerThese(
           offers,
           `${prefix} ${otherDayOffersScript(language, offers, false)}`,
@@ -931,7 +959,13 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
         say(otherDayOffersScript(language, offers, false, clinicHoursIntro(language)));
       } else {
         const script = otherDayOffersScript(language, offers, false);
-        say(note === "matched" ? script : `${noMatchPrefix(language)} ${script}`);
+        const prefix = {
+          matched: "",
+          "day full": dayFullPrefix(language, prefs.dayOffset!),
+          "day closed": dayClosedPrefix(language, prefs.dayOffset!),
+          "no match": noMatchPrefix(language),
+        }[note];
+        say(prefix ? `${prefix} ${script}` : script);
       }
       return true;
     }

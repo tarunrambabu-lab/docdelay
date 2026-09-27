@@ -84,8 +84,11 @@ export interface Hospital {
 
 export interface Doctor {
   id: string;
-  name: string;
+  name: string; // in English letters, e.g. "Dr. Meera Krishnan"
   specialty: string;
+  // The name in Tamil / Hindi script, e.g. "டாக்டர் மீரா கிருஷ்ணன்". A real
+  // HMS may or may not supply these; messages fall back to `name`.
+  localNames?: { Tamil?: string; Hindi?: string };
 }
 
 export interface Patient {

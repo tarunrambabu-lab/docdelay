@@ -8,17 +8,29 @@
     {
       "id": "doc-cardio",
       "name": "Dr. Meera Krishnan",
-      "specialty": "Cardiologist"
+      "specialty": "Cardiologist",
+      "localNames": {
+        "Tamil": "டாக்டர் மீரா கிருஷ்ணன்",
+        "Hindi": "डॉ. मीरा कृष्णन"
+      }
     },
     {
       "id": "doc-ortho",
       "name": "Dr. Arjun Mehta",
-      "specialty": "Orthopedist"
+      "specialty": "Orthopedist",
+      "localNames": {
+        "Tamil": "டாக்டர் அர்ஜுன் மேத்தா",
+        "Hindi": "डॉ. अर्जुन मेहता"
+      }
     },
     {
       "id": "doc-gp",
       "name": "Dr. Farah Siddiqui",
-      "specialty": "General Physician"
+      "specialty": "General Physician",
+      "localNames": {
+        "Tamil": "டாக்டர் ஃபரா சித்திக்கி",
+        "Hindi": "डॉ. फ़राह सिद्दीक़ी"
+      }
     }
   ],
   "patients": [
