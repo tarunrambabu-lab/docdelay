@@ -16,7 +16,9 @@ Doctors sometimes get pulled into emergency surgery, and their booked patients g
 - The owner is a beginner. Keep code simple and well-commented.
 - Build in small steps. After each step, explain in plain English what changed and how to run it.
 - Never add features that weren't asked for.
-- You may make reasonable assumptions to keep moving. At the end of every report, list the assumptions you made. Clearly flag any that could be impractical, confusing or problematic for patients or hospital staff, and explain the risk in one line, so I can decide.
+- You may make reasonable assumptions to keep moving. At the end of every report, list ALL the assumptions you made, in two groups:
+  - **⚠️ Flagged for your decision** — only assumptions that could (a) put patient safety at risk, (b) book the wrong slot or move someone unfairly, or (c) confuse staff about what to do. Explain the risk in one line each, so I can decide.
+  - **Minor, logged in BACKLOG.md** — everything else. Also add these to BACKLOG.md (under "Minor assumptions").
 
 ## Next.js notes
 @AGENTS.md
