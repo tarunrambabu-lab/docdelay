@@ -16,6 +16,7 @@ Doctors sometimes get pulled into emergency surgery, and their booked patients g
 - The owner is a beginner. Keep code simple and well-commented.
 - Build in small steps. After each step, explain in plain English what changed and how to run it.
 - Never add features that weren't asked for.
+- You may make reasonable assumptions to keep moving. At the end of every report, list the assumptions you made. Clearly flag any that could be impractical, confusing or problematic for patients or hospital staff, and explain the risk in one line, so I can decide.
 
 ## Next.js notes
 @AGENTS.md
