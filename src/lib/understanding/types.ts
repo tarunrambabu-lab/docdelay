@@ -14,6 +14,9 @@ export const INTENTS = [
   "choose_offer", // picked one of the offers read out (A/B/C, or named its day/time)
   "unclear",
   "health_concern", // ANY mention of a symptom or health worry → escalate to staff
+  // A time but no day ("after 4") → ask "today, or another day?".
+  // (Kept last so demos saved in visitors' cookies keep their meaning.)
+  "time_without_day",
 ] as const;
 export type Intent = (typeof INTENTS)[number];
 

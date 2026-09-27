@@ -13,7 +13,7 @@
 //   4. choose one of the offers read out (A/B/C, or its day/time)
 //   5. another day (a day word, a date, "another day", …)
 //   6. later today ("wait", "later", "today", …)
-//   7. a time preference with no day ("after 4") → another day with that time
+//   7. a time preference with no day ("after 4") → ask "today, or another day?"
 //   8. otherwise: unclear
 
 import type { Understander, Preferences, Understanding, UnderstandingContext } from "./types";
@@ -532,9 +532,9 @@ export const understandWithRules: Understander = async (message, context) => {
   // 6. Later today
   if (prefs.dayOffset === 0 || hasAny(t, LATER_TODAY_WORDS)) return result("later_today");
 
-  // 7. Only a time preference ("after 4", "evening") — other days are the
-  //    only place a patient can pick a time, so search those.
-  if (prefs.timeOfDay || prefs.after || prefs.before) return result("another_day");
+  // 7. Only a time preference ("after 4", "evening") — don't guess the day:
+  //    DocDelay will ask "today, or another day?"
+  if (prefs.timeOfDay || prefs.after || prefs.before) return result("time_without_day");
 
   // 8. Nothing matched
   return result("unclear", { preferences: {} });

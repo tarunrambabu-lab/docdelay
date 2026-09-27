@@ -54,6 +54,15 @@ export function unclearReply(language: Language, hasOffers: boolean): string {
   return hasOffers ? base + offers : base;
 }
 
+// Asked when the patient gave a time but no day (e.g. "after 4").
+export function askTodayOrAnotherDay(language: Language): string {
+  return {
+    English: "Do you mean today, or another day?",
+    Tamil: "இன்றைக்கா, அல்லது வேறு நாளுக்கா?",
+    Hindi: "क्या आपका मतलब आज से है, या किसी और दिन से?",
+  }[language];
+}
+
 // Put in front of the offers when nothing matched what the patient asked for.
 export function noMatchPrefix(language: Language): string {
   return {

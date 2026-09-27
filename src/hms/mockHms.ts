@@ -46,6 +46,7 @@ import {
   planLaterToday,
   SLOT_MINUTES,
   type SlotQuery,
+  type TimeWish,
 } from "@/lib/reschedulingRules";
 import {
   anotherDayReply,
@@ -55,6 +56,7 @@ import {
   otherDayOffersScript,
 } from "@/lib/callScript";
 import {
+  askTodayOrAnotherDay,
   cancelledReply,
   noMatchPrefix,
   slotTakenPrefix,
@@ -386,13 +388,18 @@ function applyOffer(
 // Give a patient who pressed "1 – Later today" a new time today, following the
 // rules in lib/reschedulingRules.ts. Changes `state`; the caller saves it.
 // Returns null if it worked, or the reason there was no room today.
-function rescheduleLaterToday(state: HmsState, appt: Appointment, at: number): string | null {
+function rescheduleLaterToday(
+  state: HmsState,
+  appt: Appointment,
+  at: number,
+  wish?: TimeWish, // only times the patient asked for, e.g. "today after 4"
+): string | null {
   const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId);
   if (!unavailability) return "unknown unavailability"; // shouldn't happen
   const todaysAppointments = state.appointments.filter(
     (a) => a.doctorId === appt.doctorId && a.dayOffset === 0,
   );
-  const plan = planLaterToday(appt, todaysAppointments, unavailability.untilTime);
+  const plan = planLaterToday(appt, todaysAppointments, unavailability.untilTime, wish);
 
   if (plan.kind === "no room") return plan.why;
 
@@ -739,6 +746,17 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
   };
   if (u.intent !== "unclear") appt.unclearInARow = 0;
 
+  // A time given earlier without a day ("after 4") is used with the answer to
+  // "today, or another day?" — unless the new message names a time itself.
+  const timeOf = (p: Preferences): TimeWish | undefined =>
+    p.timeOfDay || p.after || p.before
+      ? { timeOfDay: p.timeOfDay, after: p.after, before: p.before }
+      : undefined;
+  const prefs: Preferences = timeOf(u.preferences)
+    ? u.preferences
+    : { ...u.preferences, ...appt.timeWish };
+  if (u.intent !== "unclear" && u.intent !== "time_without_day") delete appt.timeWish;
+
   switch (u.intent) {
     // SAFETY: any health concern stops rescheduling at once. Nothing is
     // booked, reserved or prioritised; any later rebooking follows the normal rules.
@@ -764,13 +782,20 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
       log("Cancelled", "cancelled");
       return true;
 
+    // A time but no day — don't guess: ask. (Not an "unclear" reply.)
+    case "time_without_day":
+      appt.timeWish = timeOf(u.preferences);
+      say(askTodayOrAnotherDay(language));
+      return true;
+
     case "later_today": {
-      if (appt.offers && appt.offersBecause === "no room today") {
+      const todayWish = timeOf(prefs); // e.g. "after 4" → only at or after 4 PM
+      if (appt.offers && appt.offersBecause === "no room today" && !todayWish) {
         // Today is still full — repeat the other-day offers.
         say(otherDayOffersScript(language, appt.offers, true));
         return true;
       }
-      const noRoomBecause = rescheduleLaterToday(state, appt, step.at);
+      const noRoomBecause = rescheduleLaterToday(state, appt, step.at, todayWish);
       if (!noRoomBecause) {
         dropOffers();
         say(laterTodayReply(language, formatTime(appt.startTime)));
@@ -778,6 +803,22 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
         return true;
       }
       log("Wants later today", `No room today: ${noRoomBecause}`);
+      if (todayWish) {
+        // Nothing today at the time they asked for: say so, and offer other
+        // days at that time.
+        const { offers } = chatOffers(state, appt, todayWish);
+        if (offers.length === 0) {
+          appt.status = "Needs staff call";
+          appt.note = "No free slot in the next days";
+          dropOffers();
+          say(staffWillCallReply(language));
+          return true;
+        }
+        appt.offers = offers;
+        appt.offersBecause = "asked";
+        say(`${noMatchPrefix(language)} ${otherDayOffersScript(language, offers, false)}`);
+        return true;
+      }
       offerOtherDays(state, appt, "no room today");
       say(
         appt.offers
@@ -788,7 +829,7 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
     }
 
     case "another_day": {
-      const { matched, offers } = chatOffers(state, appt, u.preferences);
+      const { matched, offers } = chatOffers(state, appt, prefs);
       if (offers.length === 0) {
         appt.status = "Needs staff call";
         appt.note = "No free slot in the next days";

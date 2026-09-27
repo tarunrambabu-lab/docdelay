@@ -113,6 +113,9 @@ export interface Appointment {
   offersBecause?: "asked" | "no room today"; // pressed 2, or pressed 1 but today was full
   chat?: ChatTurn[]; // the full chat, if the call was done in Chat mode
   unclearInARow?: number; // chat replies in a row that couldn't be understood
+  // A time the patient gave without a day ("after 4"), kept while DocDelay
+  // asks "today, or another day?".
+  timeWish?: { timeOfDay?: "morning" | "afternoon" | "evening"; after?: string; before?: string };
   falseAlarms?: FalseAlarm[]; // URGENT flags that staff marked as false alarms
 }
 
