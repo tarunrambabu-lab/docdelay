@@ -23,6 +23,11 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - "Morning" requests must end by 12:00 PM and "afternoon" by 4:00 PM — treated like "before X".
 - A named day the clinic is closed on (Sunday) gets "The clinic is closed on …" instead of "… is full at that time".
 - Staff screens (staff call list, call-simulator header, Buttons screen) stay in English.
+- AI chat: after an outcome (booked / waiting / cancelled / staff / urgent), DocDelay sends its own fixed confirmation line instead of AI-written text, so the AM/PM and local-time-word rules are always met. (It also saves one API call.)
+- AI chat: when the daily AI message limit is hit, the simulator switches to Buttons (as before); when the AI errors or its reply fails the checks, only that message falls back to the rule-based stand-in.
+- AI chat: in one turn the AI may check slots more than once; all slots offered in that turn are kept (up to 5, A–E). E.g. "kal subah ya parso shaam" also got a day-after-tomorrow morning option.
+- AI chat: Tamil/Hindi replies may mix in English words (e.g. "Thursday") around the exact slot text.
+- AI chat: the prompt (≈2,300 tokens) is below the minimum size for prompt caching on Haiku 4.5, so each call pays full input price (≈$0.003 per API call).
 
 ## Done
 

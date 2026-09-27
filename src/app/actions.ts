@@ -24,7 +24,9 @@ import {
   type UnavailabilityReason,
 } from "@/hms/types";
 import { isValidTime } from "@/lib/time";
-import { interpretPatientMessage } from "@/lib/understanding";
+import { activeEngine, interpretWithRules, mentionsHealth } from "@/lib/understanding";
+import { aiChatTurn } from "@/lib/understanding/aiChat";
+import { countOneAiMessage } from "@/lib/understanding/usage";
 import { MAX_CHAT_TEXT } from "@/hms/visitorState";
 
 // What the "unavailable" form gets back: nothing yet, success, or an error.
@@ -111,11 +113,13 @@ export async function sendUpdatesAction(): Promise<void> {
 }
 
 // Chat mode: the operator typed what the patient said.
-// 1. Understand it (rule-based today, AI later — see lib/understanding).
-// 2. If the AI is unavailable (spending limit or error): switch to Buttons
-//    mode with a small notice.
-// 3. Otherwise run the conversation one step. If an outcome was recorded,
-//    show the finished chat; if not, stay on the chat.
+// 1. SAFETY first: the rule-based health check runs on every message. Any
+//    health words → the rule-based URGENT escalation, never the AI.
+// 2. If the AI is on (settings + API key): check the spending limits (hit →
+//    Buttons mode with a notice), then let the AI handle the message. If the
+//    AI fails for any reason, the rule-based stand-in handles THIS message.
+// 3. Otherwise (or as the fallback): the rule-based stand-in.
+// If an outcome was recorded, show the finished chat; if not, stay on the chat.
 export async function chatAction(
   appointmentId: string,
   message: string,
@@ -126,15 +130,21 @@ export async function chatAction(
   if (!appt || appt.status !== "Affected – needs contact") return;
   const callsPage = `/calls/${appt.unavailabilityId}`;
 
-  const interpreted = await interpretPatientMessage(text, {
-    language: appt.patient.preferredLanguage,
-    offers: appt.offers ?? [],
-  });
-  if (!interpreted.ok) redirect(`${callsPage}?mode=buttons&notice=${interpreted.reason}`);
-
-  const saved = await sendChatMessage(appointmentId, text, interpreted.understanding);
-  if (!saved)
-    return { error: "This demo has too much history. Press “Reset demo” to start again." };
+  let handled = false;
+  if (activeEngine() === "claude" && !mentionsHealth(text)) {
+    if ((await countOneAiMessage()) !== "ok") redirect(`${callsPage}?mode=buttons&notice=limit`);
+    handled = (await aiChatTurn(appointmentId, text)).ok; // failed → rule-based below
+  }
+  if (!handled) {
+    const understanding = await interpretWithRules(text, {
+      language: appt.patient.preferredLanguage,
+      offers: appt.offers ?? [],
+    });
+    const saved = await sendChatMessage(appointmentId, text, understanding);
+    if (!saved) {
+      return { error: "This demo has too much history. Press “Reset demo” to start again." };
+    }
+  }
 
   const after = await getAppointment(appointmentId);
   if (after && after.status !== "Affected – needs contact") {

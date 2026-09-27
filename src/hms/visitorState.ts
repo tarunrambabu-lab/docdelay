@@ -16,6 +16,10 @@
 //                              (intent #1, no offer, day 4, any time, after 16:00)
 //   f.12.mg3k2h33              staff marked appt-012's URGENT flag a false alarm
 //   b.12.3.1015.mg3k2i44       bookSlot tool: book appt-012 on day 3 at 10:15
+//   a.12.b3-1615.<text>.<reply>.3-1600~4-1615.mg3k2j55
+//                              AI chat turn for appt-012: its outcome (here: book
+//                              day 3 at 16:15), the patient's text and the AI's
+//                              reply (both compressed), and the slots it offered
 // Steps are joined with "_". Times are milliseconds since 1970, in base 36.
 //
 // Chat messages are saved together with what they were understood to mean,
@@ -23,9 +27,10 @@
 // (with the AI version, that means no repeated — and paid — AI calls).
 
 import { cookies } from "next/headers";
+import { deflateRawSync, inflateRawSync } from "node:zlib";
 import startingData from "./mockData.json";
 import { CALL_RESULTS, UNAVAILABILITY_REASONS } from "./types";
-import type { CallResult, UnavailabilityReason } from "./types";
+import type { CallResult, SlotOffer, UnavailabilityReason } from "./types";
 import { isValidTime } from "@/lib/time";
 import { INTENTS, type Understanding } from "@/lib/understanding/types";
 import type { TimeOfDay } from "@/lib/reschedulingRules";
@@ -51,7 +56,34 @@ export type DemoStep =
       understanding: Understanding; // what it was understood to mean
     }
   | { kind: "falseAlarm"; at: number; appointmentId: string }
-  | { kind: "book"; at: number; appointmentId: string; dayOffset: number; startTime: string };
+  | { kind: "book"; at: number; appointmentId: string; dayOffset: number; startTime: string }
+  | {
+      kind: "ai";
+      at: number;
+      appointmentId: string;
+      text: string; // what the patient typed
+      reply: string; // what the AI replied (checked before saving)
+      offers: SlotOffer[]; // slots the AI offered in this turn (from checkFreeSlots)
+      action?: AiAction; // at most one outcome, already checked by the hms rules
+    };
+
+// The one outcome an AI chat turn may record. The hms module applies it with
+// the same rules as everywhere else.
+export type AiAction =
+  | { kind: "book"; dayOffset: number; startTime: string } // via bookSlot
+  | { kind: "wait" } // plain "later today" (the push rules)
+  | { kind: "cancel" }
+  | { kind: "staff"; reason: StaffReason }
+  | { kind: "urgent" }; // health concern → URGENT staff call
+
+export const STAFF_REASONS = [
+  "asked_for_person",
+  "could_not_understand",
+  "no_suitable_time",
+] as const;
+export type StaffReason = (typeof STAFF_REASONS)[number];
+
+export const MAX_AI_REPLY = 700; // longest AI reply kept (characters)
 
 export const MAX_CHAT_TEXT = 200; // longest chat message kept
 
@@ -79,6 +111,55 @@ const packText = (text: string) =>
 const unpackText = (code: string) =>
   Buffer.from(code.replace(/\*/g, "_"), "base64url").toString("utf8").slice(0, MAX_CHAT_TEXT);
 const orN = (value: string | number | undefined) => (value === undefined ? "n" : value);
+// Longer texts (AI replies, often in Tamil or Hindi) are compressed first.
+const packLong = (text: string, max: number) =>
+  deflateRawSync(Buffer.from(text.slice(0, max), "utf8"))
+    .toString("base64url")
+    .replace(/_/g, "*");
+const unpackLong = (code: string, max: number) =>
+  inflateRawSync(Buffer.from(code.replace(/\*/g, "_"), "base64url"))
+    .toString("utf8")
+    .slice(0, max);
+// Offers ↔ "3-1015~4-1400"
+const packOffers = (offers: SlotOffer[]) =>
+  offers.length ? offers.map((o) => `${o.dayOffset}-${hhmm(o.startTime)}`).join("~") : "n";
+const unpackOffers = (code: string): SlotOffer[] | null => {
+  if (code === "n") return [];
+  const offers = code.split("~").map((o) => {
+    const [day, time] = o.split("-");
+    return { dayOffset: Number(day), startTime: unHhmm(time ?? "") };
+  });
+  return offers.every((o) => Number.isInteger(o.dayOffset) && isValidTime(o.startTime))
+    ? offers
+    : null;
+};
+// AI outcome ↔ "n" | "b3-1615" | "w" | "c" | "s0" | "u"
+const packAction = (a?: AiAction) =>
+  !a
+    ? "n"
+    : a.kind === "book"
+      ? `b${a.dayOffset}-${hhmm(a.startTime)}`
+      : a.kind === "staff"
+        ? `s${STAFF_REASONS.indexOf(a.reason)}`
+        : { wait: "w", cancel: "c", urgent: "u" }[a.kind];
+const unpackAction = (code: string): AiAction | undefined | null => {
+  if (code === "n") return undefined;
+  if (code === "w") return { kind: "wait" };
+  if (code === "c") return { kind: "cancel" };
+  if (code === "u") return { kind: "urgent" };
+  if (code.startsWith("s")) {
+    const reason = STAFF_REASONS[Number(code.slice(1))];
+    return reason ? { kind: "staff", reason } : null;
+  }
+  if (code.startsWith("b")) {
+    const [day, time] = code.slice(1).split("-");
+    const startTime = unHhmm(time ?? "");
+    return Number.isInteger(Number(day)) && isValidTime(startTime)
+      ? { kind: "book", dayOffset: Number(day), startTime }
+      : null;
+  }
+  return null;
+};
 
 function encodeStep(step: DemoStep): string {
   const at = step.at.toString(36);
@@ -120,6 +201,16 @@ function encodeStep(step: DemoStep): string {
       return ["b", apptNumber(step.appointmentId), step.dayOffset, hhmm(step.startTime), at].join(
         ".",
       );
+    case "ai":
+      return [
+        "a",
+        apptNumber(step.appointmentId),
+        packAction(step.action),
+        packLong(step.text, MAX_CHAT_TEXT),
+        packLong(step.reply, MAX_AI_REPLY),
+        packOffers(step.offers),
+        at,
+      ].join(".");
   }
 }
 
@@ -194,6 +285,26 @@ function decodeStep(code: string): DemoStep | null {
       dayOffset: Number(parts[1]),
       startTime,
     };
+  }
+  if (kind === "a" && parts.length === 6) {
+    const [appt, action, text, reply, offers] = parts;
+    if (!Number.isInteger(Number(appt))) return null;
+    const parsedAction = unpackAction(action);
+    const parsedOffers = unpackOffers(offers);
+    if (parsedAction === null || parsedOffers === null) return null;
+    try {
+      return {
+        kind: "ai",
+        at,
+        appointmentId: apptId(Number(appt)),
+        text: unpackLong(text, MAX_CHAT_TEXT),
+        reply: unpackLong(reply, MAX_AI_REPLY),
+        offers: parsedOffers,
+        action: parsedAction,
+      };
+    } catch {
+      return null; // not valid compressed text
+    }
   }
   return null;
 }

@@ -30,7 +30,7 @@ DocDelay plugs into the hospital's management system (HMS), finds the affected a
 - **Later-today rescheduling** — finds the patient a new slot after the doctor's return and tells them the new time on the call.
 - **Another-day rescheduling** — offers three open slots over the next week (A / B / C) and books the one they pick.
 - **One-text-per-patient outbox** — every patient whose time changed gets exactly one text with their *final* time, in their language, once staff press "Send updates".
-- **Chat mode** — instead of pressing buttons, type what the patient says ("Can I come Thursday after 4?", "naan wait panren", "cancel kar do"). A swappable *understanding* layer turns it into an intent and preferences; today it's a rule-based stand-in, built so a Claude-powered version can replace it with one setting.
+- **Chat mode** — instead of pressing buttons, type what the patient says ("Can I come Thursday after 4?", "naan wait panren", "cancel kar do"). With an Anthropic API key set, **Claude Haiku 4.5** handles the conversation, using two tools (`checkFreeSlots`, `bookSlot`) that apply all the hospital's rules — the AI only talks, it never decides. Without a key (as on the live demo) a free rule-based stand-in does the same job. If the AI fails, that message falls back to the stand-in.
 - **Health-concern safety net** — any mention of a symptom stops rescheduling at once, replies with a fixed "connecting you to staff / call 108" line, and puts the patient at the top of the dashboard as **URGENT – staff call now**. It never books or prioritises a slot, and never gives medical advice. Staff can mark false alarms.
 - **Full audit trail** — each appointment keeps a call log, the full chat, and a history of time changes (old time, new time, why). Click any row on the dashboard to see it.
 
@@ -72,6 +72,8 @@ npm run dev
 
 Then open **http://localhost:3000**.
 
+Optional — to use the Claude-powered chat, create a `.env.local` file with `ANTHROPIC_API_KEY=your-key` (it's git-ignored). Each AI message's token use and estimated cost is printed in the terminal.
+
 ### A 2-minute demo
 
 1. Choose **Dr. Meera Krishnan** and click **Mark doctor unavailable**. Set **9:00 AM → 11:00 AM** and submit.
@@ -106,7 +108,7 @@ src/
 
 ## Roadmap
 
-- **AI conversation** — the chat groundwork is in place: swap the rule-based stand-in for Claude Haiku (`src/lib/understanding/claude.ts` + one setting), with per-visitor and site-wide daily spending limits already built in.
+- **AI conversation in the live demo** — the Claude-powered chat works locally (`src/lib/understanding/`); before switching it on publicly, move the site-wide spending counter to a shared store and set a spend limit on the API key.
 - **Real calls and texts** — connect a telephony/SMS provider so patients are actually called and messaged.
 - **Real HMS integration** — replace the mock with a FHIR or hospital-specific API adapter behind the same `hms` interface.
 

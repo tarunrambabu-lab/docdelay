@@ -101,6 +101,11 @@ export function laterTodayReply(language: Language, startTime: string): string {
 // The word for "today" in each language (used when an offer is for today).
 const TODAY: Record<Language, string> = { English: "today", Tamil: "இன்று", Hindi: "आज" };
 
+// How an offer's day is written to a patient: "today" or the date, in their language.
+export function dayLabelFor(dayOffset: number, language: Language): string {
+  return dayOffset === 0 ? TODAY[language] : formatDate(dayOffset, language);
+}
+
 // Reads out the offers, e.g. "We can offer: A) Mon 28 Sep, 10:15 AM, B) …".
 // Offers can be for other days or for today ("A) today, 4:00 PM").
 // If the patient pressed 1 but today was full, it starts with an apology.
@@ -115,7 +120,7 @@ export function otherDayOffersScript(
   const list = offers
     .map(
       (o, i) =>
-        `${OFFER_LETTERS[i]}) ${o.dayOffset === 0 ? TODAY[language] : formatDate(o.dayOffset, language)}, ${formatTimeFor(o.startTime, language)}`,
+        `${OFFER_LETTERS[i]}) ${dayLabelFor(o.dayOffset, language)}, ${formatTimeFor(o.startTime, language)}`,
     )
     .join(", ");
   // "A, B or C" (with the word for "or" in each language); just "A" if there's one offer.
