@@ -22,6 +22,9 @@
 //   part of the day as the original booking (morning → morning,
 //   afternoon → afternoon), then the earliest days, then the time closest to
 //   the original.
+//
+// Any other day: EMPTY SLOTS ONLY. Nobody's booking on another day is ever
+// moved or pushed. Every slot DocDelay mentions comes from listFreeSlots.
 
 import type { Appointment, SlotOffer } from "@/hms/types";
 import { dateForDayOffset, formatTime, fromMinutes, toMinutes } from "@/lib/time";
@@ -35,6 +38,7 @@ export const LATEST_APPOINTMENT_END = "19:00"; // 7:00 PM — no appointment may
 export const MAX_PUSH_MINUTES = 45; // an unaffected patient may be pushed back at most this much in total
 export const CLOSED_WEEKDAYS = [0]; // days the hospital is closed (0 = Sunday … 6 = Saturday)
 export const MORNING_ENDS = "12:00"; // before this is "morning", from this on is "afternoon"
+export const EVENING_STARTS = "16:00"; // from this on is "evening" (for chat requests like "evening")
 export const DAYS_TO_SEARCH = 7; // how many days ahead to look for "another day" slots
 export const OFFERS_TO_MAKE = 3; // how many other-day slots to offer
 
@@ -147,49 +151,154 @@ export function planLaterToday(
   return { kind: "push", newStartTime: fromMinutes(insertAt), pushed };
 }
 
-// ---------- "2 – Another day" ----------
+// ---------- Free slots (used by "another day" and by chat) ----------
 
-export function findOtherDaySlots(
-  patientAppointment: Appointment,
+export type TimeOfDay = "morning" | "afternoon" | "evening";
+
+// What to look for. Every field is optional.
+export interface SlotQuery {
+  days?: number[]; // which days (dayOffsets); default: every day from 1 to DAYS_TO_SEARCH
+  timeOfDay?: TimeOfDay;
+  after?: string; // "HH:MM" — the slot starts at or after this
+  before?: string; // "HH:MM" — the slot ends at or before this
+}
+
+// "10:30" → "morning", "13:00" → "afternoon", "16:15" → "evening"
+export function timeOfDayOf(time: string): TimeOfDay {
+  const t = toMinutes(time);
+  if (t < toMinutes(MORNING_ENDS)) return "morning";
+  if (t < toMinutes(EVENING_STARTS)) return "afternoon";
+  return "evening";
+}
+
+// Every genuinely EMPTY 15-minute slot that matches the query, earliest first.
+// Only normal opening hours, never closed days, never beyond DAYS_TO_SEARCH.
+// Today (day 0) is only searched if `todayFrom` says when the doctor is back.
+// Nothing here ever needs anyone else to move.
+export function listFreeSlots(
   doctorsAppointments: Appointment[], // ALL of this doctor's appointments, every day
+  query: SlotQuery,
+  options: { excludeAppointmentId?: string; todayFrom?: string } = {},
 ): SlotOffer[] {
-  const original = toMinutes(originalStartTime(patientAppointment));
-  const morningEnds = toMinutes(MORNING_ENDS);
-  const wantsMorning = original < morningEnds;
+  const days = query.days ?? Array.from({ length: DAYS_TO_SEARCH }, (_, i) => i + 1); // 1 … DAYS_TO_SEARCH
+  const slots: SlotOffer[] = [];
 
-  // Of a list of free slots, the one closest to the original time
+  for (const day of [...new Set(days)].sort((a, b) => a - b)) {
+    if (day < 0 || day > DAYS_TO_SEARCH || isClosedDay(day)) continue;
+    if (day === 0 && !options.todayFrom) continue;
+
+    const thatDay = doctorsAppointments.filter(
+      (a) => a.dayOffset === day && a.id !== options.excludeAppointmentId,
+    );
+    const firstSlot =
+      day === 0
+        ? Math.max(
+            toMinutes(DAY_START),
+            Math.ceil(toMinutes(options.todayFrom!) / SLOT_MINUTES) * SLOT_MINUTES,
+          )
+        : toMinutes(DAY_START);
+
+    for (
+      let slot = firstSlot;
+      slot + SLOT_MINUTES <= toMinutes(NORMAL_DAY_END);
+      slot += SLOT_MINUTES
+    ) {
+      const time = fromMinutes(slot);
+      if (query.timeOfDay && timeOfDayOf(time) !== query.timeOfDay) continue;
+      if (query.after && slot < toMinutes(query.after)) continue;
+      if (query.before && slot + SLOT_MINUTES > toMinutes(query.before)) continue;
+      if (isSlotFree(thatDay, slot)) slots.push({ dayOffset: day, startTime: time });
+    }
+  }
+  return slots;
+}
+
+// Pick up to `count` offers from a list of free slots: one per day, preferring
+// the same half of the day as `anchorTime`, then the earliest days, then the
+// time closest to `anchorTime`.
+export function pickOffers(
+  free: SlotOffer[],
+  anchorTime: string,
+  count = OFFERS_TO_MAKE,
+): SlotOffer[] {
+  const anchor = toMinutes(anchorTime);
+  const morningEnds = toMinutes(MORNING_ENDS);
+  const wantsMorning = anchor < morningEnds;
+
+  // Of some free slots, the one closest to the anchor time
   // (the earlier one if two are equally close).
   const closest = (slots: number[]) =>
-    [...slots].sort((a, b) => Math.abs(a - original) - Math.abs(b - original) || a - b)[0];
+    [...slots].sort((a, b) => Math.abs(a - anchor) - Math.abs(b - anchor) || a - b)[0];
 
   const sameHalf: SlotOffer[] = []; // best slot per day in the same half of the day
   const otherHalf: SlotOffer[] = []; // best slot on days with nothing in the same half
 
-  for (let day = 1; day <= DAYS_TO_SEARCH; day++) {
-    if (isClosedDay(day)) continue;
-    const thatDay = doctorsAppointments.filter(
-      (a) => a.dayOffset === day && a.id !== patientAppointment.id,
-    );
-
-    const free: number[] = [];
-    for (
-      let slot = toMinutes(DAY_START);
-      slot + SLOT_MINUTES <= toMinutes(NORMAL_DAY_END);
-      slot += SLOT_MINUTES
-    ) {
-      if (isSlotFree(thatDay, slot)) free.push(slot);
-    }
-
-    const best = closest(free.filter((s) => s < morningEnds === wantsMorning));
+  const days = [...new Set(free.map((s) => s.dayOffset))].sort((a, b) => a - b);
+  for (const day of days) {
+    const times = free.filter((s) => s.dayOffset === day).map((s) => toMinutes(s.startTime));
+    const best = closest(times.filter((t) => t < morningEnds === wantsMorning));
     if (best !== undefined) {
       sameHalf.push({ dayOffset: day, startTime: fromMinutes(best) });
-    } else if (free.length > 0) {
-      otherHalf.push({ dayOffset: day, startTime: fromMinutes(closest(free)) });
+    } else if (times.length > 0) {
+      otherHalf.push({ dayOffset: day, startTime: fromMinutes(closest(times)) });
     }
   }
 
   // Same half of the day first (earliest days), then fill up with the others.
-  return [...sameHalf, ...otherHalf]
-    .slice(0, OFFERS_TO_MAKE)
-    .sort((a, b) => a.dayOffset - b.dayOffset);
+  return [...sameHalf, ...otherHalf].slice(0, count).sort((a, b) => a.dayOffset - b.dayOffset);
+}
+
+// The `count` free slots closest to a wished-for day and time (any day if
+// no day is given — then earlier days count as closer). Used when nothing
+// matches exactly, or when the patient asked for one specific day.
+export function pickClosest(
+  free: SlotOffer[],
+  target: { dayOffset?: number; time: string },
+  count = OFFERS_TO_MAKE,
+): SlotOffer[] {
+  const distance = (s: SlotOffer) =>
+    (target.dayOffset === undefined ? s.dayOffset : Math.abs(s.dayOffset - target.dayOffset)) *
+      24 *
+      60 +
+    Math.abs(toMinutes(s.startTime) - toMinutes(target.time));
+  return [...free]
+    .sort((a, b) => distance(a) - distance(b))
+    .slice(0, count)
+    .sort((a, b) => a.dayOffset - b.dayOffset || a.startTime.localeCompare(b.startTime));
+}
+
+// The time to search around for a chat request: "after 4" → 16:00,
+// "before 11" → 10:00, "evening" → 16:30, … or else the original booking time.
+export function anchorTime(
+  wish: { timeOfDay?: TimeOfDay; after?: string; before?: string },
+  originalTime: string,
+): string {
+  if (wish.after) return wish.after;
+  if (wish.before) {
+    return fromMinutes(Math.max(toMinutes(DAY_START), toMinutes(wish.before) - 60));
+  }
+  if (wish.timeOfDay) return { morning: "10:00", afternoon: "14:00", evening: "16:30" }[wish.timeOfDay];
+  return originalTime;
+}
+
+// The time a patient was first booked for (exported for chat).
+export function originalTimeOf(appt: Appointment): string {
+  return originalStartTime(appt);
+}
+
+// ---------- "2 – Another day" ----------
+
+// The 3 offers read out after "2 – Another day" (or "no room today").
+export function findOtherDaySlots(
+  patientAppointment: Appointment,
+  doctorsAppointments: Appointment[], // ALL of this doctor's appointments, every day
+): SlotOffer[] {
+  const free = listFreeSlots(
+    doctorsAppointments,
+    {},
+    {
+      excludeAppointmentId: patientAppointment.id,
+    },
+  );
+  return pickOffers(free, originalStartTime(patientAppointment));
 }

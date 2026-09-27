@@ -14,6 +14,7 @@ export const statusColors: Record<AppointmentStatus, string> = {
   "Needs staff call": "bg-orange-100 text-orange-800",
   "No answer": "bg-yellow-100 text-yellow-800",
   "Time moved": "bg-cyan-100 text-cyan-800",
+  "URGENT – staff call now": "bg-red-600 text-white font-semibold",
 };
 
 // Short words used in the summary, e.g. "3 later today". Statuses not
@@ -24,6 +25,7 @@ const summaryWords: Partial<Record<AppointmentStatus, string>> = {
   Cancelled: "cancelled",
   "Needs staff call": "needs staff",
   "No answer": "no answer",
+  "URGENT – staff call now": "urgent",
 };
 
 // "8 called: 3 later today, 2 another day, 1 cancelled"

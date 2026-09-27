@@ -22,13 +22,29 @@ export type AppointmentStatus =
   | "Cancelled"
   | "Needs staff call"
   | "No answer"
-  | "Time moved"; // pushed back to make room for a rescheduled patient
+  | "Time moved" // pushed back to make room for a rescheduled patient
+  | "URGENT – staff call now"; // patient mentioned a health concern — a person must call NOW
 
 // One line in an appointment's call log.
 export interface CallLogEntry {
   calledAt: string; // when the call happened (ISO date-time)
-  result: CallResult;
+  result?: CallResult; // what the patient answered (empty for staff notes)
   detail?: string; // extra info, e.g. "Picked B: Tue 29 Sep, 9:45 AM"
+}
+
+// One line of a chat conversation (Chat mode in the call simulator).
+export interface ChatTurn {
+  at: string; // ISO date-time
+  from: "patient" | "docdelay";
+  text: string;
+  // For patient lines: what DocDelay understood (e.g. "another_day: Thu, after 16:00").
+  understood?: string;
+}
+
+// A staff member said an URGENT flag was a false alarm.
+export interface FalseAlarm {
+  at: string; // ISO date-time
+  by: string; // who marked it (the demo has no staff logins, so "Front desk")
 }
 
 // One line in an appointment's time-change history.
@@ -95,6 +111,9 @@ export interface Appointment {
   // Other-day slots offered on the phone, waiting for the patient to pick one.
   offers?: SlotOffer[];
   offersBecause?: "asked" | "no room today"; // pressed 2, or pressed 1 but today was full
+  chat?: ChatTurn[]; // the full chat, if the call was done in Chat mode
+  unclearInARow?: number; // chat replies in a row that couldn't be understood
+  falseAlarms?: FalseAlarm[]; // URGENT flags that staff marked as false alarms
 }
 
 // An appointment with its patient's details attached — handy for screens.

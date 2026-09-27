@@ -69,3 +69,12 @@ export function formatWhen(dayOffset: number, time: string): string {
     ? `Today ${formatTime(time)}`
     : `${formatDate(dayOffset)}, ${formatTime(time)}`;
 }
+
+// "2026-09-27T05:10:00.000Z" → "10:40 AM" (hospital time) — for logs.
+export function formatClock(isoDateTime: string): string {
+  return new Date(isoDateTime).toLocaleTimeString("en-IN", {
+    timeZone: HOSPITAL_TIME_ZONE,
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}

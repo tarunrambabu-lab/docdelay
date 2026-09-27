@@ -10,6 +10,8 @@ import {
   chooseOffer,
   getAppointment,
   getDoctor,
+  markFalseAlarm,
+  sendChatMessage,
   markDoctorUnavailable,
   recordCallResult,
   resetDemo,
@@ -22,6 +24,8 @@ import {
   type UnavailabilityReason,
 } from "@/hms/types";
 import { isValidTime } from "@/lib/time";
+import { interpretPatientMessage } from "@/lib/understanding";
+import { MAX_CHAT_TEXT } from "@/hms/visitorState";
 
 // What the "unavailable" form gets back: nothing yet, success, or an error.
 export type MarkUnavailableResult = { ok?: boolean; error?: string };
@@ -103,5 +107,44 @@ export async function resetDemoAction(): Promise<void> {
 // "Send" all pending text updates (simulated — nothing is really sent).
 export async function sendUpdatesAction(): Promise<void> {
   await sendPendingUpdates();
+  refresh();
+}
+
+// Chat mode: the operator typed what the patient said.
+// 1. Understand it (rule-based today, AI later — see lib/understanding).
+// 2. If the AI is unavailable (spending limit or error): switch to Buttons
+//    mode with a small notice.
+// 3. Otherwise run the conversation one step. If an outcome was recorded,
+//    show the finished chat; if not, stay on the chat.
+export async function chatAction(
+  appointmentId: string,
+  message: string,
+): Promise<{ error?: string } | void> {
+  const text = message.trim().slice(0, MAX_CHAT_TEXT);
+  if (!text) return;
+  const appt = await getAppointment(appointmentId);
+  if (!appt || appt.status !== "Affected – needs contact") return;
+  const callsPage = `/calls/${appt.unavailabilityId}`;
+
+  const interpreted = await interpretPatientMessage(text, {
+    language: appt.patient.preferredLanguage,
+    offers: appt.offers ?? [],
+  });
+  if (!interpreted.ok) redirect(`${callsPage}?mode=buttons&notice=${interpreted.reason}`);
+
+  const saved = await sendChatMessage(appointmentId, text, interpreted.understanding);
+  if (!saved)
+    return { error: "This demo has too much history. Press “Reset demo” to start again." };
+
+  const after = await getAppointment(appointmentId);
+  if (after && after.status !== "Affected – needs contact") {
+    redirect(`${callsPage}?mode=chat&answered=${appointmentId}`);
+  }
+  refresh();
+}
+
+// Staff: an URGENT flag was a false alarm.
+export async function falseAlarmAction(appointmentId: string): Promise<void> {
+  await markFalseAlarm(appointmentId);
   refresh();
 }

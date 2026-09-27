@@ -29,19 +29,41 @@ import type {
   Patient,
   PendingUpdate,
   PendingUpdateWithDetails,
+  SlotOffer,
   SmsMessage,
   Unavailability,
   UnavailabilityReason,
 } from "./types";
 import { clearSteps, isNearlyFull, readSteps, writeSteps, type DemoStep } from "./visitorState";
 import {
+  anchorTime,
   findOtherDaySlots,
   isClosedDay,
-  isSlotFree,
+  listFreeSlots,
+  originalTimeOf,
+  pickClosest,
+  pickOffers,
   planLaterToday,
   SLOT_MINUTES,
+  type SlotQuery,
 } from "@/lib/reschedulingRules";
-import { OFFER_LETTERS } from "@/lib/callScript";
+import {
+  anotherDayReply,
+  callScript,
+  laterTodayReply,
+  OFFER_LETTERS,
+  otherDayOffersScript,
+} from "@/lib/callScript";
+import {
+  cancelledReply,
+  noMatchPrefix,
+  slotTakenPrefix,
+  staffWillCallReply,
+  unclearReply,
+  urgentReply,
+} from "@/lib/chatReplies";
+import { describeUnderstanding } from "@/lib/understanding/describe";
+import type { Preferences, Understanding } from "@/lib/understanding/types";
 import { timeChangedSms } from "@/lib/smsText";
 import { formatTime, formatWhen, fromMinutes, toMinutes } from "@/lib/time";
 
@@ -87,6 +109,15 @@ function replay(steps: DemoStep[]): HmsState {
         break;
       case "send":
         applySend(state, step);
+        break;
+      case "chat":
+        applyChat(state, step);
+        break;
+      case "falseAlarm":
+        applyFalseAlarm(state, step);
+        break;
+      case "book":
+        applyBook(state, step);
         break;
     }
   }
@@ -343,28 +374,11 @@ function applyOffer(
   const offer = appt.offers[choice];
   if (!offer) return "skipped";
 
-  // Make sure nobody took the slot in the meantime.
-  const thatDay = state.appointments.filter(
-    (a) => a.doctorId === appt.doctorId && a.dayOffset === offer.dayOffset,
-  );
-  if (!isSlotFree(thatDay, toMinutes(offer.startTime))) {
+  // Book it — bookSlotIn re-checks every rule (e.g. nobody took it meanwhile).
+  if (!bookSlotIn(state, appt, offer, at).ok) {
     offerOtherDays(state, appt, appt.offersBecause ?? "asked");
     return "taken";
   }
-
-  const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId)!;
-  moveAppointment(
-    state,
-    appt,
-    offer.dayOffset,
-    offer.startTime,
-    "Patient chose another day",
-    unavailability,
-    at,
-  );
-  appt.status = "Rescheduled – another day";
-  delete appt.offers;
-  delete appt.offersBecause;
   log(`Picked ${OFFER_LETTERS[choice]}: ${formatWhen(offer.dayOffset, offer.startTime)}`);
   return "booked";
 }
@@ -518,6 +532,359 @@ function applySend(state: HmsState, step: Extract<DemoStep, { kind: "send" }>): 
   const sent = state.pendingUpdates.length;
   state.pendingUpdates = [];
   return sent;
+}
+
+// ---------- Tools: check_free_slots and book_slot ----------
+// Used by the chat (rule-based today, AI later) and by the Buttons offers.
+// Every time DocDelay mentions a slot, it came from checkFreeSlots.
+
+export type BookResult = { ok: true } | { ok: false; reason: string };
+
+// check_free_slots: real EMPTY slots for a doctor that match the query
+// (days, time of day, after/before a time). Never a slot that would need
+// anyone to move. Today's slots only from the doctor's return time on.
+export async function checkFreeSlots(
+  doctorId: string,
+  query: SlotQuery,
+  options: { excludeAppointmentId?: string; todayFrom?: string } = {},
+): Promise<SlotOffer[]> {
+  const state = await loadState();
+  return listFreeSlots(
+    state.appointments.filter((a) => a.doctorId === doctorId),
+    query,
+    options,
+  );
+}
+
+// book_slot: re-check a slot under ALL the rules, then book it or refuse
+// with a reason. (A "later today" push is never done here — that only
+// happens through the "Later today" answer and its own rules.)
+export async function bookSlot(appointmentId: string, slot: SlotOffer): Promise<BookResult> {
+  const steps = await readSteps();
+  const step: DemoStep = { kind: "book", at: Date.now(), appointmentId, ...slot };
+  const result = applyBook(replay(steps), step);
+  if (!result.ok) return result;
+  return (await writeSteps([...steps, step]))
+    ? result
+    : { ok: false, reason: "This demo has too much history. Press “Reset demo”." };
+}
+
+function applyBook(state: HmsState, step: Extract<DemoStep, { kind: "book" }>): BookResult {
+  const appt = state.appointments.find((a) => a.id === step.appointmentId);
+  if (!appt) return { ok: false, reason: "Unknown appointment." };
+  const slot = { dayOffset: step.dayOffset, startTime: step.startTime };
+  const result = bookSlotIn(state, appt, slot, step.at);
+  if (result.ok) {
+    appt.callLog = [
+      ...(appt.callLog ?? []),
+      {
+        calledAt: new Date(step.at).toISOString(),
+        detail: `Booked ${formatWhen(slot.dayOffset, slot.startTime)}`,
+      },
+    ];
+  }
+  return result;
+}
+
+// The rules for booking one slot (changes `state`; the caller saves it):
+//   - the patient must still be waiting for a new time;
+//   - the slot must be one checkFreeSlots would list right now: EMPTY, on an
+//     open day, within opening hours, and — today — from the doctor's return
+//     time on. So nobody else is ever moved, and if two patients pick the
+//     same slot, the first one wins and the second is refused.
+function bookSlotIn(state: HmsState, appt: Appointment, slot: SlotOffer, at: number): BookResult {
+  if (appt.status !== "Affected – needs contact") {
+    return { ok: false, reason: "This patient isn't waiting for a new time." };
+  }
+  const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId);
+  if (!unavailability) return { ok: false, reason: "Unknown doctor unavailability." };
+
+  const free = listFreeSlots(
+    state.appointments.filter((a) => a.doctorId === appt.doctorId),
+    { days: [slot.dayOffset] },
+    { excludeAppointmentId: appt.id, todayFrom: unavailability.untilTime },
+  );
+  if (!free.some((f) => f.startTime === slot.startTime)) {
+    return { ok: false, reason: "That slot isn't free any more (or it's outside the rules)." };
+  }
+
+  const today = slot.dayOffset === 0;
+  moveAppointment(
+    state,
+    appt,
+    slot.dayOffset,
+    slot.startTime,
+    today ? "Patient chose a later time today" : "Patient chose another day",
+    unavailability,
+    at,
+  );
+  appt.status = today ? "Rescheduled – later today" : "Rescheduled – another day";
+  delete appt.offers;
+  delete appt.offersBecause;
+  return { ok: true };
+}
+
+// ---------- Chat mode ----------
+
+// A patient's chat message, together with what it was understood to mean
+// (the understanding is done BEFORE this, in lib/understanding). Runs the
+// conversation one step and saves it. Returns false if nothing happened.
+export async function sendChatMessage(
+  appointmentId: string,
+  text: string,
+  understanding: Understanding,
+): Promise<boolean> {
+  const steps = await readSteps();
+  const step: DemoStep = { kind: "chat", at: Date.now(), appointmentId, text, understanding };
+  if (!applyChat(replay(steps), step)) return false;
+  return writeSteps([...steps, step]);
+}
+
+// Offers for a chat request: real free slots matching the wish; if none
+// match, the closest real free slots. Returns an empty list if the doctor
+// has no free slot at all in the coming days.
+function chatOffers(
+  state: HmsState,
+  appt: Appointment,
+  wish: Preferences,
+): { matched: boolean; offers: SlotOffer[] } {
+  const doctorsAppointments = state.appointments.filter((a) => a.doctorId === appt.doctorId);
+  const exclude = { excludeAppointmentId: appt.id };
+  const day = wish.dayOffset;
+  const wantedDay = day !== undefined && day > 0 ? day : undefined;
+  const anchor = anchorTime(wish, originalTimeOf(appt));
+
+  const query: SlotQuery = {
+    days: day !== undefined ? [day] : undefined,
+    timeOfDay: wish.timeOfDay,
+    after: wish.after,
+    before: wish.before,
+  };
+  const matching = listFreeSlots(doctorsAppointments, query, exclude);
+  if (matching.length > 0) {
+    return {
+      matched: true,
+      // One day asked for → the best 3 on that day; otherwise one per day.
+      offers:
+        query.days?.length === 1
+          ? pickClosest(matching, { dayOffset: wantedDay, time: anchor })
+          : pickOffers(matching, anchor),
+    };
+  }
+  const anyFree = listFreeSlots(doctorsAppointments, {}, exclude);
+  return { matched: false, offers: pickClosest(anyFree, { dayOffset: wantedDay, time: anchor }) };
+}
+
+// One chat turn. Replies use the existing wording in the patient's language
+// and only ever mention slots from checkFreeSlots. Changes `state`.
+function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): boolean {
+  const appt = state.appointments.find((a) => a.id === step.appointmentId);
+  if (!appt || appt.status !== "Affected – needs contact") return false;
+  const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId);
+  if (!unavailability) return false;
+
+  const patient = patients.find((p) => p.id === appt.patientId)!;
+  const doctor = doctors.find((d) => d.id === appt.doctorId)!;
+  const language = patient.preferredLanguage;
+  const when = new Date(step.at).toISOString();
+  const u = step.understanding;
+  const say = (text: string) => appt.chat!.push({ at: when, from: "docdelay", text });
+  const log = (result: CallResult | undefined, detail: string) =>
+    (appt.callLog = [
+      ...(appt.callLog ?? []),
+      { calledAt: when, result, detail: `Chat: ${detail}` },
+    ]);
+  const dropOffers = () => {
+    delete appt.offers;
+    delete appt.offersBecause;
+  };
+
+  // The chat starts with what DocDelay said first.
+  if (!appt.chat?.length) {
+    appt.chat = [];
+    say(
+      appt.offers
+        ? otherDayOffersScript(language, appt.offers, appt.offersBecause === "no room today")
+        : callScript({
+            language,
+            patientName: patient.name,
+            hospitalName: hospital.name,
+            doctorName: doctor.name,
+            reason: unavailability.reason,
+            appointmentTime: formatTime(appt.startTime),
+            untilTime: formatTime(unavailability.untilTime),
+          }),
+    );
+  }
+  appt.chat.push({
+    at: when,
+    from: "patient",
+    text: step.text,
+    understood: describeUnderstanding(u),
+  });
+
+  // Couldn't understand: ask again once; the second time in a row, hand over to staff.
+  const unclear = () => {
+    appt.unclearInARow = (appt.unclearInARow ?? 0) + 1;
+    if (appt.unclearInARow >= 2) {
+      appt.status = "Needs staff call";
+      appt.note = "Couldn't understand";
+      dropOffers();
+      say(staffWillCallReply(language));
+      log("Needs staff call", "couldn't understand 2 replies in a row");
+    } else {
+      say(unclearReply(language, Boolean(appt.offers)));
+    }
+    return true;
+  };
+  if (u.intent !== "unclear") appt.unclearInARow = 0;
+
+  switch (u.intent) {
+    // SAFETY: any health concern stops rescheduling at once. Nothing is
+    // booked, reserved or prioritised; any later rebooking follows the normal rules.
+    case "health_concern":
+      appt.status = "URGENT – staff call now";
+      dropOffers();
+      say(urgentReply(language));
+      log(undefined, "health concern mentioned → URGENT staff call");
+      return true;
+
+    case "talk_to_person":
+      appt.status = "Needs staff call";
+      appt.note = appt.offers ? "Wants a different day" : "Asked to talk to a person";
+      dropOffers();
+      say(staffWillCallReply(language));
+      log("Needs staff call", appt.note);
+      return true;
+
+    case "cancel":
+      appt.status = "Cancelled";
+      dropOffers();
+      say(cancelledReply(language));
+      log("Cancelled", "cancelled");
+      return true;
+
+    case "later_today": {
+      if (appt.offers && appt.offersBecause === "no room today") {
+        // Today is still full — repeat the other-day offers.
+        say(otherDayOffersScript(language, appt.offers, true));
+        return true;
+      }
+      const noRoomBecause = rescheduleLaterToday(state, appt, step.at);
+      if (!noRoomBecause) {
+        dropOffers();
+        say(laterTodayReply(language, formatTime(appt.startTime)));
+        log("Wants later today", `new time ${formatTime(appt.startTime)} today`);
+        return true;
+      }
+      log("Wants later today", `No room today: ${noRoomBecause}`);
+      offerOtherDays(state, appt, "no room today");
+      say(
+        appt.offers
+          ? otherDayOffersScript(language, appt.offers, true)
+          : staffWillCallReply(language),
+      );
+      return true;
+    }
+
+    case "another_day": {
+      const { matched, offers } = chatOffers(state, appt, u.preferences);
+      if (offers.length === 0) {
+        appt.status = "Needs staff call";
+        appt.note = "No free slot in the next days";
+        dropOffers();
+        say(staffWillCallReply(language));
+        log("Wants another day", "no free slot in the next days");
+        return true;
+      }
+      appt.offers = offers;
+      appt.offersBecause = "asked";
+      const script = otherDayOffersScript(language, offers, false);
+      say(matched ? script : `${noMatchPrefix(language)} ${script}`);
+      return true;
+    }
+
+    case "choose_offer": {
+      const offer = u.offerIndex !== undefined ? appt.offers?.[u.offerIndex] : undefined;
+      if (!offer) return unclear();
+      if (bookSlotIn(state, appt, offer, step.at).ok) {
+        say(
+          offer.dayOffset === 0
+            ? laterTodayReply(language, formatTime(offer.startTime))
+            : anotherDayReply(language, offer.dayOffset, offer.startTime),
+        );
+        log(
+          "Wants another day",
+          `picked ${OFFER_LETTERS[u.offerIndex!]}: ${formatWhen(offer.dayOffset, offer.startTime)}`,
+        );
+        return true;
+      }
+      // Taken meanwhile — first one wins; this patient gets fresh options.
+      offerOtherDays(state, appt, appt.offersBecause ?? "asked");
+      say(
+        `${slotTakenPrefix(language)} ${
+          appt.offers
+            ? otherDayOffersScript(language, appt.offers, false)
+            : staffWillCallReply(language)
+        }`,
+      );
+      return true;
+    }
+
+    default:
+      return unclear();
+  }
+}
+
+// ---------- URGENT flags ----------
+
+// A staff member says an URGENT flag was a false alarm: the patient goes back
+// to "Affected – needs contact" (and back into the normal call queue — no
+// advantage, no penalty). It's logged with who and when.
+export async function markFalseAlarm(appointmentId: string): Promise<boolean> {
+  const steps = await readSteps();
+  const step: DemoStep = { kind: "falseAlarm", at: Date.now(), appointmentId };
+  if (!applyFalseAlarm(replay(steps), step)) return false;
+  return writeSteps([...steps, step]);
+}
+
+// The demo has no staff logins, so every false alarm is marked by "Front desk".
+const STAFF_NAME = "Front desk";
+
+function applyFalseAlarm(
+  state: HmsState,
+  step: Extract<DemoStep, { kind: "falseAlarm" }>,
+): boolean {
+  const appt = state.appointments.find((a) => a.id === step.appointmentId);
+  if (!appt || appt.status !== "URGENT – staff call now") return false;
+  const when = new Date(step.at).toISOString();
+  appt.status = "Affected – needs contact";
+  appt.unclearInARow = 0;
+  appt.falseAlarms = [...(appt.falseAlarms ?? []), { at: when, by: STAFF_NAME }];
+  appt.callLog = [
+    ...(appt.callLog ?? []),
+    {
+      calledAt: when,
+      detail: `Marked as a false alarm by ${STAFF_NAME} — back to "Affected – needs contact"`,
+    },
+  ];
+  return true;
+}
+
+// Everyone who needs a staff call: URGENT first, then "Needs staff call",
+// each group earliest first.
+export async function getStaffCallList(): Promise<
+  (AppointmentWithPatient & { doctorName: string })[]
+> {
+  const state = await loadState();
+  const rank = (a: Appointment) => (a.status === "URGENT – staff call now" ? 0 : 1);
+  return state.appointments
+    .filter((a) => a.status === "URGENT – staff call now" || a.status === "Needs staff call")
+    .sort((a, b) => rank(a) - rank(b) || byDayAndTime(a, b))
+    .map((a) => ({
+      ...withPatient(a),
+      doctorName: doctors.find((d) => d.id === a.doctorId)!.name,
+    }));
 }
 
 // Put this visitor's demo back to the starting data.

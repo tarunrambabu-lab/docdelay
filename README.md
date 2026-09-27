@@ -30,7 +30,9 @@ DocDelay plugs into the hospital's management system (HMS), finds the affected a
 - **Later-today rescheduling** — finds the patient a new slot after the doctor's return and tells them the new time on the call.
 - **Another-day rescheduling** — offers three open slots over the next week (A / B / C) and books the one they pick.
 - **One-text-per-patient outbox** — every patient whose time changed gets exactly one text with their *final* time, in their language, once staff press "Send updates".
-- **Full audit trail** — each appointment keeps a call log and a history of time changes (old time, new time, why).
+- **Chat mode** — instead of pressing buttons, type what the patient says ("Can I come Thursday after 4?", "naan wait panren", "cancel kar do"). A swappable *understanding* layer turns it into an intent and preferences; today it's a rule-based stand-in, built so a Claude-powered version can replace it with one setting.
+- **Health-concern safety net** — any mention of a symptom stops rescheduling at once, replies with a fixed "connecting you to staff / call 108" line, and puts the patient at the top of the dashboard as **URGENT – staff call now**. It never books or prioritises a slot, and never gives medical advice. Staff can mark false alarms.
+- **Full audit trail** — each appointment keeps a call log, the full chat, and a history of time changes (old time, new time, why). Click any row on the dashboard to see it.
 
 ## Product decisions (and why)
 
@@ -40,6 +42,8 @@ DocDelay plugs into the hospital's management system (HMS), finds the affected a
 | **Patients are placed in the order they answer.** | First come, first served. Someone who said "later today" first shouldn't be bumped by someone who answered after them. |
 | **45-minute fairness cap** (`MAX_PUSH_MINUTES`) | Patients who *weren't* affected shouldn't pay for the delay. No unaffected patient is ever pushed more than 45 minutes past their original time (all pushes counted together). |
 | **7 PM hard limit** (`LATEST_APPOINTMENT_END`) | The day may run late, but not indefinitely. If fitting someone in would run past 7 PM, it's "no room today". |
+| **Other days: empty slots only** | Moving someone on another day to fit a delayed patient would just spread the disruption. Every slot DocDelay offers comes from one `checkFreeSlots` tool, and `bookSlot` re-checks it before booking — if two patients pick the same slot, the first wins and the second gets fresh options. |
+| **Health concerns always go to a person** | Software must never judge how serious a symptom is. The check is deliberately broad (false alarms are cheap; staff clear them with one click), and it runs before any AI, so obvious concerns never depend on a model. |
 | **"No room today" → offer other days straight away** | The patient is already on the phone. Offering three concrete choices beats "someone will call you back". |
 | **Morning ↔ morning, afternoon ↔ afternoon** | A patient booked at 10 AM probably arranged their day around a morning visit. Offers match the part of the day first, then the earliest days, then the closest time. |
 | **Staff-approved texts** | Changes are queued as *pending updates* (one per patient, always holding the latest time). Staff review and press "Send updates". This avoids a flood of messages when someone is moved several times, and keeps a human in the loop. |
@@ -90,6 +94,8 @@ src/
     types.ts             ← shared data shapes
   lib/
     reschedulingRules.ts ← all rescheduling rules and hospital settings
+    understanding/       ← turns a chat message into an intent (rules today; Claude later — one setting)
+    chatReplies.ts       ← chat-only lines (incl. the fixed urgent line)
     callScript.ts        ← what the call says, in English / Tamil / Hindi
     smsText.ts           ← text-message wording
   app/
@@ -100,7 +106,7 @@ src/
 
 ## Roadmap
 
-- **AI conversation** — replace the keypad menu with a natural spoken conversation, so patients can just say what they want ("anything after 3 is fine").
+- **AI conversation** — the chat groundwork is in place: swap the rule-based stand-in for Claude Haiku (`src/lib/understanding/claude.ts` + one setting), with per-visitor and site-wide daily spending limits already built in.
 - **Real calls and texts** — connect a telephony/SMS provider so patients are actually called and messaged.
 - **Real HMS integration** — replace the mock with a FHIR or hospital-specific API adapter behind the same `hms` interface.
 

@@ -6,16 +6,20 @@
 // "Mark doctor unavailable" pop-up (see MarkUnavailableButton.tsx).
 // Each red banner links to the call simulator (app/calls/[id]/page.tsx).
 // The header links to the simulated text messages (app/messages/page.tsx).
+// At the very top: the staff call list — URGENT patients first.
+// Clicking a patient's row opens their details (&appt=<id>): call log and chat.
 
 import Link from "next/link";
 import {
   getAffectedAppointments,
+  getAppointment,
   getAppointmentsForDay,
   getAppointmentsMovedAwayFrom,
   getDoctors,
   getHospital,
   getMessages,
   getPendingUpdates,
+  getStaffCallList,
   getUnavailabilities,
   isClosed,
   isDemoNearlyFull,
@@ -23,9 +27,12 @@ import {
 import type { Language } from "@/hms/types";
 import { DAYS_TO_SEARCH } from "@/lib/reschedulingRules";
 import { callSummary, describeTimeChange, statusColors } from "@/lib/status";
-import { formatDate, formatTime, HOSPITAL_TIME_ZONE } from "@/lib/time";
+import { formatDate, formatTime, formatWhen, HOSPITAL_TIME_ZONE } from "@/lib/time";
 import { resetDemoAction } from "./actions";
+import ClickableRow from "./ClickableRow";
+import FalseAlarmButton from "./FalseAlarmButton";
 import MarkUnavailableButton from "./MarkUnavailableButton";
+import PatientDetails from "./PatientDetails";
 
 // A different colour for each language, so it's easy to scan.
 const languageColors: Record<Language, string> = {
@@ -46,7 +53,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const doctors = await getDoctors();
 
   // Which doctor and day are selected? Default to the first doctor, today.
-  const { doctor, day } = await searchParams;
+  const { doctor, day, appt } = await searchParams;
   const selected = doctors.find((d) => d.id === doctor) ?? doctors[0];
   const dayNumber = Number(day);
   const selectedDay =
@@ -78,6 +85,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const messageCount = (await getMessages()).length;
   const pendingUpdates = await getPendingUpdates();
   const demoNearlyFull = await isDemoNearlyFull();
+  const staffCalls = await getStaffCallList(); // URGENT first
+  const here = `/?doctor=${selected.id}&day=${selectedDay}`; // this view, for links
+  const opened = typeof appt === "string" ? await getAppointment(appt) : undefined;
 
   const today = new Date().toLocaleDateString("en-IN", {
     timeZone: HOSPITAL_TIME_ZONE,
@@ -94,6 +104,54 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         <p className="mb-4 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800">
           This demo has a lot of history. Press “Reset demo” to start fresh.
         </p>
+      )}
+
+      {/* Staff call list: URGENT patients first (bright red), then "Needs staff call" */}
+      {staffCalls.length > 0 && (
+        <section className="mb-6 rounded-xl border border-slate-200 bg-white">
+          <h2 className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900">
+            Staff call list{" "}
+            <span className="font-normal text-slate-500">({staffCalls.length})</span>
+          </h2>
+          <ul className="divide-y divide-slate-100">
+            {staffCalls.map((c) => {
+              const urgent = c.status === "URGENT – staff call now";
+              return (
+                <li
+                  key={c.id}
+                  className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm ${
+                    urgent ? "bg-red-50" : ""
+                  }`}
+                >
+                  <div>
+                    <span
+                      className={`mr-2 rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[c.status]}`}
+                    >
+                      {c.status}
+                    </span>
+                    <span className="font-medium text-slate-900">{c.patient.name}</span>{" "}
+                    <span className="tabular-nums text-slate-500">{c.patient.phone}</span>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {c.doctorName} · {formatWhen(c.dayOffset, c.startTime)}
+                      {c.note && ` · ${c.note}`}
+                      {c.falseAlarms?.length ? ` · false alarms: ${c.falseAlarms.length}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {urgent && <FalseAlarmButton appointmentId={c.id} />}
+                    <Link
+                      href={`/?doctor=${c.doctorId}&day=${c.dayOffset}&appt=${c.id}`}
+                      scroll={false}
+                      className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                    >
+                      View
+                    </Link>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
 
       {/* Red banners: one for each time a doctor was marked unavailable */}
@@ -261,26 +319,46 @@ export default async function Home({ searchParams }: PageProps<"/">) {
               <tbody className="divide-y divide-slate-100">
                 {rows.map(({ a, movedAway: gone, time }) => {
                   const affected = a.status === "Affected – needs contact";
+                  const urgent = a.status === "URGENT – staff call now";
+                  const details = `${here}&appt=${a.id}`;
                   return (
-                    <tr
+                    <ClickableRow
                       key={a.id}
-                      // Affected rows get a red tint and a red stripe on the left.
-                      // Rows that moved to another day are greyed out.
+                      href={details}
+                      // Affected rows get a red tint and a red stripe on the left;
+                      // URGENT rows a stronger red. Rows that moved to another day
+                      // are greyed out. Click any row to see its details.
                       className={
-                        affected ? "bg-red-50" : gone ? "bg-slate-50/70" : "hover:bg-slate-50"
+                        urgent
+                          ? "bg-red-100 hover:bg-red-200"
+                          : affected
+                            ? "bg-red-50 hover:bg-red-100"
+                            : gone
+                              ? "bg-slate-50/70 hover:bg-slate-100"
+                              : "hover:bg-slate-50"
                       }
                     >
                       <td
                         className={`whitespace-nowrap px-5 py-3 font-medium tabular-nums ${
                           gone ? "text-slate-400 line-through" : "text-slate-900"
-                        } ${affected ? "shadow-[inset_4px_0_0_var(--color-red-500)]" : ""}`}
+                        } ${
+                          urgent
+                            ? "shadow-[inset_4px_0_0_var(--color-red-700)]"
+                            : affected
+                              ? "shadow-[inset_4px_0_0_var(--color-red-500)]"
+                              : ""
+                        }`}
                       >
                         {formatTime(time)}
                       </td>
                       <td className="px-5 py-3">
-                        <p className={gone ? "text-slate-500" : "text-slate-900"}>
+                        <Link
+                          href={details}
+                          scroll={false}
+                          className={`hover:underline ${gone ? "text-slate-500" : "text-slate-900"}`}
+                        >
                           {a.patient.name}
-                        </p>
+                        </Link>
                         <p className="text-xs tabular-nums text-slate-500">{a.patient.phone}</p>
                       </td>
                       <td className={`px-5 py-3 ${gone ? "text-slate-400" : "text-slate-700"}`}>
@@ -306,8 +384,13 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                           </p>
                         )}
                         {a.note && <p className="mt-1 text-xs text-orange-700">{a.note}</p>}
+                        {a.falseAlarms?.length ? (
+                          <p className="mt-1 text-xs text-slate-500">
+                            False alarms: {a.falseAlarms.length}
+                          </p>
+                        ) : null}
                       </td>
-                    </tr>
+                    </ClickableRow>
                   );
                 })}
               </tbody>
@@ -315,6 +398,15 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           </div>
         )}
       </section>
+
+      {/* Patient details panel (opened by clicking a row) */}
+      {opened && (
+        <PatientDetails
+          appointment={opened}
+          doctorName={doctors.find((d) => d.id === opened.doctorId)?.name ?? ""}
+          closeHref={here}
+        />
+      )}
     </div>
   );
 }

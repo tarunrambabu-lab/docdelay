@@ -12,7 +12,13 @@
 // When a patient gets a new time (later today, or an offer they picked), the
 // address becomes /calls/<id>?answered=<appointment id>, and the phone card
 // tells that patient their new time before moving on.
+//
+// Two modes (switch at the top, kept in the address as ?mode=chat):
+//   - Buttons: you press what the patient answers.
+//   - Chat: you type what the patient says; lib/understanding works out what
+//     they mean, and the conversation goes on until an outcome is recorded.
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   getAffectedAppointments,
@@ -28,14 +34,18 @@ import {
   laterTodayReply,
   otherDayOffersScript,
 } from "@/lib/callScript";
-import { callSummary, describeTimeChange } from "@/lib/status";
+import { callSummary, describeTimeChange, statusColors } from "@/lib/status";
 import { formatTime } from "@/lib/time";
+import { activeEngine } from "@/lib/understanding";
+import ChatTranscript from "@/app/ChatTranscript";
 import AnswerButtons from "./AnswerButtons";
+import ChatBox from "./ChatBox";
 import OfferButtons from "./OfferButtons";
 
 export default async function CallSimulator({ params, searchParams }: PageProps<"/calls/[id]">) {
   const { id } = await params;
-  const { answered } = await searchParams;
+  const { answered, mode: modeParam, notice } = await searchParams;
+  const mode = modeParam === "chat" ? "chat" : "buttons";
   const unavailability = await getUnavailability(id);
 
   // E.g. after "Reset demo", old call lists no longer exist.
@@ -64,6 +74,32 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
     justAnswered?.unavailabilityId === id &&
     (justAnswered.status === "Rescheduled – later today" ||
       justAnswered.status === "Rescheduled – another day");
+  // Chat mode: a conversation just ended with an outcome — show the whole chat.
+  const chatDone =
+    mode === "chat" &&
+    justAnswered?.unavailabilityId === id &&
+    justAnswered.status !== "Affected – needs contact";
+
+  // What DocDelay says first to the current patient.
+  const opening = current
+    ? current.offers
+      ? otherDayOffersScript(
+          current.patient.preferredLanguage,
+          current.offers,
+          current.offersBecause === "no room today",
+        )
+      : callScript({
+          language: current.patient.preferredLanguage,
+          patientName: current.patient.name,
+          hospitalName: hospital.name,
+          doctorName: doctor.name,
+          reason: unavailability.reason,
+          appointmentTime: formatTime(current.startTime),
+          untilTime: formatTime(unavailability.untilTime),
+        })
+    : "";
+  const chatLabel =
+    activeEngine() === "claude" ? "Chat (AI)" : "Chat (basic mode – AI coming soon)";
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
@@ -78,7 +114,107 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
         </p>
       </header>
 
-      {showReply ? (
+      {/* Buttons / Chat switch */}
+      <nav
+        className="mb-6 inline-flex rounded-xl border border-slate-200 bg-white p-1 text-sm"
+        aria-label="Mode"
+      >
+        {(
+          [
+            ["buttons", "Buttons", `/calls/${id}`],
+            ["chat", chatLabel, `/calls/${id}?mode=chat`],
+          ] as const
+        ).map(([value, label, href]) => (
+          <Link
+            key={value}
+            href={href}
+            aria-current={mode === value ? "page" : undefined}
+            className={`rounded-lg px-3 py-1.5 font-medium ${
+              mode === value ? "bg-teal-700 text-white" : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
+
+      {/* Chat was switched off because of a spending limit or an AI error */}
+      {mode === "buttons" && (notice === "limit" || notice === "error") && (
+        <p className="mb-6 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800">
+          Chat isn’t available right now
+          {notice === "limit"
+            ? " (today’s AI message limit was reached)"
+            : " (the AI had a problem)"}
+          , so the simulator switched to Buttons.
+        </p>
+      )}
+
+      {chatDone ? (
+        // ----- Chat mode: the conversation ended with an outcome -----
+        <>
+          <p className="mb-3 text-sm font-medium text-slate-500">
+            Patient {calledCount} of {appointments.length}
+          </p>
+          <div className="grid gap-6 md:grid-cols-[1fr_320px]">
+            <PhoneCard appointment={justAnswered} label="Chat ended">
+              <ChatTranscript
+                turns={justAnswered.chat ?? []}
+                language={justAnswered.patient.preferredLanguage}
+                dark
+              />
+            </PhoneCard>
+            <div>
+              <h2 className="mb-3 text-sm font-medium text-slate-500">Outcome</h2>
+              <div className="mb-4 space-y-2 rounded-xl border border-slate-200 bg-white p-4 text-sm">
+                <span
+                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[justAnswered.status]}`}
+                >
+                  {justAnswered.status}
+                </span>
+                {justAnswered.status === "URGENT – staff call now" && (
+                  <p className="font-medium text-red-700">
+                    A staff member must call this patient now. Nothing was booked.
+                  </p>
+                )}
+                {justAnswered.note && <p className="text-orange-800">{justAnswered.note}</p>}
+                {justAnswered.timeHistory && (
+                  <p className="text-emerald-800">{describeTimeChange(justAnswered)}</p>
+                )}
+              </div>
+              <Link
+                href={`/calls/${id}?mode=chat`}
+                className="block rounded-xl bg-teal-700 px-4 py-3 text-center text-sm font-medium text-white hover:bg-teal-800"
+              >
+                {current ? "Next patient →" : "See summary →"}
+              </Link>
+            </div>
+          </div>
+        </>
+      ) : mode === "chat" && current ? (
+        // ----- Chat mode: talking to the current patient -----
+        <>
+          <p className="mb-3 text-sm font-medium text-slate-500">
+            Patient {calledCount + 1} of {appointments.length}
+          </p>
+          <div className="grid gap-6 md:grid-cols-[1fr_320px]">
+            <PhoneCard appointment={current} label="On call (chat)">
+              <ChatTranscript
+                turns={current.chat ?? [{ at: "", from: "docdelay", text: opening }]}
+                language={current.patient.preferredLanguage}
+                dark
+              />
+            </PhoneCard>
+            <div>
+              {/* key = a fresh, empty box for each patient */}
+              <ChatBox key={current.id} appointmentId={current.id} />
+              <p className="mt-4 text-xs leading-relaxed text-slate-500">
+                The chat goes on until an outcome is recorded: later today, another day, cancel, or
+                a staff call. Any mention of a health concern hands the patient straight to staff.
+              </p>
+            </div>
+          </div>
+        </>
+      ) : showReply ? (
         // ----- The patient got a new time: tell them -----
         <>
           <p className="mb-3 text-sm font-medium text-slate-500">
@@ -125,23 +261,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
             <PhoneCard
               appointment={current}
               label={current.offers ? "On call" : "Calling…"}
-              message={
-                current.offers
-                  ? otherDayOffersScript(
-                      current.patient.preferredLanguage,
-                      current.offers,
-                      current.offersBecause === "no room today",
-                    )
-                  : callScript({
-                      language: current.patient.preferredLanguage,
-                      patientName: current.patient.name,
-                      hospitalName: hospital.name,
-                      doctorName: doctor.name,
-                      reason: unavailability.reason,
-                      appointmentTime: formatTime(current.startTime),
-                      untilTime: formatTime(unavailability.untilTime),
-                    })
-              }
+              message={opening}
             />
             {/* Right: you play the patient */}
             {current.offers ? (
@@ -190,15 +310,18 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
 
 const languageCodes: Record<Language, string> = { English: "en", Tamil: "ta", Hindi: "hi" };
 
-// The phone-style card: who's on the line, and what DocDelay says to them.
+// The phone-style card: who's on the line, and what DocDelay says to them
+// (one message, or — in Chat mode — the whole conversation as `children`).
 function PhoneCard({
   appointment,
   label,
   message,
+  children,
 }: {
   appointment: AppointmentWithPatient;
   label: string;
-  message: string;
+  message?: string;
+  children?: ReactNode;
 }) {
   const { patient } = appointment;
   // The time they were first booked for (before any changes).
@@ -219,15 +342,21 @@ function PhoneCard({
           </span>
         </div>
 
-        <p className="mb-2 mt-6 text-xs font-medium uppercase tracking-wider text-slate-400">
-          DocDelay says
-        </p>
-        <p
-          lang={languageCodes[patient.preferredLanguage]}
-          className="rounded-2xl rounded-tl-sm bg-white/10 p-4 leading-relaxed"
-        >
-          {message}
-        </p>
+        {children ? (
+          <div className="mt-6">{children}</div>
+        ) : (
+          <>
+            <p className="mb-2 mt-6 text-xs font-medium uppercase tracking-wider text-slate-400">
+              DocDelay says
+            </p>
+            <p
+              lang={languageCodes[patient.preferredLanguage]}
+              className="rounded-2xl rounded-tl-sm bg-white/10 p-4 leading-relaxed"
+            >
+              {message}
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

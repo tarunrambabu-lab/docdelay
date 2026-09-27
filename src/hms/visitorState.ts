@@ -11,13 +11,24 @@
 //   c.12.0.mg3k2c9d            call: appt-012 answered result #0, at <time>
 //   o.12.1.mg3k2e0f            offer: appt-012 picked offer #1 (B)   ("n" = none of these)
 //   s.mg3k2f11                 send all pending updates
+//   h.12.1.n.4.n.1600.n.<text>.mg3k2g22   chat: appt-012, what the patient typed
+//                              (<text>, base64) and what it was understood to mean
+//                              (intent #1, no offer, day 4, any time, after 16:00)
+//   f.12.mg3k2h33              staff marked appt-012's URGENT flag a false alarm
+//   b.12.3.1015.mg3k2i44       bookSlot tool: book appt-012 on day 3 at 10:15
 // Steps are joined with "_". Times are milliseconds since 1970, in base 36.
+//
+// Chat messages are saved together with what they were understood to mean,
+// so replaying the demo never has to run the "understanding" step again
+// (with the AI version, that means no repeated — and paid — AI calls).
 
 import { cookies } from "next/headers";
 import startingData from "./mockData.json";
 import { CALL_RESULTS, UNAVAILABILITY_REASONS } from "./types";
 import type { CallResult, UnavailabilityReason } from "./types";
 import { isValidTime } from "@/lib/time";
+import { INTENTS, type Understanding } from "@/lib/understanding/types";
+import type { TimeOfDay } from "@/lib/reschedulingRules";
 
 // One thing the visitor did.
 export type DemoStep =
@@ -31,12 +42,26 @@ export type DemoStep =
     }
   | { kind: "call"; at: number; appointmentId: string; result: CallResult }
   | { kind: "offer"; at: number; appointmentId: string; choice: number | null }
-  | { kind: "send"; at: number };
+  | { kind: "send"; at: number }
+  | {
+      kind: "chat";
+      at: number;
+      appointmentId: string;
+      text: string; // what the patient typed (at most MAX_CHAT_TEXT characters)
+      understanding: Understanding; // what it was understood to mean
+    }
+  | { kind: "falseAlarm"; at: number; appointmentId: string }
+  | { kind: "book"; at: number; appointmentId: string; dayOffset: number; startTime: string };
+
+export const MAX_CHAT_TEXT = 200; // longest chat message kept
 
 const COOKIE_NAME = "docdelay-demo";
-// Browsers allow about 4,000 characters per cookie; stay safely below that.
-// That's roughly 200 steps — a full demo run uses about 40.
-const MAX_COOKIE_LENGTH = 3800;
+// Browsers allow about 4,000 characters per cookie, so the steps are split
+// over up to MAX_COOKIES cookies ("docdelay-demo", "docdelay-demo-2", …).
+// That's roughly 550 steps — a full demo run uses about 40, or ~100 in chat.
+const CHUNK_LENGTH = 3800;
+const MAX_COOKIES = 3;
+const cookieName = (i: number) => (i === 0 ? COOKIE_NAME : `${COOKIE_NAME}-${i + 1}`);
 
 const doctorIds = startingData.doctors.map((d) => d.id);
 
@@ -46,6 +71,14 @@ const hhmm = (time: string) => time.replace(":", ""); // "09:00" → "0900"
 const unHhmm = (code: string) => `${code.slice(0, 2)}:${code.slice(2)}`; // "0900" → "09:00"
 const apptNumber = (id: string) => Number(id.replace("appt-", "")); // "appt-012" → 12
 const apptId = (n: number) => `appt-${String(n).padStart(3, "0")}`; // 12 → "appt-012"
+const TIMES_OF_DAY: TimeOfDay[] = ["morning", "afternoon", "evening"];
+// Chat text → cookie-safe letters (base64, with "_" swapped for "*" because
+// "_" separates the steps) and back.
+const packText = (text: string) =>
+  Buffer.from(text.slice(0, MAX_CHAT_TEXT), "utf8").toString("base64url").replace(/_/g, "*");
+const unpackText = (code: string) =>
+  Buffer.from(code.replace(/\*/g, "_"), "base64url").toString("utf8").slice(0, MAX_CHAT_TEXT);
+const orN = (value: string | number | undefined) => (value === undefined ? "n" : value);
 
 function encodeStep(step: DemoStep): string {
   const at = step.at.toString(36);
@@ -65,6 +98,28 @@ function encodeStep(step: DemoStep): string {
       return ["o", apptNumber(step.appointmentId), step.choice ?? "n", at].join(".");
     case "send":
       return ["s", at].join(".");
+    case "chat": {
+      const u = step.understanding;
+      const p = u.preferences;
+      return [
+        "h",
+        apptNumber(step.appointmentId),
+        INTENTS.indexOf(u.intent),
+        orN(u.offerIndex),
+        orN(p.dayOffset),
+        p.timeOfDay ? TIMES_OF_DAY.indexOf(p.timeOfDay) : "n",
+        p.after ? hhmm(p.after) : "n",
+        p.before ? hhmm(p.before) : "n",
+        packText(step.text),
+        at,
+      ].join(".");
+    }
+    case "falseAlarm":
+      return ["f", apptNumber(step.appointmentId), at].join(".");
+    case "book":
+      return ["b", apptNumber(step.appointmentId), step.dayOffset, hhmm(step.startTime), at].join(
+        ".",
+      );
   }
 }
 
@@ -96,14 +151,66 @@ function decodeStep(code: string): DemoStep | null {
     return { kind: "offer", at, appointmentId: apptId(Number(parts[0])), choice };
   }
   if (kind === "s" && parts.length === 1) return { kind: "send", at };
+  if (kind === "h" && parts.length === 9) {
+    const [appt, intentIndex, offer, day, tod, after, before, text] = parts;
+    const intent = INTENTS[Number(intentIndex)];
+    const num = (v: string) => (v === "n" ? undefined : Number(v));
+    const time = (v: string) => (v === "n" ? undefined : unHhmm(v));
+    const understanding: Understanding = {
+      intent,
+      offerIndex: num(offer),
+      preferences: {
+        dayOffset: num(day),
+        timeOfDay: tod === "n" ? undefined : TIMES_OF_DAY[Number(tod)],
+        after: time(after),
+        before: time(before),
+      },
+    };
+    const p = understanding.preferences;
+    const badNumber = [num(appt), understanding.offerIndex, p.dayOffset].some(
+      (n) => n !== undefined && !Number.isInteger(n),
+    );
+    const badTime = [p.after, p.before].some((t) => t !== undefined && !isValidTime(t));
+    if (!intent || badNumber || badTime || (tod !== "n" && !p.timeOfDay)) return null;
+    return {
+      kind: "chat",
+      at,
+      appointmentId: apptId(Number(appt)),
+      text: unpackText(text),
+      understanding,
+    };
+  }
+  if (kind === "f" && parts.length === 2 && Number.isInteger(Number(parts[0]))) {
+    return { kind: "falseAlarm", at, appointmentId: apptId(Number(parts[0])) };
+  }
+  if (kind === "b" && parts.length === 4) {
+    const startTime = unHhmm(parts[2]);
+    if (!Number.isInteger(Number(parts[0])) || !Number.isInteger(Number(parts[1]))) return null;
+    if (!isValidTime(startTime)) return null;
+    return {
+      kind: "book",
+      at,
+      appointmentId: apptId(Number(parts[0])),
+      dayOffset: Number(parts[1]),
+      startTime,
+    };
+  }
   return null;
 }
 
-// ---------- Reading and writing the cookie ----------
+// ---------- Reading and writing the cookie(s) ----------
+
+// The whole saved text, joined back together from its cookies.
+async function readValue(): Promise<string> {
+  const store = await cookies();
+  let value = "";
+  for (let i = 0; i < MAX_COOKIES; i++) value += store.get(cookieName(i))?.value ?? "";
+  return value;
+}
 
 // Everything this visitor has done so far, oldest first.
 export async function readSteps(): Promise<DemoStep[]> {
-  const value = (await cookies()).get(COOKIE_NAME)?.value;
+  const value = await readValue();
   if (!value) return [];
   return value
     .split("_")
@@ -111,28 +218,36 @@ export async function readSteps(): Promise<DemoStep[]> {
     .filter((s): s is DemoStep => s !== null);
 }
 
-// Save the visitor's steps. Returns false (and saves nothing) if the cookie
-// would get too big — the visitor then needs to press "Reset demo".
+// Save the visitor's steps. Returns false (and saves nothing) if they would
+// get too big — the visitor then needs to press "Reset demo".
 // Only works inside a Server Action (that's where Next.js allows setting cookies).
 export async function writeSteps(steps: DemoStep[]): Promise<boolean> {
   const value = steps.map(encodeStep).join("_");
-  if (value.length > MAX_COOKIE_LENGTH) return false;
-  (await cookies()).set(COOKIE_NAME, value, {
-    httpOnly: true, // page scripts can't read or change it
-    sameSite: "lax",
-    path: "/",
-    // No maxAge: the demo is forgotten when the browser is closed.
-  });
+  if (value.length > CHUNK_LENGTH * MAX_COOKIES) return false;
+  const store = await cookies();
+  for (let i = 0; i < MAX_COOKIES; i++) {
+    const chunk = value.slice(i * CHUNK_LENGTH, (i + 1) * CHUNK_LENGTH);
+    if (chunk) {
+      store.set(cookieName(i), chunk, {
+        httpOnly: true, // page scripts can't read or change it
+        sameSite: "lax",
+        path: "/",
+        // No maxAge: the demo is forgotten when the browser is closed.
+      });
+    } else if (store.get(cookieName(i))) {
+      store.delete(cookieName(i));
+    }
+  }
   return true;
 }
 
-// Is the visitor's demo history close to the cookie limit?
+// Is the visitor's demo history close to the limit?
 export async function isNearlyFull(): Promise<boolean> {
-  const value = (await cookies()).get(COOKIE_NAME)?.value ?? "";
-  return value.length > MAX_COOKIE_LENGTH - 200;
+  return (await readValue()).length > CHUNK_LENGTH * MAX_COOKIES - 400;
 }
 
 // Forget everything this visitor did ("Reset demo").
 export async function clearSteps(): Promise<void> {
-  (await cookies()).delete(COOKIE_NAME);
+  const store = await cookies();
+  for (let i = 0; i < MAX_COOKIES; i++) store.delete(cookieName(i));
 }
