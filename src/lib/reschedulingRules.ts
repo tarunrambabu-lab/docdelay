@@ -11,13 +11,18 @@
 //      AFTER any patients already rescheduled there, so patients are placed in
 //      the order they answer — and push every later appointment for that
 //      doctor back by 15 minutes. The day may run past its normal end.
-//   If the patient asked for a time today (e.g. "today, after 4"), the same
-//   rules apply, but only at or after that time (and before it, for
-//   "before 11"). If nothing fits: "no room today" — other days are offered.
 //   c. Don't push if that would make any appointment end after
 //      LATEST_APPOINTMENT_END, or (fairness rule) make any UNAFFECTED patient
 //      start more than MAX_PUSH_MINUTES after their original booked time.
 //      Instead it's "no room today", and the patient is offered other days.
+//   Pushing (b, c) is ONLY for a plain "later today" / "I'll wait" with no time.
+//
+// A SPECIFIC time later today ("after 4", "evening", "today after 4"):
+//   Only EMPTY slots at or after that time (and within it, e.g. "before 11"),
+//   from the doctor's return time on, within normal opening hours. Nobody is
+//   ever pushed to fit a chosen time. If no empty slot fits, the patient is
+//   told so and offered other days at that time. (firstEmptySlotToday below,
+//   and the bookSlot check in the hms module, both follow this.)
 //
 // "2 – Another day" (and "no room today"):
 //   Offer OFFERS_TO_MAKE open slots with the same doctor over the next
@@ -84,44 +89,25 @@ export type LaterTodayPlan =
   // Rule c: no room today (why: which limit was hit)
   | { kind: "no room"; why: string };
 
-// A patient's wished-for time as a window [from, until) in minutes.
-function wishWindow(wish?: TimeWish): { from: number; until: number } {
-  let from = -Infinity;
-  let until = Infinity;
-  if (wish?.after) from = Math.max(from, toMinutes(wish.after));
-  if (wish?.before) until = Math.min(until, toMinutes(wish.before));
-  if (wish?.timeOfDay === "morning") until = Math.min(until, toMinutes(MORNING_ENDS));
-  if (wish?.timeOfDay === "afternoon") {
-    from = Math.max(from, toMinutes(MORNING_ENDS));
-    until = Math.min(until, toMinutes(EVENING_STARTS));
-  }
-  if (wish?.timeOfDay === "evening") from = Math.max(from, toMinutes(EVENING_STARTS));
-  return { from, until };
-}
-
 export function planLaterToday(
   patientAppointment: Appointment,
   todaysAppointments: Appointment[], // ALL of this doctor's appointments TODAY
   returnTime: string, // the doctor's "Expected until" time
-  wish?: TimeWish, // only if the patient asked for a time today, e.g. "after 4"
 ): LaterTodayPlan {
-  const window = wishWindow(wish);
   // Cancelled appointments free up their slot; the patient's own old slot
   // (while the doctor was away) doesn't count either.
   const others = todaysAppointments.filter(
     (a) => a.id !== patientAppointment.id && a.status !== "Cancelled",
   );
 
-  // Slots start on the quarter hour, so round the return time (or the
-  // patient's wished-for time, if later) UP to one (e.g. 12:10 → 12:15).
-  const firstSlot =
-    Math.ceil(Math.max(toMinutes(returnTime), window.from) / SLOT_MINUTES) * SLOT_MINUTES;
+  // Slots start on the quarter hour, so round the return time UP to one
+  // (e.g. a return at 12:10 → first slot 12:15).
+  const firstSlot = Math.ceil(toMinutes(returnTime) / SLOT_MINUTES) * SLOT_MINUTES;
 
-  // Rule a: earliest empty slot between the return time and the end of the day
-  // (or the end of the wished-for time).
+  // Rule a: earliest empty slot between the return time and the end of the day.
   for (
     let slot = firstSlot;
-    slot + SLOT_MINUTES <= Math.min(toMinutes(NORMAL_DAY_END), window.until);
+    slot + SLOT_MINUTES <= toMinutes(NORMAL_DAY_END);
     slot += SLOT_MINUTES
   ) {
     if (isSlotFree(others, slot)) return { kind: "empty slot", newStartTime: fromMinutes(slot) };
@@ -137,9 +123,6 @@ export function planLaterToday(
     )
   ) {
     insertAt += SLOT_MINUTES;
-  }
-  if (insertAt + SLOT_MINUTES > window.until) {
-    return { kind: "no room", why: "nothing fits today at the time the patient asked for" };
   }
 
   // Everyone from that slot onwards moves back by one slot.
@@ -312,6 +295,22 @@ export function anchorTime(
   if (wish.timeOfDay)
     return { morning: "10:00", afternoon: "14:00", evening: "16:30" }[wish.timeOfDay];
   return originalTime;
+}
+
+// A SPECIFIC time later today: the earliest EMPTY slot at or after the time
+// the patient asked for (from the doctor's return time on, within opening
+// hours). Never a push. Returns undefined if nothing fits.
+export function firstEmptySlotToday(
+  todaysAppointments: Appointment[], // ALL of this doctor's appointments TODAY
+  returnTime: string, // the doctor's "Expected until" time
+  wish: TimeWish,
+  excludeAppointmentId?: string, // the patient's own (old) appointment
+): SlotOffer | undefined {
+  return listFreeSlots(
+    todaysAppointments,
+    { days: [0], ...wish },
+    { excludeAppointmentId, todayFrom: returnTime },
+  )[0];
 }
 
 // The time a patient was first booked for (exported for chat).

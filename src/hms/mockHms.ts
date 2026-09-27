@@ -38,6 +38,7 @@ import { clearSteps, isNearlyFull, readSteps, writeSteps, type DemoStep } from "
 import {
   anchorTime,
   findOtherDaySlots,
+  firstEmptySlotToday,
   isClosedDay,
   listFreeSlots,
   originalTimeOf,
@@ -388,18 +389,13 @@ function applyOffer(
 // Give a patient who pressed "1 – Later today" a new time today, following the
 // rules in lib/reschedulingRules.ts. Changes `state`; the caller saves it.
 // Returns null if it worked, or the reason there was no room today.
-function rescheduleLaterToday(
-  state: HmsState,
-  appt: Appointment,
-  at: number,
-  wish?: TimeWish, // only times the patient asked for, e.g. "today after 4"
-): string | null {
+function rescheduleLaterToday(state: HmsState, appt: Appointment, at: number): string | null {
   const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId);
   if (!unavailability) return "unknown unavailability"; // shouldn't happen
   const todaysAppointments = state.appointments.filter(
     (a) => a.doctorId === appt.doctorId && a.dayOffset === 0,
   );
-  const plan = planLaterToday(appt, todaysAppointments, unavailability.untilTime, wish);
+  const plan = planLaterToday(appt, todaysAppointments, unavailability.untilTime);
 
   if (plan.kind === "no room") return plan.why;
 
@@ -564,23 +560,35 @@ export async function checkFreeSlots(
 }
 
 // book_slot: re-check a slot under ALL the rules, then book it or refuse
-// with a reason. (A "later today" push is never done here — that only
-// happens through the "Later today" answer and its own rules.)
-export async function bookSlot(appointmentId: string, slot: SlotOffer): Promise<BookResult> {
+// with a reason. It only ever books an EMPTY slot — nobody is ever pushed to
+// fit a chosen slot (pushing only happens for a plain "later today" answer
+// with no time, through its own rules). If the patient asked for a time
+// (`wish`, e.g. "after 4"), the slot must also be within it.
+export async function bookSlot(
+  appointmentId: string,
+  slot: SlotOffer,
+  wish?: TimeWish,
+): Promise<BookResult> {
   const steps = await readSteps();
   const step: DemoStep = { kind: "book", at: Date.now(), appointmentId, ...slot };
-  const result = applyBook(replay(steps), step);
+  // (The wish only narrows what may be booked, so replaying the saved step
+  // later without it gives the same result.)
+  const result = applyBook(replay(steps), step, wish);
   if (!result.ok) return result;
   return (await writeSteps([...steps, step]))
     ? result
     : { ok: false, reason: "This demo has too much history. Press “Reset demo”." };
 }
 
-function applyBook(state: HmsState, step: Extract<DemoStep, { kind: "book" }>): BookResult {
+function applyBook(
+  state: HmsState,
+  step: Extract<DemoStep, { kind: "book" }>,
+  wish?: TimeWish,
+): BookResult {
   const appt = state.appointments.find((a) => a.id === step.appointmentId);
   if (!appt) return { ok: false, reason: "Unknown appointment." };
   const slot = { dayOffset: step.dayOffset, startTime: step.startTime };
-  const result = bookSlotIn(state, appt, slot, step.at);
+  const result = bookSlotIn(state, appt, slot, step.at, wish);
   if (result.ok) {
     appt.callLog = [
       ...(appt.callLog ?? []),
@@ -598,8 +606,15 @@ function applyBook(state: HmsState, step: Extract<DemoStep, { kind: "book" }>): 
 //   - the slot must be one checkFreeSlots would list right now: EMPTY, on an
 //     open day, within opening hours, and — today — from the doctor's return
 //     time on. So nobody else is ever moved, and if two patients pick the
-//     same slot, the first one wins and the second is refused.
-function bookSlotIn(state: HmsState, appt: Appointment, slot: SlotOffer, at: number): BookResult {
+//     same slot, the first one wins and the second is refused;
+//   - if the patient asked for a time (`wish`), the slot must be within it.
+function bookSlotIn(
+  state: HmsState,
+  appt: Appointment,
+  slot: SlotOffer,
+  at: number,
+  wish?: TimeWish,
+): BookResult {
   if (appt.status !== "Affected – needs contact") {
     return { ok: false, reason: "This patient isn't waiting for a new time." };
   }
@@ -608,7 +623,7 @@ function bookSlotIn(state: HmsState, appt: Appointment, slot: SlotOffer, at: num
 
   const free = listFreeSlots(
     state.appointments.filter((a) => a.doctorId === appt.doctorId),
-    { days: [slot.dayOffset] },
+    { days: [slot.dayOffset], ...wish },
     { excludeAppointmentId: appt.id, todayFrom: unavailability.untilTime },
   );
   if (!free.some((f) => f.startTime === slot.startTime)) {
@@ -790,22 +805,27 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
 
     case "later_today": {
       const todayWish = timeOf(prefs); // e.g. "after 4" → only at or after 4 PM
-      if (appt.offers && appt.offersBecause === "no room today" && !todayWish) {
-        // Today is still full — repeat the other-day offers.
-        say(otherDayOffersScript(language, appt.offers, true));
-        return true;
-      }
-      const noRoomBecause = rescheduleLaterToday(state, appt, step.at, todayWish);
-      if (!noRoomBecause) {
-        dropOffers();
-        say(laterTodayReply(language, formatTime(appt.startTime)));
-        log("Wants later today", `new time ${formatTime(appt.startTime)} today`);
-        return true;
-      }
-      log("Wants later today", `No room today: ${noRoomBecause}`);
+
+      // A SPECIFIC time today: only an EMPTY slot at or after it — nobody is
+      // ever pushed to fit a chosen time (see reschedulingRules.ts).
       if (todayWish) {
-        // Nothing today at the time they asked for: say so, and offer other
-        // days at that time.
+        const todaysAppointments = state.appointments.filter(
+          (a) => a.doctorId === appt.doctorId && a.dayOffset === 0,
+        );
+        const slot = firstEmptySlotToday(
+          todaysAppointments,
+          unavailability.untilTime,
+          todayWish,
+          appt.id,
+        );
+        if (slot && bookSlotIn(state, appt, slot, step.at, todayWish).ok) {
+          say(laterTodayReply(language, formatTime(slot.startTime)));
+          log("Wants later today", `new time ${formatTime(slot.startTime)} today (empty slot)`);
+          return true;
+        }
+        // Nothing empty today at that time: say so, and offer other days at
+        // that time.
+        log("Wants later today", "no empty slot today at the time asked for");
         const { offers } = chatOffers(state, appt, todayWish);
         if (offers.length === 0) {
           appt.status = "Needs staff call";
@@ -819,6 +839,22 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
         say(`${noMatchPrefix(language)} ${otherDayOffersScript(language, offers, false)}`);
         return true;
       }
+
+      // A plain "later today" / "I'll wait" with no time: the existing rules
+      // (empty slot first, then the push with the 45-minute cap and 7 PM limit).
+      if (appt.offers && appt.offersBecause === "no room today") {
+        // Today is still full — repeat the other-day offers.
+        say(otherDayOffersScript(language, appt.offers, true));
+        return true;
+      }
+      const noRoomBecause = rescheduleLaterToday(state, appt, step.at);
+      if (!noRoomBecause) {
+        dropOffers();
+        say(laterTodayReply(language, formatTime(appt.startTime)));
+        log("Wants later today", `new time ${formatTime(appt.startTime)} today`);
+        return true;
+      }
+      log("Wants later today", `No room today: ${noRoomBecause}`);
       offerOtherDays(state, appt, "no room today");
       say(
         appt.offers
