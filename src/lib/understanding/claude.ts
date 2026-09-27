@@ -96,14 +96,18 @@ const TOOLS: (Anthropic.Tool & { name: AiToolName })[] = [
     input_schema: {
       type: "object",
       properties: {
-        reason: {
-          type: "string",
-          enum: ["asked_for_person", "could_not_understand", "no_suitable_time"],
-        },
+        reason: { type: "string", enum: ["asked_for_person", "no_suitable_time"] },
       },
       required: ["reason"],
       additionalProperties: false,
     },
+  },
+  {
+    name: "cannot_understand",
+    description:
+      "You could not understand the patient's message. Call ONLY this; DocDelay then asks the patient to say it again " +
+      "(and after two in a row it hands them to staff itself). Not for normal clarifying questions.",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
     name: "escalate_urgent",
@@ -193,9 +197,10 @@ export async function runClaudeTurn(
         is_error: !known,
       });
     }
-    // An outcome was recorded (booked, waiting, cancelled, staff, urgent):
-    // stop here — DocDelay sends its own fixed confirmation. (Saves a call.)
-    if (turn.outcome()) return { reply: "", usage };
+    // An outcome was recorded (booked, waiting, cancelled, staff, urgent), or
+    // the AI said it couldn't understand: stop here — DocDelay sends its own
+    // fixed line. (Saves a call.)
+    if (turn.outcome() || turn.notUnderstood()) return { reply: "", usage };
     messages.push({ role: "user", content: results });
   }
   throw new AiTurnError(`no final reply after ${AI_MAX_CALLS_PER_MESSAGE} calls`, usage);

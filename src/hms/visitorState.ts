@@ -65,6 +65,7 @@ export type DemoStep =
       reply: string; // what the AI replied (checked before saving)
       offers: SlotOffer[]; // slots the AI offered in this turn (from checkFreeSlots)
       action?: AiAction; // at most one outcome, already checked by the hms rules
+      unclear?: boolean; // the AI couldn't understand this message (counted by the hms module)
     };
 
 // The one outcome an AI chat turn may record. The hms module applies it with
@@ -133,7 +134,7 @@ const unpackOffers = (code: string): SlotOffer[] | null => {
     ? offers
     : null;
 };
-// AI outcome ↔ "n" | "b3-1615" | "w" | "c" | "s0" | "u"
+// AI outcome ↔ "n" | "b3-1615" | "w" | "c" | "s0" | "u"   ("x" = no outcome, not understood)
 const packAction = (a?: AiAction) =>
   !a
     ? "n"
@@ -205,7 +206,7 @@ function encodeStep(step: DemoStep): string {
       return [
         "a",
         apptNumber(step.appointmentId),
-        packAction(step.action),
+        !step.action && step.unclear ? "x" : packAction(step.action),
         packLong(step.text, MAX_CHAT_TEXT),
         packLong(step.reply, MAX_AI_REPLY),
         packOffers(step.offers),
@@ -289,7 +290,8 @@ function decodeStep(code: string): DemoStep | null {
   if (kind === "a" && parts.length === 6) {
     const [appt, action, text, reply, offers] = parts;
     if (!Number.isInteger(Number(appt))) return null;
-    const parsedAction = unpackAction(action);
+    const unclear = action === "x"; // no outcome; the message couldn't be understood
+    const parsedAction = unclear ? undefined : unpackAction(action);
     const parsedOffers = unpackOffers(offers);
     if (parsedAction === null || parsedOffers === null) return null;
     try {
@@ -301,6 +303,7 @@ function decodeStep(code: string): DemoStep | null {
         reply: unpackLong(reply, MAX_AI_REPLY),
         offers: parsedOffers,
         action: parsedAction,
+        unclear,
       };
     } catch {
       return null; // not valid compressed text

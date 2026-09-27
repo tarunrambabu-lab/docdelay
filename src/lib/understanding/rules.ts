@@ -25,8 +25,13 @@ import { dateForDayOffset, fromMinutes } from "@/lib/time";
 // A trailing "*" means "any word starting with this" (e.g. "breath*" matches
 // "breathless", "breathing").
 
-// Anything health-related. False alarms are fine (staff can clear them);
-// missing a real concern is not.
+// Anything health-related. False alarms are fine (a false alarm costs one
+// staff call); missing a real concern is not. When unsure whether a word is
+// health-related, it goes on the list.
+//
+// ⚠️ This list must be reviewed by a native Tamil speaker, a native Hindi
+// speaker AND a clinician before real use — they will know symptom words and
+// everyday phrases that are missing here.
 const HEALTH_WORDS = [
   // English
   "pain*",
@@ -99,6 +104,37 @@ const HEALTH_WORDS = [
   "shaking",
   "trembling",
   "cramp*",
+  "tight*", // tight, tightness, tightening
+  "heavy",
+  "heaviness",
+  "heavi*",
+  "uneasy",
+  "unease",
+  "discomfort",
+  "uncomfortable",
+  "not right",
+  "not feeling good",
+  "not feeling great",
+  "not feeling ok",
+  "not feeling okay",
+  "feel off",
+  "feeling off",
+  "feel strange",
+  "feeling strange",
+  "feel weird",
+  "feeling weird",
+  "tired",
+  "exhausted",
+  "fatigue*",
+  "pins and needles",
+  "tingling",
+  "cold sweat*",
+  "racing",
+  "pounding",
+  "clammy",
+  "short of breath",
+  "shortness of breath",
+  "doctor said",
   // Tamil (romanised)
   "vali",
   "valikudhu",
@@ -125,6 +161,32 @@ const HEALTH_WORDS = [
   "thalai suthuthu",
   "thala suthudhu",
   "thalai suthudhu",
+  "nenju iruku", // chest feels tight
+  "nenju irukku",
+  "nenju irukkama",
+  "nenju irukkam",
+  "nenju kanama", // chest feels heavy
+  "nenju kanam",
+  "nenju padapadappu", // palpitations
+  "padapadappu",
+  "moochu vaanguthu", // breathless
+  "moochu vanguthu",
+  "moochu vaangudhu",
+  "moochu vangudhu",
+  "moochu thinaral",
+  "moochu vida mudiyala",
+  "marathu pochu", // numb
+  "maraththu pochu",
+  "viyarvai", // sweat
+  "vervai",
+  "sorvu", // tiredness
+  "kiru kiru", // dizzy
+  "thala sutral",
+  "thalai sutral",
+  "asowkariyam", // discomfort
+  "asoukaryam",
+  "enakku sariya illa",
+  "udambu mudiyala",
   // Hindi (romanised)
   "dard",
   "seene",
@@ -149,6 +211,32 @@ const HEALTH_WORDS = [
   "dawai",
   "dawa",
   "dava",
+  "seena bhaari", // chest feels heavy
+  "seene mein bhaaripan",
+  "bhaari",
+  "bhari",
+  "bhaaripan",
+  "bechaini", // restlessness / uneasiness
+  "bechain",
+  "jakdan", // tightness
+  "jakdahat",
+  "jakad",
+  "dabav", // pressure
+  "saans phool*", // breathless
+  "saans nahi",
+  "saans lene",
+  "pasina", // sweat
+  "paseena",
+  "sunn", // numb
+  "thakan", // tiredness
+  "thakaan",
+  "ji machal*", // nausea
+  "jee machal*",
+  "theek nahi lag*", // not feeling right
+  "thik nahi lag*",
+  "achha nahi lag*",
+  "accha nahi lag*",
+  "kuch theek nahi",
   // Tamil script
   "வலி",
   "நெஞ்சு",
@@ -158,6 +246,11 @@ const HEALTH_WORDS = [
   "ரத்தம்",
   "வாந்தி",
   "உடம்பு",
+  "இறுக்க*", // tightness (இறுக்கம், இறுக்கமாக)
+  "கனம*", // heavy (கனம், கனமாக)
+  "வியர்*", // sweat
+  "மரத்*", // numb
+  "சோர்*", // tiredness
   // Devanagari (Hindi)
   "दर्द",
   "सीने",
@@ -173,6 +266,14 @@ const HEALTH_WORDS = [
   "दिल",
   "घबराहट",
   "दवा",
+  "भारी", // heavy
+  "भारीपन",
+  "बेचैनी", // uneasiness
+  "जकड़न", // tightness
+  "दबाव", // pressure
+  "पसीना", // sweat
+  "सुन्न", // numb
+  "थकान", // tiredness
 ];
 
 const TALK_WORDS = [

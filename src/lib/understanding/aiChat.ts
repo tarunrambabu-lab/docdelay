@@ -48,6 +48,12 @@ function missingAmPm(reply: string, language: Language): boolean {
   return /\d{1,2}:\d{2}/.test(withoutGood);
 }
 
+// Does the AI's reply ask the patient to repeat because it didn't understand?
+// (Safety net: the AI is told to call cannot_understand instead, but doesn't
+// always — so DocDelay spots it itself and counts it.)
+const DID_NOT_UNDERSTAND =
+  /(didn'?t|did not|couldn'?t|could not|don'?t|do not|wasn'?t able to)\s+(quite\s+)?(understand|catch|follow|get)|say (that|it) again|repeat (that|it)|समझ नहीं|समझ न|दोबारा|फिर से (कह|बोल|बता)|புரியவில்லை|புரியல|மீண்டும் (சொல்|கூற)|திரும்ப(ச்)? சொல்/i;
+
 // Why a reply can't be used (or undefined if it's fine).
 function problemWith(reply: string, allowed: Set<string>, language: Language): string | undefined {
   if (!reply) return "empty reply";
@@ -70,11 +76,20 @@ export async function aiChatTurn(
     const result = await runClaudeTurn(turn, text);
     const usage = result.usage;
     const reply = result.reply.replace(/\*\*/g, "").trim(); // plain text, no markdown bold
+    // The AI asked the patient to repeat without calling cannot_understand:
+    // treat it as "couldn't understand" anyway, so it's COUNTED here.
+    let detected = false;
+    if (!turn.outcome() && !turn.notUnderstood() && DID_NOT_UNDERSTAND.test(reply)) {
+      turn.runTool("cannot_understand", {});
+      detected = true;
+    }
     const outcome = turn.outcome();
-    // With an outcome, DocDelay's fixed confirmation is used (no AI text to check).
-    const problem = outcome
-      ? undefined
-      : problemWith(reply, turn.allowedTimes(), turn.context.language);
+    // With an outcome or "couldn't understand", DocDelay's fixed line is used
+    // (no AI text to check).
+    const problem =
+      outcome || turn.notUnderstood()
+        ? undefined
+        : problemWith(reply, turn.allowedTimes(), turn.context.language);
     if (problem) {
       logCost(appointmentId, usage, startedAt, `NOT USED — ${problem} → rule-based stand-in`);
       return { ok: false, reason: problem };
@@ -83,7 +98,13 @@ export async function aiChatTurn(
       logCost(appointmentId, usage, startedAt, "NOT SAVED → rule-based stand-in");
       return { ok: false, reason: "could not save the turn" };
     }
-    logCost(appointmentId, usage, startedAt, outcome ? outcome.kind : "replied");
+    logCost(
+      appointmentId,
+      usage,
+      startedAt,
+      (outcome ? outcome.kind : turn.notUnderstood() ? "couldn't understand" : "replied") +
+        (detected ? " (spotted in the AI's reply, counted by DocDelay)" : ""),
+    );
     return { ok: true };
   } catch (error) {
     const usage =

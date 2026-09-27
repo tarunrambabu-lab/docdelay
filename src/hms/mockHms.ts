@@ -39,7 +39,6 @@ import {
   clearSteps,
   isNearlyFull,
   readSteps,
-  STAFF_REASONS,
   writeSteps,
   type AiAction,
   type DemoStep,
@@ -1108,6 +1107,7 @@ export const AI_TOOL_NAMES = [
   "cancel_appointment",
   "hand_to_staff",
   "escalate_urgent",
+  "cannot_understand",
 ] as const;
 export type AiToolName = (typeof AI_TOOL_NAMES)[number];
 
@@ -1138,6 +1138,7 @@ export interface AiTurn {
   runTool(name: AiToolName, input: Record<string, unknown>): Record<string, unknown>;
   allowedTimes(): Set<string>; // "HH:MM" times the reply may mention
   outcome(): AiAction | undefined;
+  notUnderstood(): boolean; // the AI said it couldn't understand this message
   save(text: string, reply: string): Promise<boolean>;
 }
 
@@ -1197,6 +1198,7 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
 
   const offered: SlotOffer[] = []; // slots offered in this turn
   let outcome: AiAction | undefined; // at most one per turn
+  let unclear = false; // the AI couldn't understand this message
   const times = new Set<string>([
     originalTimeOf(appt),
     unavailability.untilTime,
@@ -1295,11 +1297,23 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
     },
     hand_to_staff(input) {
       if (outcome) return alreadyDone;
-      const reason = STAFF_REASONS.includes(input.reason as StaffReason)
-        ? (input.reason as StaffReason)
-        : "asked_for_person";
+      // "Couldn't understand" is decided by the count below, never by the AI.
+      const reason =
+        input.reason === "no_suitable_time" ? "no_suitable_time" : ("asked_for_person" as const);
       outcome = { kind: "staff", reason };
       return { ok: true, tell_patient: staffWillCallReply(language) };
+    },
+    // Two replies in a row that couldn't be understood → staff call. The COUNT
+    // is kept here in the hms module (shared with the rule-based chat), not by
+    // the AI: the AI only says "I didn't understand this one".
+    cannot_understand() {
+      if (outcome) return alreadyDone;
+      if ((appt.unclearInARow ?? 0) + 1 >= 2) {
+        outcome = { kind: "staff", reason: "could_not_understand" };
+        return { ok: true, handed_to_staff: true };
+      }
+      unclear = true; // DocDelay asks the patient to say it again (fixed wording)
+      return { ok: true };
     },
     escalate_urgent() {
       // Allowed even after another outcome would have been — safety first.
@@ -1327,6 +1341,7 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
     runTool: (name, input) => tools[name](input),
     allowedTimes: () => times,
     outcome: () => outcome,
+    notUnderstood: () => unclear,
     // For a turn with an outcome, the reply is DocDelay's fixed confirmation
     // (added when the step is applied), so `reply` is ignored and not stored.
     async save(text, reply) {
@@ -1335,9 +1350,10 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
         at,
         appointmentId,
         text,
-        reply: outcome ? "" : reply,
+        reply: outcome || unclear ? "" : reply,
         offers: outcome ? [] : offered,
         action: outcome,
+        unclear: !outcome && unclear,
       };
       if (!applyAi(replay(steps), step)) return false; // must apply cleanly
       return writeSteps([...steps, step]);
@@ -1376,8 +1392,14 @@ function applyAi(state: HmsState, step: Extract<DemoStep, { kind: "ai" }>): bool
       : action.kind === "staff"
         ? `AI · staff call (${action.reason.replace(/_/g, " ")})`
         : `AI · ${{ wait: "waits for later today", cancel: "cancelled", urgent: "URGENT (health concern)" }[action.kind]}`;
-  appt.chat.push({ at: when, from: "patient", text: step.text, understood });
-  appt.unclearInARow = 0;
+  appt.chat.push({
+    at: when,
+    from: "patient",
+    text: step.text,
+    understood: step.unclear ? "AI · couldn't understand (1 of 2)" : understood,
+  });
+  // Count unclear replies in a row (shared with the rule-based chat).
+  appt.unclearInARow = step.unclear ? (appt.unclearInARow ?? 0) + 1 : 0;
   delete appt.timeWish;
 
   if (!action) {
@@ -1414,8 +1436,11 @@ function applyAi(state: HmsState, step: Extract<DemoStep, { kind: "ai" }>): bool
   // Outcomes are confirmed with DocDelay's FIXED wording (the same lines as
   // the rule-based chat — always with AM/PM and the local time words), never
   // with AI-written text. The urgent reply is always the fixed safety line.
+  // "Couldn't understand" is also answered with DocDelay's fixed line.
   const confirmation = !action
-    ? step.reply
+    ? step.unclear
+      ? unclearReply(language, Boolean(appt.offers))
+      : step.reply
     : action.kind === "urgent"
       ? urgentReply(language)
       : action.kind === "cancel"
