@@ -8,6 +8,8 @@
 // connects the patient to staff and points to emergency services.
 
 import type { Language } from "@/hms/types";
+import { DAY_START, NORMAL_DAY_END } from "@/lib/reschedulingRules";
+import { formatTimeFor } from "@/lib/time";
 
 // The fixed line for ANY health concern. Never change it into advice.
 export function urgentReply(language: Language): string {
@@ -79,6 +81,43 @@ export function noFreeTodayPrefix(language: Language): string {
     English: "Sorry, nothing is free today at that time.",
     Tamil: "மன்னிக்கவும், இன்று அந்த நேரத்தில் இடம் இல்லை.",
     Hindi: "माफ़ कीजिए, आज उस समय कोई जगह खाली नहीं है।",
+  }[language];
+}
+
+// Used instead of "We can offer:" when the patient asked for a time today
+// that's BEFORE the doctor is back. `backAt` is "HH:MM".
+export function doctorBackIntro(language: Language, doctorName: string, backAt: string): string {
+  const t = formatTimeFor(backAt, language);
+  return {
+    English: `${doctorName} is back at ${t}. The earliest I can offer today is:`,
+    Tamil: `${doctorName} ${t} மணிக்கு திரும்பி வருவார். இன்று நான் வழங்கக்கூடிய முதல் நேரங்கள்:`,
+    Hindi: `${doctorName} के ${t} तक वापस आने की उम्मीद है। आज सबसे जल्दी उपलब्ध समय:`,
+  }[language];
+}
+
+// …and when nothing is free today after the doctor is back (other days follow).
+export function doctorBackNoneTodayPrefix(
+  language: Language,
+  doctorName: string,
+  backAt: string,
+): string {
+  const t = formatTimeFor(backAt, language);
+  return {
+    English: `${doctorName} is back at ${t}, but nothing is free today after that.`,
+    Tamil: `${doctorName} ${t} மணிக்கு திரும்பி வருவார், ஆனால் அதன் பிறகு இன்று இடம் இல்லை.`,
+    Hindi: `${doctorName} के ${t} तक वापस आने की उम्मीद है, लेकिन उसके बाद आज कोई जगह खाली नहीं है।`,
+  }[language];
+}
+
+// Used instead of "We can offer:" when the asked time is outside clinic hours
+// (e.g. "after 6", "before 8").
+export function clinicHoursIntro(language: Language): string {
+  const open = formatTimeFor(DAY_START, language);
+  const close = formatTimeFor(NORMAL_DAY_END, language);
+  return {
+    English: `The clinic is open ${open} to ${close}. The closest I can offer is:`,
+    Tamil: `மருத்துவமனை ${open} முதல் ${close} வரை திறந்திருக்கும். நான் வழங்கக்கூடிய அருகிலுள்ள நேரங்கள்:`,
+    Hindi: `क्लिनिक ${open} से ${close} तक खुला है। सबसे नज़दीकी उपलब्ध समय:`,
   }[language];
 }
 

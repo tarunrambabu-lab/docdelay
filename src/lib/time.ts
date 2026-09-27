@@ -78,3 +78,38 @@ export function formatClock(isoDateTime: string): string {
     minute: "2-digit",
   });
 }
+
+// A time as shown to a PATIENT, in their language:
+//   English: "4:30 PM"
+//   Tamil:   "மாலை 4:30 (4:30 PM)"      Hindi: "शाम 4:30 (4:30 PM)"
+// Tamil and Hindi get the local word for the time of day, plus the time with
+// AM/PM in brackets. (Staff screens keep using formatTime.)
+//
+// ⚠️ The Tamil and Hindi time-of-day words (and where one part of the day
+// ends and the next begins) must be checked by a native speaker before real use.
+const TIME_OF_DAY_WORDS: Record<"Tamil" | "Hindi", [number, string][]> = {
+  // [starts at hour, word] — the last one that has started wins
+  Tamil: [
+    [0, "இரவு"], // night
+    [5, "காலை"], // morning
+    [12, "மதியம்"], // afternoon
+    [16, "மாலை"], // evening
+    [20, "இரவு"], // night
+  ],
+  Hindi: [
+    [0, "रात"], // night
+    [5, "सुबह"], // morning
+    [12, "दोपहर"], // afternoon
+    [16, "शाम"], // evening
+    [20, "रात"], // night
+  ],
+};
+
+export function formatTimeFor(time: string, language: Language): string {
+  const clock = formatTime(time); // "4:30 PM"
+  if (language === "English") return clock;
+  const hour = Math.floor(toMinutes(time) / 60);
+  const word = TIME_OF_DAY_WORDS[language].filter(([from]) => hour >= from).at(-1)![1];
+  const bare = clock.replace(/ (AM|PM)$/, ""); // "4:30"
+  return `${word} ${bare} (${clock})`;
+}

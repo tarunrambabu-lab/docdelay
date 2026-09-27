@@ -375,14 +375,21 @@ function hasWord(text: string, word: string): boolean {
 const hasAny = (text: string, words: string[]) => words.some((w) => hasWord(text, w));
 
 // "4" → "16:00"; "9" → "09:00"; "4:30 pm" → "16:30". Clinic hours are 9–5, so
-// a bare 1–8 means afternoon and 9–11 means morning.
-function toClock(hourText: string, minuteText?: string, ampm?: string): string | undefined {
+// a bare 1–5 means afternoon and 9–11 means morning. A bare 6–8 is outside
+// clinic hours either way: "after 6" is read as 6 PM, "before 8" as 8 AM.
+function toClock(
+  hourText: string,
+  minuteText?: string,
+  ampm?: string,
+  direction: "after" | "before" = "after",
+): string | undefined {
   let hour = Number(hourText);
   const minute = minuteText ? Number(minuteText) : 0;
   if (!Number.isInteger(hour) || hour < 1 || hour > 12 || minute > 59) return undefined;
   if (ampm === "pm" && hour < 12) hour += 12;
   else if (ampm === "am" && hour === 12) hour = 0;
-  else if (!ampm && hour >= 1 && hour <= 8) hour += 12;
+  else if (!ampm && hour >= 1 && hour <= 5) hour += 12;
+  else if (!ampm && hour >= 6 && hour <= 8 && direction === "after") hour += 12;
   return fromMinutes(hour * 60 + minute);
 }
 
@@ -439,7 +446,7 @@ function readPreferences(t: string): Preferences {
     t.match(new RegExp(String.raw`\s(?:before|by|until|till|earlier than)\s${TIME}`)) ??
     t.match(new RegExp(String.raw`\s${TIME}\s(?:baje\s)?(?:se pehle|se pahle)\s`)) ??
     t.match(new RegExp(String.raw`\s${TIME}\s(?:mani(?:kku)?\s)?(?:munnadi|munnaadi|munnaal)\s`));
-  if (before) prefs.before = toClock(before[1], before[2], before[3]);
+  if (before) prefs.before = toClock(before[1], before[2], before[3], "before");
   // A plain "at 4pm" / "4:30" counts as "from then on"
   if (!prefs.after && !prefs.before) {
     const at =

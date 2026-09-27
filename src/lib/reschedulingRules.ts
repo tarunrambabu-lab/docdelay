@@ -23,8 +23,15 @@
 //   Slots after 5 PM are only ever created by pushing (a plain "later today"),
 //   so e.g. "after 6" today finds nothing. Nobody is ever pushed to fit a
 //   chosen time. If no empty slot fits, the patient is
-//   told so and offered other days at that time. (firstEmptySlotToday below,
-//   and the bookSlot check in the hms module, both follow this.)
+//   told so and offered other days at that time. (emptySlotsToday below, and
+//   the bookSlot check in the hms module, both follow this.)
+//   The patient is offered up to OFFERS_TO_MAKE such slots (A/B/C) to pick from.
+//   - If the asked time is BEFORE the doctor's return (see wishStartsAt), the
+//     earliest empty slots from the return time are offered instead.
+//   - If the asked time is outside clinic hours (see isOutsideClinicHours,
+//     e.g. "after 6", "before 8"), the closest slots are offered, one per day.
+//
+// Other-day offers are ALWAYS one per day, earliest days first.
 //
 // "2 – Another day" (and "no room today"):
 //   Offer OFFERS_TO_MAKE open slots with the same doctor over the next
@@ -265,23 +272,53 @@ export function pickOffers(
   return [...sameHalf, ...otherHalf].slice(0, count).sort((a, b) => a.dayOffset - b.dayOffset);
 }
 
-// The `count` free slots closest to a wished-for day and time (any day if
-// no day is given — then earlier days count as closer). Used when nothing
-// matches exactly, or when the patient asked for one specific day.
-export function pickClosest(
+// The free slots closest to a wished-for time, ONE PER DAY, earliest days
+// first (like the other-day offers). Used when nothing matches exactly, or
+// when the asked time is outside clinic hours.
+export function pickClosestPerDay(
   free: SlotOffer[],
-  target: { dayOffset?: number; time: string },
+  time: string,
   count = OFFERS_TO_MAKE,
 ): SlotOffer[] {
-  const distance = (s: SlotOffer) =>
-    (target.dayOffset === undefined ? s.dayOffset : Math.abs(s.dayOffset - target.dayOffset)) *
-      24 *
-      60 +
-    Math.abs(toMinutes(s.startTime) - toMinutes(target.time));
-  return [...free]
-    .sort((a, b) => distance(a) - distance(b))
+  const target = toMinutes(time);
+  const days = [...new Set(free.map((s) => s.dayOffset))].sort((a, b) => a - b);
+  return days
     .slice(0, count)
-    .sort((a, b) => a.dayOffset - b.dayOffset || a.startTime.localeCompare(b.startTime));
+    .map(
+      (day) =>
+        free
+          .filter((s) => s.dayOffset === day)
+          .sort(
+            (a, b) =>
+              Math.abs(toMinutes(a.startTime) - target) -
+                Math.abs(toMinutes(b.startTime) - target) || a.startTime.localeCompare(b.startTime),
+          )[0],
+    );
+}
+
+// The earliest time a wish allows: "after 4" → 16:00, "afternoon" → 12:00,
+// "evening" → 16:00; "before 11" (or nothing) → the start of the clinic day.
+export function wishStartsAt(wish: TimeWish): string {
+  if (wish.after) return wish.after;
+  if (wish.timeOfDay === "afternoon") return MORNING_ENDS;
+  if (wish.timeOfDay === "evening") return EVENING_STARTS;
+  return DAY_START;
+}
+
+// Is the asked time completely outside clinic hours (DAY_START–NORMAL_DAY_END,
+// 9:00 AM–5:00 PM)? E.g. "after 6", "before 8" — no slot could ever fit.
+export function isOutsideClinicHours(wish: TimeWish): boolean {
+  let from = toMinutes(DAY_START);
+  let until = toMinutes(NORMAL_DAY_END);
+  if (wish.after) from = Math.max(from, toMinutes(wish.after));
+  if (wish.before) until = Math.min(until, toMinutes(wish.before));
+  if (wish.timeOfDay === "morning") until = Math.min(until, toMinutes(MORNING_ENDS));
+  if (wish.timeOfDay === "afternoon") {
+    from = Math.max(from, toMinutes(MORNING_ENDS));
+    until = Math.min(until, toMinutes(EVENING_STARTS));
+  }
+  if (wish.timeOfDay === "evening") from = Math.max(from, toMinutes(EVENING_STARTS));
+  return from + SLOT_MINUTES > until;
 }
 
 // The time to search around for a chat request: "after 4" → 16:00,
@@ -299,20 +336,22 @@ export function anchorTime(
   return originalTime;
 }
 
-// A SPECIFIC time later today: the earliest EMPTY slot at or after the time
-// the patient asked for (from the doctor's return time on, within opening
-// hours). Never a push. Returns undefined if nothing fits.
-export function firstEmptySlotToday(
-  todaysAppointments: Appointment[], // ALL of this doctor's appointments TODAY
+// A SPECIFIC time later today: the earliest `count` EMPTY slots at or after
+// the time the patient asked for (from the doctor's return time on, ending by
+// 5:00 PM). Never a push. With an empty `wish`: the earliest empty slots from
+// the return time. Returns an empty list if nothing fits.
+export function emptySlotsToday(
+  doctorsAppointments: Appointment[], // this doctor's appointments
   returnTime: string, // the doctor's "Expected until" time
   wish: TimeWish,
   excludeAppointmentId?: string, // the patient's own (old) appointment
-): SlotOffer | undefined {
+  count = OFFERS_TO_MAKE,
+): SlotOffer[] {
   return listFreeSlots(
-    todaysAppointments,
+    doctorsAppointments,
     { days: [0], ...wish },
     { excludeAppointmentId, todayFrom: returnTime },
-  )[0];
+  ).slice(0, count);
 }
 
 // The time a patient was first booked for (exported for chat).

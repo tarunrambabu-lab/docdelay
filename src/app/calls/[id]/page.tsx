@@ -94,8 +94,8 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
           hospitalName: hospital.name,
           doctorName: doctor.name,
           reason: unavailability.reason,
-          appointmentTime: formatTime(current.startTime),
-          untilTime: formatTime(unavailability.untilTime),
+          appointmentTime: current.startTime,
+          untilTime: unavailability.untilTime,
         })
     : "";
   const chatLabel =

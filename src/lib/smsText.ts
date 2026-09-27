@@ -5,7 +5,7 @@
 // native Hindi speaker must review it before any real patient receives it.
 
 import type { Language, UnavailabilityReason } from "@/hms/types";
-import { formatDate, formatTime } from "@/lib/time";
+import { formatDate, formatTimeFor } from "@/lib/time";
 
 export interface SmsDetails {
   language: Language;
@@ -13,7 +13,7 @@ export interface SmsDetails {
   doctorName: string;
   reason: UnavailabilityReason; // why the doctor was unavailable
   newDayOffset: number; // 0 = today
-  newStartTime: string; // "HH:MM" — always written with AM/PM, e.g. "2:45 PM"
+  newStartTime: string; // "HH:MM" — always written with AM/PM (see formatTimeFor)
 }
 
 export function timeChangedSms(d: SmsDetails): string {
@@ -21,7 +21,9 @@ export function timeChangedSms(d: SmsDetails): string {
   const isEmergency = d.reason !== "Other";
   const today = d.newDayOffset === 0;
   const date = formatDate(d.newDayOffset, d.language);
-  const newTime = formatTime(d.newStartTime); // always with AM/PM
+  // Always with AM/PM; Tamil/Hindi also get the local time-of-day word,
+  // e.g. "மாலை 4:30 (4:30 PM)". (Native-speaker check needed — see formatTimeFor.)
+  const newTime = formatTimeFor(d.newStartTime, d.language);
 
   switch (d.language) {
     case "English":
