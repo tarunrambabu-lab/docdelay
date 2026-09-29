@@ -19,6 +19,7 @@ Doctors sometimes get pulled into emergency surgery, and their booked patients g
 - You may make reasonable assumptions to keep moving. At the end of every report, list ALL the assumptions you made, in two groups:
   - **⚠️ Flagged for your decision** — only assumptions that could (a) put patient safety at risk, (b) book the wrong slot or move someone unfairly, or (c) confuse staff about what to do. Explain the risk in one line each, so I can decide.
   - **Minor, logged in BACKLOG.md** — everything else. Also add these to BACKLOG.md (under "Minor assumptions").
+- Read HANDOFF.md at the start of every session, and update its 'Where things stand' table at the end of each session.
 
 ## Next.js notes
 @AGENTS.md
