@@ -24,9 +24,13 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | 6: chat mode | Done. Live site = basic word-list chat. Laptop = real AI (Claude Haiku 4.5) using my API key in `.env.local` |
 | Safety: wide health-keyword check runs first; "two unclear replies" counted in code | Done |
 | Alarm-fatigue fix ("tired of waiting", "heavy traffic", "work pressure", remove "doctor said") | Done |
-| 7: guided demo tour, suggested chat phrases, phone-width polish | Next |
-| Real calls to my own phone | After Stage 7 |
-| Demo video | After real calls |
+| Automated tests (npm test, 245 tests) | Done |
+| Tamil/Hindi health-word fix (word beginnings, lookalike guards) | Done, live. Needs a second native-speaker and a clinician review before real patients |
+| 7: guided demo tour, suggested chat phrases, phone-width polish | Done, live (29 Sep) |
+| AI weekday fix + day check in code | Done. 4 AI items in BACKLOG under "Must do before real calls or laptop demos" |
+| Demo video (without the real-call clip) | Next |
+| Real calls to my own phone | After the demo video |
+| Add the real-call clip to the video | After real calls |
 
 Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinics.
 
@@ -39,6 +43,9 @@ Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinic
 - Any health mention → URGENT, straight to staff. The app never judges severity. Escalation gives no booking advantage.
 - One text per patient, sent only when staff approve.
 - Chat rules are frozen for the MVP; new edge cases go to BACKLOG.md.
+- After Phase 2: lighter safety net. Clinician-set red flags → staff welfare check; other health mentions → 108 line, normal rebooking, note for staff/doctor.
+- The demo never shows my face or voice. Video: Claude writes the script; Claude Code records automatically and joins video, voice and captions; voice from a free, licence-checked tool (first choice: Indic Parler-TTS).
+- Switch the AI off for laptop demos until the 4 backlog AI items are done.
 
 ## How I like to work
 
@@ -63,3 +70,5 @@ npm run dev
 ```
 
 Then open http://localhost:3000.
+
+To test on my phone (same Wi-Fi): `npm run build`, then `npx next start -H 0.0.0.0`, then open the laptop's Network address on the phone.
