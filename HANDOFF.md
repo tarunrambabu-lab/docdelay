@@ -23,7 +23,7 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | Live site on Vercel, GitHub README, screenshots, copyright notice | Done |
 | 6: chat mode | Done. Live site = basic word-list chat. Laptop = real AI (Claude Haiku 4.5) using my API key in `.env.local` |
 | Safety: wide health-keyword check runs first; "two unclear replies" counted in code | Done |
-| Alarm-fatigue fix ("tired of waiting", "heavy traffic", "work pressure", remove "doctor said") | Sent to Claude Code — check the report |
+| Alarm-fatigue fix ("tired of waiting", "heavy traffic", "work pressure", remove "doctor said") | Done |
 | 7: guided demo tour, suggested chat phrases, phone-width polish | Next |
 | Real calls to my own phone | After Stage 7 |
 | Demo video | After real calls |
