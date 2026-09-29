@@ -632,7 +632,9 @@ export function mentionsHealth(message: string): boolean {
 }
 
 export const understandWithRules: Understander = async (message, context) => {
-  const t = normalise(message);
+  // Harmless phrases are skipped for EVERYTHING, not just the health check —
+  // otherwise "tired of waiting" would be read as "I'll wait".
+  const t = withoutHarmlessPhrases(normalise(message));
   const prefs = readPreferences(t);
   const result = (intent: Understanding["intent"], extra: Partial<Understanding> = {}) => ({
     intent,
@@ -641,7 +643,7 @@ export const understandWithRules: Understander = async (message, context) => {
   });
 
   // 1. Health — always first.
-  if (hasAny(withoutHarmlessPhrases(t), HEALTH_WORDS)) {
+  if (hasAny(t, HEALTH_WORDS)) {
     return result("health_concern", { preferences: {} });
   }
 

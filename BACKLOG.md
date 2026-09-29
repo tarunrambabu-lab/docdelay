@@ -34,6 +34,7 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - When the AI can't understand, DocDelay sends its own fixed "please say it again" line (the same as the rule-based chat), not AI-written text.
 - Alarm-fatigue tuning: a short list of harmless phrases is skipped before the health check — tired/exhausted/sick/fed up/bored "of/with/from (the/this) waiting / wait / delay / queue / line / rescheduling"; Hindi "intezaar/wait … thak…"; heavy/bhaari + traffic/rain/work/workload/schedule/jam (and "traffic bhaari"); work/office/job/traffic/schedule/kaam/naukri + pressure/dabav (and "pressure at/from work"). Only those phrases are skipped; the rest of the message is still checked. No Tamil harmless phrases yet.
 - "doctor said" removed from the health keywords.
+- The harmless phrases are also skipped when the keyword chat works out what the patient wants, so "tired of waiting" is no longer read as "I'll wait" (it's now an unclear reply that asks the patient to choose).
 - AI chat: besides the patient's first name, language and original time, the AI is also told the doctor's name, the reason for the delay and the doctor's return time (no patient data).
 
 ## Done
