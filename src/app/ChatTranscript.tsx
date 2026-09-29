@@ -28,7 +28,7 @@ export default function ChatTranscript({
             </p>
             <p
               lang={languageCodes[language]}
-              className={`rounded-2xl rounded-tl-sm p-3 text-sm leading-relaxed ${
+              className={`rounded-2xl rounded-tl-sm p-3 text-sm leading-relaxed wrap-break-word ${
                 dark ? "bg-white/10 text-white" : "bg-slate-100 text-slate-800"
               }`}
             >
@@ -42,7 +42,7 @@ export default function ChatTranscript({
             >
               Patient
             </p>
-            <p className="inline-block rounded-2xl rounded-tr-sm bg-teal-600 p-3 text-left text-sm leading-relaxed text-white">
+            <p className="inline-block max-w-full rounded-2xl rounded-tr-sm bg-teal-600 p-3 text-left text-sm leading-relaxed wrap-break-word text-white">
               {turn.text}
             </p>
             {turn.understood && (

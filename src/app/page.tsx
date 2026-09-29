@@ -33,6 +33,7 @@ import ClickableRow from "./ClickableRow";
 import FalseAlarmButton from "./FalseAlarmButton";
 import MarkUnavailableButton from "./MarkUnavailableButton";
 import PatientDetails from "./PatientDetails";
+import { TAP } from "./tapTarget";
 
 // A different colour for each language, so it's easy to scan.
 const languageColors: Record<Language, string> = {
@@ -46,6 +47,22 @@ function dayLabel(dayOffset: number): string {
   if (dayOffset === 0) return "Today";
   if (dayOffset === 1) return "Tomorrow";
   return formatDate(dayOffset);
+}
+
+// Background colour of a patient's row (laptop) or card (phone): URGENT is a
+// stronger red, affected a light red, moved-to-another-day greyed out.
+function rowTint(urgent: boolean, affected: boolean, gone: boolean): string {
+  if (urgent) return "bg-red-100 hover:bg-red-200";
+  if (affected) return "bg-red-50 hover:bg-red-100";
+  if (gone) return "bg-slate-50/70 hover:bg-slate-100";
+  return "hover:bg-slate-50";
+}
+
+// The red stripe on the left of affected (and URGENT) rows and cards.
+function rowStripe(urgent: boolean, affected: boolean): string {
+  if (urgent) return "shadow-[inset_4px_0_0_var(--color-red-700)]";
+  if (affected) return "shadow-[inset_4px_0_0_var(--color-red-500)]";
+  return "";
 }
 
 export default async function Home({ searchParams }: PageProps<"/">) {
@@ -125,13 +142,15 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                 >
                   <div>
                     <span
-                      className={`mr-2 rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[c.status]}`}
+                      className={`mr-2 rounded-full px-2 py-0.5 text-xs font-medium max-sm:inline-block ${statusColors[c.status]}`}
                     >
                       {c.status}
                     </span>
-                    <span className="font-medium text-slate-900">{c.patient.name}</span>{" "}
-                    <span className="tabular-nums text-slate-500">{c.patient.phone}</span>
-                    <p className="mt-0.5 text-xs text-slate-500">
+                    <span className="font-medium wrap-break-word text-slate-900">
+                      {c.patient.name}
+                    </span>{" "}
+                    <span className="whitespace-nowrap tabular-nums text-slate-500">{c.patient.phone}</span>
+                    <p className="mt-0.5 text-xs wrap-break-word text-slate-500">
                       {c.doctorName} · {formatWhen(c.dayOffset, c.startTime)}
                       {c.note && ` · ${c.note}`}
                       {c.falseAlarms?.length ? ` · false alarms: ${c.falseAlarms.length}` : ""}
@@ -142,7 +161,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                     <Link
                       href={`/?doctor=${c.doctorId}&day=${c.dayOffset}&appt=${c.id}`}
                       scroll={false}
-                      className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                      className={`rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 ${TAP}`}
                     >
                       View
                     </Link>
@@ -185,7 +204,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                     </p>
                   )}
                   {waiting > 0 && (
-                    <Link href="/messages" className="mt-0.5 block text-red-100 underline">
+                    <Link href="/messages" className={`mt-0.5 block text-red-100 underline ${TAP}`}>
                       ✉ {waiting} {waiting === 1 ? "update" : "updates"} waiting to be sent
                     </Link>
                   )}
@@ -193,7 +212,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                 {stillToCall > 0 && (
                   <Link
                     href={`/calls/${u.id}`}
-                    className="rounded-lg bg-white px-3 py-1.5 font-medium text-red-700 shadow-sm hover:bg-red-50"
+                    className={`rounded-lg bg-white px-3 py-1.5 font-medium text-red-700 shadow-sm hover:bg-red-50 ${TAP}`}
                   >
                     Start calling patients
                   </Link>
@@ -215,7 +234,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           <p className="text-sm text-slate-600">{today}</p>
           <Link
             href="/messages"
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+            className={`rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 ${TAP}`}
           >
             Messages{messageCount > 0 && ` (${messageCount})`}
           </Link>
@@ -223,7 +242,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           <form action={resetDemoAction}>
             <button
               type="submit"
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+              className={`rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 ${TAP}`}
             >
               Reset demo
             </button>
@@ -267,7 +286,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             <Link
               key={d}
               href={`/?doctor=${selected.id}&day=${d}`}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+              className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${TAP} ${
                 d === selectedDay
                   ? "bg-teal-700 text-white"
                   : "border border-slate-200 bg-white text-slate-700 hover:border-slate-300"
@@ -304,98 +323,147 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             The hospital is closed on this day.
           </p>
         ) : (
-          // On small screens the table scrolls sideways instead of squashing.
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-5 py-3 font-medium">Time</th>
-                  <th className="px-5 py-3 font-medium">Patient</th>
-                  <th className="px-5 py-3 font-medium">Reason</th>
-                  <th className="px-5 py-3 font-medium">Language</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {rows.map(({ a, movedAway: gone, time }) => {
-                  const affected = a.status === "Affected – needs contact";
-                  const urgent = a.status === "URGENT – staff call now";
-                  const details = `${here}&appt=${a.id}`;
-                  return (
-                    <ClickableRow
-                      key={a.id}
-                      href={details}
-                      // Affected rows get a red tint and a red stripe on the left;
-                      // URGENT rows a stronger red. Rows that moved to another day
-                      // are greyed out. Click any row to see its details.
-                      className={
-                        urgent
-                          ? "bg-red-100 hover:bg-red-200"
-                          : affected
-                            ? "bg-red-50 hover:bg-red-100"
-                            : gone
-                              ? "bg-slate-50/70 hover:bg-slate-100"
-                              : "hover:bg-slate-50"
-                      }
+          <>
+            {/* Phones (below 640 px): one card per patient instead of the table.
+                Same colours, stripe and information; tap a card for details. */}
+            <ul className="divide-y divide-slate-100 sm:hidden">
+              {rows.map(({ a, movedAway: gone, time }) => {
+                const affected = a.status === "Affected – needs contact";
+                const urgent = a.status === "URGENT – staff call now";
+                return (
+                  <li key={a.id}>
+                    <Link
+                      href={`${here}&appt=${a.id}`}
+                      scroll={false}
+                      className={`block px-4 py-3 text-sm ${rowTint(urgent, affected, gone)} ${rowStripe(urgent, affected)}`}
                     >
-                      <td
-                        className={`whitespace-nowrap px-5 py-3 font-medium tabular-nums ${
-                          gone ? "text-slate-400 line-through" : "text-slate-900"
-                        } ${
-                          urgent
-                            ? "shadow-[inset_4px_0_0_var(--color-red-700)]"
-                            : affected
-                              ? "shadow-[inset_4px_0_0_var(--color-red-500)]"
-                              : ""
-                        }`}
-                      >
-                        {formatTime(time)}
-                      </td>
-                      <td className="px-5 py-3">
-                        <Link
-                          href={details}
-                          scroll={false}
-                          className={`hover:underline ${gone ? "text-slate-500" : "text-slate-900"}`}
-                        >
-                          {a.patient.name}
-                        </Link>
-                        <p className="text-xs tabular-nums text-slate-500">{a.patient.phone}</p>
-                      </td>
-                      <td className={`px-5 py-3 ${gone ? "text-slate-400" : "text-slate-700"}`}>
-                        {a.reason}
-                      </td>
-                      <td className="px-5 py-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <span
-                          className={`rounded-full px-2 py-0.5 text-xs ring-1 ${languageColors[a.patient.preferredLanguage]}`}
+                          className={`font-medium tabular-nums ${
+                            gone ? "text-slate-400 line-through" : "text-slate-900"
+                          }`}
                         >
-                          {a.patient.preferredLanguage}
+                          {formatTime(time)}
                         </span>
-                      </td>
-                      <td className="px-5 py-3">
                         <span
-                          className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[a.status]}`}
+                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[a.status]}`}
                         >
                           {a.status}
                         </span>
-                        {/* If the time changed: first booked time → current time */}
-                        {a.timeHistory && (
-                          <p className="mt-1 whitespace-nowrap text-xs text-slate-600">
-                            {describeTimeChange(a)}
-                          </p>
-                        )}
-                        {a.note && <p className="mt-1 text-xs text-orange-700">{a.note}</p>}
-                        {a.falseAlarms?.length ? (
-                          <p className="mt-1 text-xs text-slate-500">
-                            False alarms: {a.falseAlarms.length}
-                          </p>
-                        ) : null}
-                      </td>
-                    </ClickableRow>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                      <p
+                        className={`mt-1 font-medium wrap-break-word ${gone ? "text-slate-500" : "text-slate-900"}`}
+                      >
+                        {a.patient.name}{" "}
+                        <span className="whitespace-nowrap text-xs font-normal tabular-nums text-slate-500">
+                          {a.patient.phone}
+                        </span>
+                      </p>
+                      <p className={`mt-1 wrap-break-word ${gone ? "text-slate-400" : "text-slate-700"}`}>
+                        {a.reason}{" "}
+                        <span
+                          className={`inline-block rounded-full px-2 py-0.5 text-xs ring-1 ${languageColors[a.patient.preferredLanguage]}`}
+                        >
+                          {a.patient.preferredLanguage}
+                        </span>
+                      </p>
+                      {/* If the time changed: first booked time → current time */}
+                      {a.timeHistory && (
+                        <p className="mt-1 text-xs text-slate-600">{describeTimeChange(a)}</p>
+                      )}
+                      {a.note && (
+                        <p className="mt-1 text-xs wrap-break-word text-orange-700">{a.note}</p>
+                      )}
+                      {a.falseAlarms?.length ? (
+                        <p className="mt-1 text-xs text-slate-500">
+                          False alarms: {a.falseAlarms.length}
+                        </p>
+                      ) : null}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Laptops and tablets (640 px and wider): the table. */}
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <thead className="text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-5 py-3 font-medium">Time</th>
+                    <th className="px-5 py-3 font-medium">Patient</th>
+                    <th className="px-5 py-3 font-medium">Reason</th>
+                    <th className="px-5 py-3 font-medium">Language</th>
+                    <th className="px-5 py-3 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {rows.map(({ a, movedAway: gone, time }) => {
+                    const affected = a.status === "Affected – needs contact";
+                    const urgent = a.status === "URGENT – staff call now";
+                    const details = `${here}&appt=${a.id}`;
+                    return (
+                      <ClickableRow
+                        key={a.id}
+                        href={details}
+                        // Affected rows get a red tint and a red stripe on the left;
+                        // URGENT rows a stronger red. Rows that moved to another day
+                        // are greyed out. Click any row to see its details.
+                        className={rowTint(urgent, affected, gone)}
+                      >
+                        <td
+                          className={`whitespace-nowrap px-5 py-3 font-medium tabular-nums ${
+                            gone ? "text-slate-400 line-through" : "text-slate-900"
+                          } ${rowStripe(urgent, affected)}`}
+                        >
+                          {formatTime(time)}
+                        </td>
+                        <td className="px-5 py-3">
+                          <Link
+                            href={details}
+                            scroll={false}
+                            className={`hover:underline ${gone ? "text-slate-500" : "text-slate-900"}`}
+                          >
+                            {a.patient.name}
+                          </Link>
+                          <p className="text-xs tabular-nums text-slate-500">{a.patient.phone}</p>
+                        </td>
+                        <td className={`px-5 py-3 ${gone ? "text-slate-400" : "text-slate-700"}`}>
+                          {a.reason}
+                        </td>
+                        <td className="px-5 py-3">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs ring-1 ${languageColors[a.patient.preferredLanguage]}`}
+                          >
+                            {a.patient.preferredLanguage}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3">
+                          <span
+                            className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[a.status]}`}
+                          >
+                            {a.status}
+                          </span>
+                          {/* If the time changed: first booked time → current time */}
+                          {a.timeHistory && (
+                            <p className="mt-1 whitespace-nowrap text-xs text-slate-600">
+                              {describeTimeChange(a)}
+                            </p>
+                          )}
+                          {a.note && <p className="mt-1 text-xs text-orange-700">{a.note}</p>}
+                          {a.falseAlarms?.length ? (
+                            <p className="mt-1 text-xs text-slate-500">
+                              False alarms: {a.falseAlarms.length}
+                            </p>
+                          ) : null}
+                        </td>
+                      </ClickableRow>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </section>
 

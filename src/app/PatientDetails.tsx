@@ -8,6 +8,7 @@ import { describeTimeChange, statusColors } from "@/lib/status";
 import { formatClock, formatWhen } from "@/lib/time";
 import ChatTranscript from "./ChatTranscript";
 import FalseAlarmButton from "./FalseAlarmButton";
+import { TAP } from "./tapTarget";
 
 export default function PatientDetails({
   appointment: a,
@@ -24,8 +25,8 @@ export default function PatientDetails({
       <Link href={closeHref} scroll={false} aria-label="Close" className="flex-1" />
       <aside className="h-full w-full max-w-lg overflow-y-auto bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900">{a.patient.name}</h2>
+          <div className="min-w-0">
+            <h2 className="text-xl font-semibold wrap-break-word text-slate-900">{a.patient.name}</h2>
             <p className="text-sm text-slate-500">
               {a.patient.phone} · {a.patient.preferredLanguage} · {doctorName}
             </p>
@@ -33,7 +34,7 @@ export default function PatientDetails({
           <Link
             href={closeHref}
             scroll={false}
-            className="rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-slate-100"
+            className={`shrink-0 rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-slate-100 ${TAP}`}
           >
             Close ✕
           </Link>
@@ -42,7 +43,7 @@ export default function PatientDetails({
         <section className="mb-6 space-y-2 text-sm">
           <p>
             <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[a.status]}`}
+              className={`rounded-full px-2 py-0.5 text-xs font-medium max-sm:inline-block ${statusColors[a.status]}`}
             >
               {a.status}
             </span>
@@ -51,7 +52,7 @@ export default function PatientDetails({
             {formatWhen(a.dayOffset, a.startTime)} · {a.reason}
           </p>
           {a.timeHistory && <p className="text-slate-600">{describeTimeChange(a)}</p>}
-          {a.note && <p className="text-orange-700">{a.note}</p>}
+          {a.note && <p className="wrap-break-word text-orange-700">{a.note}</p>}
           {a.status === "URGENT – staff call now" && (
             <div className="rounded-lg bg-red-50 p-3">
               <p className="mb-2 font-medium text-red-700">

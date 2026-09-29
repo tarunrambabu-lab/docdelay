@@ -4,6 +4,7 @@
 
 import { useState, useTransition } from "react";
 import { chatAction } from "@/app/actions";
+import { TAP } from "@/app/tapTarget";
 
 const MAX_LENGTH = 200; // same limit the server keeps
 
@@ -49,14 +50,15 @@ export default function ChatBox({ appointmentId }: { appointmentId: string }) {
           }
         }}
         placeholder="e.g. “Can I come Thursday after 4?”"
-        className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+        // max-sm:text-base = 16 px on phones, so iPhones don't zoom in when typing
+        className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600 max-sm:text-base"
       />
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-slate-500">English, or Tamil / Hindi in English letters.</p>
         <button
           type="submit"
           disabled={isPending || !text.trim()}
-          className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-50"
+          className={`rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-50 ${TAP}`}
         >
           {isPending ? "Sending…" : "Send"}
         </button>

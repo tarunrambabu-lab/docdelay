@@ -42,6 +42,7 @@ import ChatTranscript from "@/app/ChatTranscript";
 import AnswerButtons from "./AnswerButtons";
 import ChatBox from "./ChatBox";
 import OfferButtons from "./OfferButtons";
+import { TAP } from "@/app/tapTarget";
 
 export default async function CallSimulator({ params, searchParams }: PageProps<"/calls/[id]">) {
   const { id } = await params;
@@ -54,7 +55,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
     return (
       <div className="mx-auto w-full max-w-5xl px-4 py-16 text-center">
         <p className="mb-4 text-slate-600">This call list no longer exists.</p>
-        <Link href="/" className="font-medium text-teal-700 hover:underline">
+        <Link href="/" className={`font-medium text-teal-700 hover:underline ${TAP}`}>
           ← Back to dashboard
         </Link>
       </div>
@@ -104,7 +105,10 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
-      <Link href={dashboardLink} className="text-sm font-medium text-teal-700 hover:underline">
+      <Link
+        href={dashboardLink}
+        className={`text-sm font-medium text-teal-700 hover:underline ${TAP}`}
+      >
         ← Back to dashboard
       </Link>
       <header className="mb-8 mt-3">
@@ -117,7 +121,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
 
       {/* Buttons / Chat switch */}
       <nav
-        className="mb-6 inline-flex rounded-xl border border-slate-200 bg-white p-1 text-sm"
+        className="mb-6 inline-flex flex-wrap rounded-xl border border-slate-200 bg-white p-1 text-sm"
         aria-label="Mode"
       >
         {(
@@ -130,7 +134,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
             key={value}
             href={href}
             aria-current={mode === value ? "page" : undefined}
-            className={`rounded-lg px-3 py-1.5 font-medium ${
+            className={`rounded-lg px-3 py-1.5 font-medium ${TAP} ${
               mode === value ? "bg-teal-700 text-white" : "text-slate-600 hover:bg-slate-100"
             }`}
           >
@@ -177,7 +181,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
                     A staff member must call this patient now. Nothing was booked.
                   </p>
                 )}
-                {justAnswered.note && <p className="text-orange-800">{justAnswered.note}</p>}
+                {justAnswered.note && <p className="wrap-break-word text-orange-800">{justAnswered.note}</p>}
                 {justAnswered.timeHistory && (
                   <p className="text-emerald-800">{describeTimeChange(justAnswered)}</p>
                 )}
@@ -296,7 +300,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
           </p>
           <Link
             href={dashboardLink}
-            className="inline-block rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
+            className={`inline-block rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 ${TAP}`}
           >
             Back to dashboard
           </Link>
@@ -329,7 +333,7 @@ function PhoneCard({
     <div className="rounded-[2rem] bg-slate-900 p-3 shadow-xl">
       <div className="rounded-[1.5rem] bg-slate-800 p-6 text-white">
         <p className="text-xs font-medium uppercase tracking-wider text-emerald-400">● {label}</p>
-        <p className="mt-2 text-2xl font-semibold">{patient.name}</p>
+        <p className="mt-2 text-2xl font-semibold wrap-break-word">{patient.name}</p>
         <p className="tabular-nums text-slate-300">{patient.phone}</p>
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
           <span className="rounded-full bg-white/10 px-2 py-1">
@@ -349,7 +353,7 @@ function PhoneCard({
             </p>
             <p
               lang={languageCodes[patient.preferredLanguage]}
-              className="rounded-2xl rounded-tl-sm bg-white/10 p-4 leading-relaxed"
+              className="rounded-2xl rounded-tl-sm bg-white/10 p-4 leading-relaxed wrap-break-word"
             >
               {message}
             </p>

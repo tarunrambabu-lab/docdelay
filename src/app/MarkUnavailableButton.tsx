@@ -8,6 +8,7 @@ import { useActionState, useState } from "react";
 import { markUnavailableAction } from "./actions";
 import { UNAVAILABILITY_REASONS, type Doctor } from "@/hms/types";
 import { fromMinutes, toMinutes } from "@/lib/time";
+import { TAP } from "./tapTarget";
 
 const LATEST_TIME = 23 * 60 + 45; // don't suggest times past 11:45 PM
 
@@ -31,7 +32,7 @@ export default function MarkUnavailableButton({ doctor }: { doctor: Doctor }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700"
+        className={`rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 ${TAP}`}
       >
         Mark doctor unavailable
       </button>
@@ -59,7 +60,7 @@ function UnavailableForm({ doctor, onClose }: { doctor: Doctor; onClose: () => v
   );
 
   const inputClass =
-    "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600";
+    "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600 max-sm:text-base"; // 16 px on phones, so iPhones don't zoom in
 
   return (
     // Dark see-through background behind the pop-up.
@@ -127,14 +128,14 @@ function UnavailableForm({ doctor, onClose }: { doctor: Doctor; onClose: () => v
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+            className={`rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 ${TAP}`}
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={pending}
-            className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+            className={`rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60 ${TAP}`}
           >
             {pending ? "Saving…" : "Mark unavailable"}
           </button>

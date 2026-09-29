@@ -46,11 +46,13 @@ Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinic
 - Assumptions are fine, but flag any that could risk patient safety, book the wrong slot or move someone unfairly, or confuse staff.
 - Claude Council is installed in Claude Code — suggest it only for big, hard-to-undo decisions.
 - ECC plugin: add at Phase 3, not before.
+- Run `npm test` before every push.
 
 ## Safety notes
 
 - Never paste the API key into any chat. It lives only in `.env.local` (ignored by Git).
-- API key expires — check the Anthropic console and replace it before it lapses.
+- API key expires — check the Anthropic console and replace it before it lapses. Last replaced: 29 Sep 2026.
+- Never open `.env.local` while screen-sharing or taking screenshots, and remove it from Claude Code's context if it appears.
 - $5 prepaid API credit, auto-reload OFF.
 
 ## Starting the app on my laptop
