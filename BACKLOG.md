@@ -26,6 +26,16 @@ These affect the AI chat only (laptop with an API key). The live site uses basic
 - **Hospital name in local script:** Tamil and Hindi messages still show "Sunrise Multispeciality Hospital" in English letters — store a local-script name (like the doctors' `localNames`) and show it with the English in brackets.
 - **Native-speaker check of doctor names and time-of-day boundaries:** the Tamil/Hindi spellings of the doctors' names (`localNames` in mockData.json), and where morning / afternoon / evening / night begin (`formatTimeFor` in src/lib/time.ts — e.g. whether 3:45 PM is மதியம் or மாலை).
 
+## Tooling to add
+
+Claude Code automations suggested by the claude-code-setup plugin (30 Sep 2026).
+
+- **Next session:** test-after-edit hook (run `npm test` after Claude edits code in `src/`).
+- **Next session:** `/wrap-up` skill — `npm test`, update HANDOFF's "Where things stand", log minor assumptions here, two-group assumptions report, then commit; push only after my OK.
+- **Later:** `docdelay-safety-rules` skill that points to HANDOFF.md's "Rules we've agreed" instead of copying the rules (one source of truth).
+- **Later:** `safety-reviewer` subagent that checks changes to rescheduling rules, health keywords and AI instructions against the agreed rules — run on demand only, never automatically.
+- **Skipped for now:** Playwright MCP (lets Claude click through the app and take screenshots) — revisit when there's more screen work.
+
 ## Minor assumptions
 
 Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they cause trouble.
@@ -47,6 +57,7 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Demo video: each scene's voice starts 0.5 s into the scene; scenes run 1–4 s longer than their voice (total 112 s).
 - Demo video captions: one per sentence, split at a comma when longer than 84 characters; white on a dark box, Arial. Audio is mono AAC 192 kbps.
 - Claude Code `.env` block: the rule `Read(./.env*)` is in the shared `.claude/settings.json` (committed, so it protects anyone using the repo), not the personal `settings.local.json`. It covers only top-level `.env*` files (the only place one exists) and blocks the file-reading tool, not shell commands like `cat`.
+- Claude Code `.env` hook (`.claude/hooks/block-env-read.sh`): blocks any shell command that names a `.env` file (reading or editing), using macOS's built-in `/usr/bin/jq`; if jq is missing or the input can't be read, it blocks the command (fail safe). A command that finds the file without naming it could still slip through.
 - Demo video: title and closing cards use the app's light background and teal colour. Rehearsal and build files stay in `~/DocDelay-video/rehearsal/` and `~/DocDelay-video/build/`.
 - AI chat: after an outcome (booked / waiting / cancelled / staff / urgent), DocDelay sends its own fixed confirmation line instead of AI-written text, so the AM/PM and local-time-word rules are always met. (It also saves one API call.)
 - AI chat: when the daily AI message limit is hit, the simulator switches to Buttons (as before); when the AI errors or its reply fails the checks, only that message falls back to the rule-based stand-in.
