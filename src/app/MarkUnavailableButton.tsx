@@ -9,6 +9,8 @@ import { markUnavailableAction } from "./actions";
 import { UNAVAILABILITY_REASONS, type Doctor } from "@/hms/types";
 import { fromMinutes, toMinutes } from "@/lib/time";
 import { TAP } from "./tapTarget";
+import { useTour } from "./tour/DemoTour";
+import { TOUR_UNAVAILABLE } from "./tour/tourSteps";
 
 const LATEST_TIME = 23 * 60 + 45; // don't suggest times past 11:45 PM
 
@@ -31,6 +33,7 @@ export default function MarkUnavailableButton({ doctor }: { doctor: Doctor }) {
     <>
       <button
         type="button"
+        data-tour="mark-unavailable"
         onClick={() => setOpen(true)}
         className={`rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 ${TAP}`}
       >
@@ -44,8 +47,15 @@ export default function MarkUnavailableButton({ doctor }: { doctor: Doctor }) {
 // The pop-up form. It's a separate component so it starts fresh
 // (new default times, no old error message) every time it opens.
 function UnavailableForm({ doctor, onClose }: { doctor: Doctor; onClose: () => void }) {
-  const [fromTime, setFromTime] = useState(() => fromMinutes(nextQuarterHour()));
-  const [untilTime, setUntilTime] = useState(() => threeHoursAfter(fromTime));
+  // During the demo tour: always 9:00 AM – 12:00 PM, so the tour works at any
+  // time of day. Otherwise: from the next quarter-hour, for 3 hours.
+  const { active: inTour } = useTour();
+  const [fromTime, setFromTime] = useState(() =>
+    inTour ? TOUR_UNAVAILABLE.fromTime : fromMinutes(nextQuarterHour()),
+  );
+  const [untilTime, setUntilTime] = useState(() =>
+    inTour ? TOUR_UNAVAILABLE.untilTime : threeHoursAfter(fromTime),
+  );
   // Until the user edits "Expected until" themselves, keep it 3 hours after "From".
   const [untilEdited, setUntilEdited] = useState(false);
 
@@ -134,6 +144,7 @@ function UnavailableForm({ doctor, onClose }: { doctor: Doctor; onClose: () => v
           </button>
           <button
             type="submit"
+            data-tour="confirm-unavailable"
             disabled={pending}
             className={`rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60 ${TAP}`}
           >

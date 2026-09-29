@@ -51,6 +51,13 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Health check: the approved Tamil fainting fix covers both word families: "mayakkam" (faint/dizzy, any ending) and "mayangi…" (fainted).
 - Health check (word-ending fix): a few extra spellings were added beyond the tested ones — "sirdard" (headache), Tamil-script "thala suthudhu" (colloquial) and the formal "thalai sutru…", "kiru kiru" written with or without a space, and "marathu po…" with or without the doubled "p". The "heavy rain" and "heartfelt" skips also cover their spaced / "nenjar…" spellings.
 - Health-check tests: Tamil-script versions of "heartfelt thanks", "heavy rain" and "waiting under the tree" were added (must NOT escalate), plus two messages mixing a harmless word with chest pain (must escalate).
+- Demo tour: the "Take the 2-minute tour" button is teal, in the dashboard header before "Messages" and "Reset demo".
+- Demo tour: the step number is remembered in the browser tab (sessionStorage), so a refresh continues the tour; if that storage is blocked, it's kept in memory only.
+- Demo tour: the card sits along the bottom on phones (at most 45% of the screen, scrolls inside) and bottom-right on laptops; the page gets extra space at the bottom so nothing hides behind it.
+- Demo tour: "Next" (steps 3 and 6) only appears once what it explains is on screen; a step can't be completed by an old screen (it must first be seen not done).
+- Demo tour: "Take me back" always goes to the dashboard (Dr. Meera Krishnan, today); from there the tour points the way again.
+- Demo tour: step 3 points at the appointment list's heading ("Today's appointments · 10 affected"), not the whole list, so the ring fits on a phone screen.
+- Offer-pick buttons show the offer's day and time in English format for every language (e.g. "A · Thu 1 Oct, 4:00 PM").
 - AI day check: it only looks at the patient's CURRENT message (a weekday named in an earlier message isn't checked).
 - AI day check: it's skipped when the message suggests the named day is one to avoid (not / no / except / can't / busy / illa / mudiyadhu / venam / nahi / mat / chhodkar …), so "next week but not Monday" isn't forced onto Monday.
 - AI day check: corrections are written to the server log as "[DocDelay AI] day corrected: …".

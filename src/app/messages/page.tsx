@@ -45,6 +45,7 @@ export default async function MessagesPage() {
             <form action={sendUpdatesAction}>
               <button
                 type="submit"
+                data-tour="send-updates"
                 className={`rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 ${TAP}`}
               >
                 Send updates
@@ -101,7 +102,7 @@ export default async function MessagesPage() {
       ) : (
         <ul className="space-y-3">
           {messages.map((m) => (
-            <li key={m.id} className="rounded-xl border border-slate-200 bg-white p-4">
+            <li key={m.id} data-tour="sent-message" className="rounded-xl border border-slate-200 bg-white p-4">
               <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
                 <p className="wrap-break-word">
                   <span className="font-medium text-slate-900">To: {m.toName}</span>{" "}

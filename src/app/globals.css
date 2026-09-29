@@ -5,3 +5,15 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
+
+/* Demo tour: the teal ring around the button the tour points at (see app/tour). */
+[data-tour-active] {
+  outline: 3px solid var(--color-teal-500);
+  outline-offset: 3px;
+  animation: tour-pulse 1.4s ease-in-out infinite;
+}
+@keyframes tour-pulse {
+  50% {
+    outline-color: var(--color-teal-300);
+  }
+}

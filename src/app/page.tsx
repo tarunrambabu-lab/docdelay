@@ -34,6 +34,7 @@ import FalseAlarmButton from "./FalseAlarmButton";
 import MarkUnavailableButton from "./MarkUnavailableButton";
 import PatientDetails from "./PatientDetails";
 import { TAP } from "./tapTarget";
+import { TourStartButton } from "./tour/DemoTour";
 
 // A different colour for each language, so it's easy to scan.
 const languageColors: Record<Language, string> = {
@@ -125,7 +126,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
       {/* Staff call list: URGENT patients first (bright red), then "Needs staff call" */}
       {staffCalls.length > 0 && (
-        <section className="mb-6 rounded-xl border border-slate-200 bg-white">
+        <section data-tour="staff-list" className="mb-6 rounded-xl border border-slate-200 bg-white">
           <h2 className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900">
             Staff call list{" "}
             <span className="font-normal text-slate-500">({staffCalls.length})</span>
@@ -189,6 +190,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
               <div
                 key={u.id}
                 role="alert"
+                data-tour="banner"
                 className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-600 px-4 py-3 text-sm text-white shadow-sm"
               >
                 <div>
@@ -212,6 +214,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                 {stillToCall > 0 && (
                   <Link
                     href={`/calls/${u.id}`}
+                    data-tour="start-calling"
                     className={`rounded-lg bg-white px-3 py-1.5 font-medium text-red-700 shadow-sm hover:bg-red-50 ${TAP}`}
                   >
                     Start calling patients
@@ -232,8 +235,12 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-sm text-slate-600">{today}</p>
+          <TourStartButton
+            className={`rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 ${TAP}`}
+          />
           <Link
             href="/messages"
+            data-tour="messages-link"
             className={`rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 ${TAP}`}
           >
             Messages{messageCount > 0 && ` (${messageCount})`}
@@ -300,7 +307,10 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
       {/* Appointment list */}
       <section className="rounded-xl border border-slate-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+        <div
+          data-tour="appointments"
+          className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4"
+        >
           <div>
             <h2 className="font-semibold text-slate-900">
               {selectedDay === 0

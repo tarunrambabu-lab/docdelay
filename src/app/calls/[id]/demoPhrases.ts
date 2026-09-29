@@ -10,7 +10,9 @@
 // as; the tests check every phrase against it.
 // Tamil and Hindi phrases: checked by native speaker.
 
-import type { Language } from "@/hms/types";
+import type { Language, SlotOffer } from "@/hms/types";
+import { OFFER_LETTERS } from "@/lib/callScript";
+import { formatWhen } from "@/lib/time";
 import type { Intent } from "@/lib/understanding/types";
 
 export interface DemoPhrase {
@@ -65,3 +67,13 @@ export const DEMO_PHRASES: Record<
     },
   },
 };
+
+// One pick button per offer on screen. The button shows the offer's time
+// ("A · Thu 1 Oct, 4:00 PM"), but tapping it sends just the letter ("A"),
+// like a patient would say it.
+export function offerPicks(offers: SlotOffer[]): { send: string; label: string }[] {
+  return offers.map((offer, i) => ({
+    send: OFFER_LETTERS[i],
+    label: `${OFFER_LETTERS[i]} · ${formatWhen(offer.dayOffset, offer.startTime)}`,
+  }));
+}

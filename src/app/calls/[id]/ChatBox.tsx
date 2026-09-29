@@ -7,20 +7,19 @@
 import { useState, useTransition } from "react";
 import { chatAction } from "@/app/actions";
 import { TAP } from "@/app/tapTarget";
-import type { Language } from "@/hms/types";
-import { OFFER_LETTERS } from "@/lib/callScript";
-import { DEMO_PHRASES } from "./demoPhrases";
+import type { Language, SlotOffer } from "@/hms/types";
+import { DEMO_PHRASES, offerPicks } from "./demoPhrases";
 
 const MAX_LENGTH = 200; // same limit the server keeps
 
 export default function ChatBox({
   appointmentId,
   language,
-  offerCount,
+  offers,
 }: {
   appointmentId: string;
   language: Language; // the patient's language: which example phrases to show
-  offerCount: number; // offers on screen right now (0 = none): one pick button each
+  offers: SlotOffer[]; // offers on screen right now (none = empty): one pick button each
 }) {
   const [text, setText] = useState("");
   const [error, setError] = useState("");
@@ -39,40 +38,54 @@ export default function ChatBox({
   };
 
   const { replies, symptom } = DEMO_PHRASES[language];
-  // One pick per offer on screen: "A", "B" (and "C" when there are three).
-  const offerPicks = OFFER_LETTERS.slice(0, offerCount).map((letter) => ({
-    text: letter,
-    meaning: `Pick offer ${letter}`,
-  }));
 
-  const phraseButton = (phrase: { text: string; meaning?: string }) => (
+  // A button that sends `send`; it shows `label` (and a small English meaning).
+  // `tour` = the marker the demo tour points at.
+  const phraseButton = ({
+    send: message,
+    label,
+    meaning,
+    tour,
+  }: {
+    send: string;
+    label: string;
+    meaning?: string;
+    tour?: string;
+  }) => (
     <button
-      key={phrase.text}
+      key={message}
       type="button"
+      data-tour={tour}
       disabled={isPending}
-      onClick={() => send(phrase.text, false)}
+      onClick={() => send(message, false)}
       className="min-h-11 max-w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-sm wrap-break-word text-slate-800 hover:bg-slate-100 disabled:opacity-50"
     >
-      {phrase.text}
-      {phrase.meaning && (
-        <span className="block text-xs text-slate-500">{phrase.meaning}</span>
-      )}
+      {label}
+      {meaning && <span className="block text-xs text-slate-500">{meaning}</span>}
     </button>
   );
+  const phrase = (p: { text: string; meaning?: string; intent: string }) =>
+    phraseButton({
+      send: p.text,
+      label: p.text,
+      meaning: p.meaning,
+      tour: p.intent === "health_concern" ? "symptom-example" : `reply-${p.intent}`,
+    });
 
   return (
-    <div className="grid gap-4">
+    <div data-tour="chat-box" className="grid gap-4">
       {/* Example replies to tap (demo only) */}
       <div>
         <p className="mb-2 text-sm font-medium text-slate-500">Try a reply (demo)</p>
         <div className="flex flex-wrap gap-2">
-          {offerPicks.map(phraseButton)}
-          {replies.map(phraseButton)}
+          {/* "A · Thu 1 Oct, 4:00 PM" — sends just "A" */}
+          {offerPicks(offers).map((pick) => phraseButton({ ...pick, tour: "offer-pick" }))}
+          {replies.map(phrase)}
         </div>
         <p className="mb-2 mt-3 text-xs font-medium text-slate-500">
           Example: patient mentions a symptom
         </p>
-        <div className="flex flex-wrap gap-2">{phraseButton(symptom)}</div>
+        <div className="flex flex-wrap gap-2">{phrase(symptom)}</div>
       </div>
 
       <form

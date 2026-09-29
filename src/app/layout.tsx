@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { TourProvider } from "./tour/DemoTour";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Live demo · All hospitals, doctors and patients are fictional · Calls and texts are
           simulated
         </div>
-        {children}
+        <TourProvider>{children}</TourProvider>
       </body>
     </html>
   );

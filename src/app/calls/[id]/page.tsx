@@ -107,6 +107,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
     <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
       <Link
         href={dashboardLink}
+        data-tour="back-to-dashboard"
         className={`text-sm font-medium text-teal-700 hover:underline ${TAP}`}
       >
         ← Back to dashboard
@@ -133,6 +134,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
           <Link
             key={value}
             href={href}
+            data-tour={value === "chat" ? "chat-tab" : undefined}
             aria-current={mode === value ? "page" : undefined}
             className={`rounded-lg px-3 py-1.5 font-medium ${TAP} ${
               mode === value ? "bg-teal-700 text-white" : "text-slate-600 hover:bg-slate-100"
@@ -170,7 +172,11 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
             </PhoneCard>
             <div>
               <h2 className="mb-3 text-sm font-medium text-slate-500">Outcome</h2>
-              <div className="mb-4 space-y-2 rounded-xl border border-slate-200 bg-white p-4 text-sm">
+              <div
+                data-tour="outcome"
+                data-status={justAnswered.status}
+                className="mb-4 space-y-2 rounded-xl border border-slate-200 bg-white p-4 text-sm"
+              >
                 <span
                   className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[justAnswered.status]}`}
                 >
@@ -188,6 +194,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
               </div>
               <Link
                 href={`/calls/${id}?mode=chat`}
+                data-tour="next-patient"
                 className="block rounded-xl bg-teal-700 px-4 py-3 text-center text-sm font-medium text-white hover:bg-teal-800"
               >
                 {current ? "Next patient →" : "See summary →"}
@@ -215,7 +222,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
                 key={current.id}
                 appointmentId={current.id}
                 language={current.patient.preferredLanguage}
-                offerCount={current.offers?.length ?? 0}
+                offers={current.offers ?? []}
               />
               <p className="mt-4 text-xs leading-relaxed text-slate-500">
                 The chat goes on until an outcome is recorded: later today, another day, cancel, or

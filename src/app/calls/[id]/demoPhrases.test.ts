@@ -6,9 +6,9 @@ import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Language, SlotOffer } from "@/hms/types";
 import { OFFER_LETTERS } from "@/lib/callScript";
-import { dateForDayOffset } from "@/lib/time";
+import { dateForDayOffset, formatWhen } from "@/lib/time";
 import { interpretWithRules, mentionsHealth } from "@/lib/understanding";
-import { DEMO_PHRASES } from "./demoPhrases";
+import { DEMO_PHRASES, offerPicks } from "./demoPhrases";
 
 const LANGUAGES = Object.keys(DEMO_PHRASES) as Language[];
 const understand = (message: string, language: Language, offers: SlotOffer[] = []) =>
@@ -44,14 +44,25 @@ describe.each(LANGUAGES)("%s phrases in basic mode", (language) => {
     expect((await understand(symptom.text, language)).intent).toBe("health_concern");
   });
 
-  // One pick button per offer on screen: A; A, B; or A, B, C.
-  it.each([1, 2, 3])("with %i offer(s) on screen, each letter picks its offer", async (count) => {
+  // One pick button per offer on screen: A; A, B; or A, B, C. The button shows
+  // the time ("A · Thu 1 Oct, 4:00 PM") but sends just the letter, which picks that offer.
+  it.each([1, 2, 3])("with %i offer(s) on screen, each pick shows its time and picks it", async (count) => {
     const offers = THREE_OFFERS.slice(0, count);
-    for (const [i, letter] of OFFER_LETTERS.slice(0, count).entries()) {
-      const understood = await understand(letter, language, offers);
+    const picks = offerPicks(offers);
+    expect(picks).toHaveLength(count);
+    for (const [i, pick] of picks.entries()) {
+      expect(pick.send).toBe(OFFER_LETTERS[i]);
+      expect(pick.label).toBe(
+        `${OFFER_LETTERS[i]} · ${formatWhen(offers[i].dayOffset, offers[i].startTime)}`,
+      );
+      const understood = await understand(pick.send, language, offers);
       expect(understood.intent).toBe("choose_offer");
       expect(understood.offerIndex).toBe(i);
     }
+  });
+
+  it("no offers on screen → no pick buttons", () => {
+    expect(offerPicks([])).toEqual([]);
   });
 });
 
