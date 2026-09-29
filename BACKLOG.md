@@ -6,6 +6,7 @@ Ideas and known gaps to pick up later.
 
 - **A second "doctor unavailable" window on the same day:** the empty-slot search should avoid it. Right now, if a doctor has two absences in one day, a "later today" patient can be given a slot inside the second absence.
 - **Before switching the AI on for the public:** move the site-wide AI message counter to a shared store (e.g. Redis) — on Vercel each server instance has its own memory, so today's in-memory counter isn't a reliable site-wide limit — and set a monthly spend limit for the API key in the Anthropic Console.
+- **After Phase 2 (planned, don't build yet): a lighter safety net.** Red-flag phrases set by a clinician → straight to staff. Any other health mention → the 108 line, normal rebooking, and a note. Detecting EVERY health mention still matters under this plan, so the health-check tests stay required.
 - **Native-speaker review:** the Tamil and Hindi call wording, text messages, chat replies and the chat keyword lists (`src/lib/understanding/rules.ts`) must be checked by native speakers before real use.
 
 ## Revisit with the real AI
@@ -36,6 +37,12 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - "doctor said" removed from the health keywords.
 - The harmless phrases are also skipped when the keyword chat works out what the patient wants, so "tired of waiting" is no longer read as "I'll wait" (it's now an unclear reply that asks the patient to choose).
 - AI chat: besides the patient's first name, language and original time, the AI is also told the doctor's name, the reason for the delay and the doctor's return time (no patient data).
+- Tests: Vitest 4 (not the newest, 5) because 5 needs newer Node type definitions than the project uses. Installed with `--legacy-peer-deps` to get around an npm bug ("Cannot read properties of null (reading 'edgesOut')").
+- Tests: `npm test` runs every test once and stops (not "watch" mode). The `@/` imports are set up in `vitest.config.mts` instead of adding the extra `vite-tsconfig-paths` package.
+- Health check: the approved Tamil fainting fix covers both word families: "mayakkam" (faint/dizzy, any ending) and "mayangi…" (fainted).
+- Health check (word-ending fix): a few extra spellings were added beyond the tested ones — "sirdard" (headache), Tamil-script "thala suthudhu" (colloquial) and the formal "thalai sutru…", "kiru kiru" written with or without a space, and "marathu po…" with or without the doubled "p". The "heavy rain" and "heartfelt" skips also cover their spaced / "nenjar…" spellings.
+- Health-check tests: Tamil-script versions of "heartfelt thanks", "heavy rain" and "waiting under the tree" were added (must NOT escalate), plus two messages mixing a harmless word with chest pain (must escalate).
+- Health-check tests: two messages using the English word "valid" were added to the must-NOT-escalate list, to guard against a future "vali…" word-beginning rule.
 
 ## Done
 

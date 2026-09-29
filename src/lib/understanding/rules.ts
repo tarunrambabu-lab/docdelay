@@ -42,6 +42,13 @@ const HARMLESS_PHRASES: RegExp[] = [
   // work / office / job / traffic / schedule … pressure
   /\s(work|office|job|traffic|schedule|kaam|naukri)\s(ka\s|ki\s)?(pressure|dabav)(?=\s)/g,
   /\s(pressure|dabav)\s(at|from|of)\s(work|office|my job|the office)(?=\s)/g,
+  // Tamil: "nenjaara nandri" = heartfelt thanks ("nenj…" = chest, below).
+  // Only this word is skipped; "nenju vali" (chest pain) still escalates.
+  /\s(nenjaar|nenjar)[\p{L}]*(?=\s)/gu,
+  /\sநெஞ்சார[\p{L}\p{M}]*(?=\s)/gu,
+  // Tamil: "kanamazhai" = heavy rain ("kanam…" = heavy, below)
+  /\s(kanamazhai|kana mazhai)[\p{L}]*(?=\s)/gu,
+  /\s(கனமழை|கன மழை)[\p{L}\p{M}]*(?=\s)/gu,
 ];
 
 // The message without the harmless phrases above (spaces keep word edges).
@@ -70,7 +77,7 @@ const HEALTH_WORDS = [
   "breathe*",
   "cannot breathe",
   "suffocat*",
-  "dizz*",
+  "diz*", // dizzy, dizziness — and the typo "dizy"
   "faint*",
   "passed out",
   "collaps*",
@@ -143,11 +150,15 @@ const HEALTH_WORDS = [
   "not feeling great",
   "not feeling ok",
   "not feeling okay",
+  "not feeling right",
   "feel off",
+  "feels off",
   "feeling off",
   "feel strange",
+  "feels strange",
   "feeling strange",
   "feel weird",
+  "feels weird",
   "feeling weird",
   "tired",
   "exhausted",
@@ -160,28 +171,31 @@ const HEALTH_WORDS = [
   "clammy",
   "short of breath",
   "shortness of breath",
-  // Tamil (romanised)
-  "vali",
-  "valikudhu",
-  "valikuthu",
-  "valikkudhu",
-  "valikkuthu",
-  "nenju",
+  // Tamil (romanised). Tamil adds endings to words ("vali" → "valikkudhu"),
+  // so most entries are word beginnings. Careful choices:
+  //   "valik*", not "vali*"      — "vali*" would catch English "valid"
+  //   "vaanthi*", not "vanthi*"  — "vanthi*" would catch "vanthitten" (I have come)
+  "vali", // pain
+  "valik*", // hurts: valikkudhu, valikudu, valikkithu …
+  "nenj*", // chest: nenju, nenjula … ("nenjaara" = heartfelt is skipped, see HARMLESS_PHRASES)
   "nenju vali",
-  "mayakkam",
+  "mayakka*", // faint / dizzy: mayakkam, mayakkamaa …
   "mayangi*",
-  "kaichal",
-  "kaaichal",
-  "juram",
+  "kaichal*", // fever: kaichal, kaichalaa …
+  "kaaichal*",
+  "kaaychal*",
+  "juram*", // fever
+  "udamb*", // body: udambu, udambukku …
   "udambu sari illa",
   "udambu sariyilla",
   "udambu seriyilla",
-  "moochu",
+  "mooch*", // breath: moochu, moocha …
   "mochu",
-  "ratham",
-  "rattham",
-  "vaanthi",
-  "vandhi",
+  "ratham*", // blood: ratham, rathama …
+  "rattham*",
+  "vaanthi*", // vomit: vaanthi, vaanthiyaa …
+  "vaandhi*",
+  "vandhi", // whole word only (see above)
   "vanthi",
   "thalai suthuthu",
   "thala suthudhu",
@@ -204,8 +218,8 @@ const HEALTH_WORDS = [
   "maraththu pochu",
   "viyarvai", // sweat
   "vervai",
-  "sorvu", // tiredness
-  "kiru kiru", // dizzy
+  "sorv*", // tiredness: sorvu, sorvaa …
+  "kiru kiru*", // dizzy: kiru kiru, kiru kirunu …
   "thala sutral",
   "thalai sutral",
   "asowkariyam", // discomfort
@@ -213,27 +227,39 @@ const HEALTH_WORDS = [
   "enakku sariya illa",
   "udambu mudiyala",
   // Hindi (romanised)
+  // Careful choice: "ultiy*", not "ulti*" — "ulti*" would catch English "ultimately".
+  // "takleef" (trouble) is NOT on its own: "takleef ke liye maafi" = sorry for the trouble.
   "dard",
+  "dardh",
+  "sardard", // headache, written as one word
+  "sirdard",
   "seene",
   "seena",
   "sine mein",
-  "saans",
+  "saans*", // breath: saans, saanson …
   "sans",
+  "saans lene mein takleef", // trouble breathing
+  "seene mein takleef", // chest trouble
+  "takleef ho rahi", // I'm having trouble / discomfort
   "chakkar",
-  "behosh",
+  "chakkarr",
+  "behosh*", // unconscious: behosh, behoshi …
   "bukhar",
   "bukhaar",
   "ulti",
+  "ultiy*", // vomiting: ultiyan …
   "khoon",
   "tabiyat",
+  "tabiyet",
   "tabiyat theek nahi",
   "tabiyat kharab",
-  "bimar",
-  "beemar",
-  "bimaar",
+  "bimar*", // ill / illness: bimar, bimari …
+  "beemar*",
+  "bimaar*",
   "ghabrahat",
-  "kamzori",
+  "kamzor*", // weak / weakness: kamzor, kamzori …
   "dawai",
+  "davai",
   "dawa",
   "dava",
   "seena bhaari", // chest feels heavy
@@ -262,19 +288,29 @@ const HEALTH_WORDS = [
   "achha nahi lag*",
   "accha nahi lag*",
   "kuch theek nahi",
-  // Tamil script
-  "வலி",
-  "நெஞ்சு",
-  "மயக்கம்",
-  "காய்ச்சல்",
-  "மூச்சு",
-  "ரத்தம்",
-  "வாந்தி",
-  "உடம்பு",
+  // Tamil script — word beginnings, because Tamil adds endings
+  // (vali → valikkudhu, kaaychal → kaaychalaa).
+  "வலி*", // vali… = pain, hurts
+  "நெஞ்*", // nenj… = chest ("nenjaara" = heartfelt is skipped, see HARMLESS_PHRASES)
+  "மயக்க*", // mayakkam (faint/dizzy) with any ending, e.g. mayakkamaa
+  "மயங்*", // mayangi… (fainted)
+  "காய்ச்சல*", // kaaychal… = fever
+  "ஜுரம*", // juram… = fever
+  "மூச்ச*", // mooch… = breath
+  "ரத்த*", // rath… = blood (also ratha azhuththam = blood pressure)
+  "வாந்தி*", // vaanthi… = vomit
+  "உடம்ப*", // udamb… = body
+  "தலை சுத்து*", // thalai suthudhu = dizzy
+  "தல சுத்து*",
+  "தலை சுற்று*", // thalai sutru… = dizzy (formal)
+  "தலைசுற்ற*",
+  "கிறுகிறு*", // kiru kiru = dizzy
+  "கிறு கிறு*",
   "இறுக்க*", // tightness (இறுக்கம், இறுக்கமாக)
-  "கனம*", // heavy (கனம், கனமாக)
+  "கனம*", // heavy (கனம், கனமாக) — "kanamazhai" = heavy rain is skipped, see HARMLESS_PHRASES
   "வியர்*", // sweat
-  "மரத்*", // numb
+  "மரத்துப்*", // marathu po… = gone numb (not just "marath…": marathula = in the tree)
+  "மரத்து போ*",
   "சோர்*", // tiredness
   // Devanagari (Hindi)
   "दर्द",
