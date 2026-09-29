@@ -32,6 +32,8 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Health keywords: I added a few extra words beyond the requested list when unsure (e.g. "exhausted", "racing", "pounding", "clammy", "doctor said", Tamil "sorvu", Hindi "thakan"). Everyday words like "heavy", "pressure", "bhaari" can also escalate non-health messages — accepted, since a false alarm costs one staff call.
 - "Couldn't understand" detection has a server-side safety net: AI replies that ask the patient to repeat ("couldn't understand", "say that again", "समझ नहीं", "புரியவில்லை", …) are counted even if the AI didn't call cannot_understand. Other phrasings could slip through, and in theory a normal reply containing those words could be counted.
 - When the AI can't understand, DocDelay sends its own fixed "please say it again" line (the same as the rule-based chat), not AI-written text.
+- Alarm-fatigue tuning: a short list of harmless phrases is skipped before the health check — tired/exhausted/sick/fed up/bored "of/with/from (the/this) waiting / wait / delay / queue / line / rescheduling"; Hindi "intezaar/wait … thak…"; heavy/bhaari + traffic/rain/work/workload/schedule/jam (and "traffic bhaari"); work/office/job/traffic/schedule/kaam/naukri + pressure/dabav (and "pressure at/from work"). Only those phrases are skipped; the rest of the message is still checked. No Tamil harmless phrases yet.
+- "doctor said" removed from the health keywords.
 - AI chat: besides the patient's first name, language and original time, the AI is also told the doctor's name, the reason for the delay and the doctor's return time (no patient data).
 
 ## Done

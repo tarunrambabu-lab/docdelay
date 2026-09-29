@@ -22,6 +22,32 @@ import { DAYS_TO_SEARCH } from "@/lib/reschedulingRules";
 import { dateForDayOffset, fromMinutes } from "@/lib/time";
 
 // ---------- Word lists ----------
+
+// Everyday phrases that use health-sounding words about waiting, traffic,
+// rain, work or schedules — "tired of waiting", "heavy traffic", "work
+// pressure". To avoid alarm fatigue, ONLY these exact phrases are skipped
+// before the health check; every other word in the message is still checked
+// ("heavy traffic and my chest feels heavy" still escalates).
+// Keep this list SHORT and specific: anything that might be about the
+// patient's body stays out of it (when unsure, escalate).
+// ⚠️ To be reviewed together with HEALTH_WORDS (native speakers + a clinician).
+const HARMLESS_PHRASES: RegExp[] = [
+  // tired / exhausted / sick / fed up … of waiting or of the delay
+  /\s(tired|exhausted|sick|fed up|bored)\s(of|with|from)\s(all\s)?(the\s|this\s|these\s)?(waiting|wait|delays?|queue|line|rescheduling)(?=\s)/g,
+  // Hindi: "intezaar karke thak gaya", "wait karte karte thakan"
+  /\s(intezaar|intazar|intezar|wait)(\s[\p{L}]+){0,2}\sthak[\p{L}]*(?=\s)/gu,
+  // heavy / bhaari … traffic, rain, work, schedule
+  /\s(heavy|bhaari|bhari)\s(traffic|rain|rains|baarish|barish|workload|work|schedule|jam)(?=\s)/g,
+  /\s(traffic|baarish|barish)\s(bahut\s)?(bhaari|bhari|heavy)(?=\s)/g,
+  // work / office / job / traffic / schedule … pressure
+  /\s(work|office|job|traffic|schedule|kaam|naukri)\s(ka\s|ki\s)?(pressure|dabav)(?=\s)/g,
+  /\s(pressure|dabav)\s(at|from|of)\s(work|office|my job|the office)(?=\s)/g,
+];
+
+// The message without the harmless phrases above (spaces keep word edges).
+function withoutHarmlessPhrases(text: string): string {
+  return HARMLESS_PHRASES.reduce((t, phrase) => t.replace(phrase, " "), text);
+}
 // A trailing "*" means "any word starting with this" (e.g. "breath*" matches
 // "breathless", "breathing").
 
@@ -134,7 +160,6 @@ const HEALTH_WORDS = [
   "clammy",
   "short of breath",
   "shortness of breath",
-  "doctor said",
   // Tamil (romanised)
   "vali",
   "valikudhu",
@@ -603,7 +628,7 @@ function pickedOffer(
 // Is this message about health in any way? (Also used as a safety net in
 // front of the AI engine.)
 export function mentionsHealth(message: string): boolean {
-  return hasAny(normalise(message), HEALTH_WORDS);
+  return hasAny(withoutHarmlessPhrases(normalise(message)), HEALTH_WORDS);
 }
 
 export const understandWithRules: Understander = async (message, context) => {
@@ -616,7 +641,9 @@ export const understandWithRules: Understander = async (message, context) => {
   });
 
   // 1. Health — always first.
-  if (hasAny(t, HEALTH_WORDS)) return result("health_concern", { preferences: {} });
+  if (hasAny(withoutHarmlessPhrases(t), HEALTH_WORDS)) {
+    return result("health_concern", { preferences: {} });
+  }
 
   // Keypad-style replies: "1", "2", "3", "4"
   const keypad = t.trim();
