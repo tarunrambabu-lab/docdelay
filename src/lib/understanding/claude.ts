@@ -11,6 +11,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { AiToolName, AiTurn } from "@/hms/mockHms";
 import { AI_INSTRUCTIONS, aiContext } from "./aiInstructions";
+import { correctNamedDay } from "./dayGuard";
 import {
   AI_MAX_CALLS_PER_MESSAGE,
   AI_MAX_OUTPUT_TOKENS,
@@ -187,8 +188,15 @@ export async function runClaudeTurn(
     for (const block of response.content) {
       if (block.type !== "tool_use") continue;
       const known = TOOLS.some((t) => t.name === block.name);
+      let input = (block.input ?? {}) as Record<string, unknown>;
+      // Safety check: if the patient named a weekday, search that day (dayGuard.ts).
+      if (block.name === "check_free_slots") {
+        const checked = correctNamedDay(patientMessage, input);
+        if (checked.correction) console.log(`[DocDelay AI] day corrected: ${checked.correction}`);
+        input = checked.input;
+      }
       const result = known
-        ? turn.runTool(block.name as AiToolName, (block.input ?? {}) as Record<string, unknown>)
+        ? turn.runTool(block.name as AiToolName, input)
         : { ok: false, reason: `Unknown tool ${block.name}` };
       results.push({
         type: "tool_result",

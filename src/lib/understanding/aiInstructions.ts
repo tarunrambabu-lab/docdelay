@@ -7,6 +7,8 @@
 // never a phone number or full name (see AiTurnContext in src/hms/mockHms.ts).
 
 import type { AiTurnContext } from "@/hms/mockHms";
+import { dateForDayOffset } from "@/lib/time";
+import { WEEKDAYS } from "./dayWords";
 
 export const AI_INSTRUCTIONS = `You are DocDelay, a short, polite phone assistant for a hospital. The patient's doctor was called away, so their appointment today cannot go ahead as booked. Help the patient choose ONE of these, then record it with a tool:
 - wait for a later time today,
@@ -24,6 +26,8 @@ HOW TO WORK
 - To find times, call check_free_slots:
   - when "today" if the patient wants a time today (pass after / before / time_of_day if they gave one);
   - when "other_days" otherwise. If they named days, pass their day_offset numbers from the calendar in "days" (e.g. "next week but not Monday" → every open day of next week except Monday).
+- Patients may name a day in Tamil or Hindi, in English letters or in their own script (e.g. "guruvar" or "vyazhan" = Thursday). Use the calendar's Tamil and Hindi names to find its day_offset.
+- A weekday name counts as a day: never ask "today, or another day?" when the patient named a weekday. Call check_free_slots with that day's day_offset.
 - If the patient just wants to wait today, with no time, call wait_later_today.
 - If they give a time but no day (e.g. "after 4"), ask whether they mean today or another day. No tool.
 - Offer the slots check_free_slots returns as options A, B, C and ask the patient to choose. Follow its "explanation" (for example, say first that the doctor is back at a certain time, or that a day is full).
@@ -42,8 +46,14 @@ STYLE
 
 // The facts about this call, added after the instructions.
 export function aiContext(c: AiTurnContext): string {
+  // Each day with its weekday's Tamil and Hindi names (the words basic mode
+  // uses too), e.g. "2 = Thu 1 Oct (Tamil: vyazhan / viyazhan · Hindi: guruvar / …)".
   const calendar = c.calendar
-    .map((d) => `${d.day_offset} = ${d.date}${d.closed ? " (closed)" : ""}`)
+    .map((d) => {
+      const names = WEEKDAYS.find((w) => w.weekday === dateForDayOffset(d.day_offset).getUTCDay());
+      const local = names ? ` (Tamil: ${names.tamil.join(" / ")} · Hindi: ${names.hindi.join(" / ")})` : "";
+      return `${d.day_offset} = ${d.date}${local}${d.closed ? " (closed)" : ""}`;
+    })
     .join(" | ");
   const offers = c.currentOffers.length
     ? c.currentOffers

@@ -211,7 +211,12 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
             </PhoneCard>
             <div>
               {/* key = a fresh, empty box for each patient */}
-              <ChatBox key={current.id} appointmentId={current.id} />
+              <ChatBox
+                key={current.id}
+                appointmentId={current.id}
+                language={current.patient.preferredLanguage}
+                offerCount={current.offers?.length ?? 0}
+              />
               <p className="mt-4 text-xs leading-relaxed text-slate-500">
                 The chat goes on until an outcome is recorded: later today, another day, cancel, or
                 a staff call. Any mention of a health concern hands the patient straight to staff.

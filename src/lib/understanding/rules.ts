@@ -20,6 +20,7 @@ import type { Understander, Preferences, Understanding, UnderstandingContext } f
 import type { TimeOfDay } from "@/lib/reschedulingRules";
 import { DAYS_TO_SEARCH } from "@/lib/reschedulingRules";
 import { dateForDayOffset, fromMinutes } from "@/lib/time";
+import { WEEKDAYS } from "./dayWords";
 
 // ---------- Word lists ----------
 
@@ -464,29 +465,11 @@ const ANOTHER_DAY_WORDS = [
 const TOMORROW_WORDS = ["tomorrow", "tmrw", "tmr", "naalai", "naalaikku", "nalaikku", "kal", "कल"];
 const DAY_AFTER_WORDS = ["day after tomorrow", "parso", "parson", "naalai marunaal"];
 
-// Weekday names → 0 = Sunday … 6 = Saturday.
-const WEEKDAY_WORDS: [string[], number][] = [
-  [["sunday", "sun", "nyayiru", "gnayiru", "ravivar", "itvar"], 0],
-  [["monday", "mon", "thingal", "thinkal", "somvar"], 1],
-  [["tuesday", "tue", "tues", "sevvai", "mangalvar"], 2],
-  [["wednesday", "wed", "budhan", "puthan", "budhvar", "budhwar"], 3],
-  [
-    [
-      "thursday",
-      "thu",
-      "thur",
-      "thurs",
-      "vyazhan",
-      "viyazhan",
-      "guruvar",
-      "veervar",
-      "brihaspativar",
-    ],
-    4,
-  ],
-  [["friday", "fri", "velli", "shukravar"], 5],
-  [["saturday", "sat", "sani", "shanivar"], 6],
-];
+// Weekday names → 0 = Sunday … 6 = Saturday (shared with the AI: see dayWords.ts).
+const WEEKDAY_WORDS: [string[], number][] = WEEKDAYS.map((d) => [
+  [...d.english, ...d.tamil, ...d.hindi],
+  d.weekday,
+]);
 
 const TIME_OF_DAY_WORDS: [string[], TimeOfDay][] = [
   [["morning", "subah", "kaalai", "kaalaila", "kaalaiyil", "kalaiyil", "காலை", "सुबह"], "morning"],
@@ -569,6 +552,15 @@ function dayOfMonth(date: number): number | undefined {
     if (dateForDayOffset(d).getUTCDate() === date) return d;
   }
   return undefined;
+}
+
+// The days (1 … 7) of every weekday the patient named, e.g. "guruvar" → the
+// next Thursday. Used by the AI's day check (dayGuard.ts).
+export function namedWeekdayOffsets(message: string): number[] {
+  const t = withoutHarmlessPhrases(normalise(message));
+  return WEEKDAY_WORDS.filter(([words]) => hasAny(t, words))
+    .map(([, weekday]) => nextWeekday(weekday))
+    .filter((d): d is number => d !== undefined);
 }
 
 // Pull out day and time preferences from the message.

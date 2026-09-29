@@ -9,6 +9,15 @@ Ideas and known gaps to pick up later.
 - **After Phase 2 (planned, don't build yet): a lighter safety net.** Red-flag phrases set by a clinician → straight to staff. Any other health mention → the 108 line, normal rebooking, and a note. Detecting EVERY health mention still matters under this plan, so the health-check tests stay required.
 - **Native-speaker review:** the Tamil and Hindi call wording, text messages, chat replies and the chat keyword lists (`src/lib/understanding/rules.ts`) must be checked by native speakers before real use.
 
+## Must do before real calls or laptop demos
+
+These affect the AI chat only (laptop with an API key). The live site uses basic mode and isn't affected.
+
+- **"Talk to a person" code check:** if basic mode recognises a request for a person, it wins over the AI. (Found in the AI test run: Tamil "aal kitta pesanum" wasn't understood by the AI and got "please say that again".)
+- **Tamil/Hindi "I'll wait" phrases in the AI instructions** (no code override). (Found in the AI test run: Tamil "naan wait panren" got a choice of 3 empty times today instead of the automatic next fair slot, unlike English and Hindi.)
+- **"No problem" phrases don't count as avoiding a day** in the AI day check (`dayGuard.ts`): today "No problem, Thursday after 4" skips the check because of the word "no".
+- **Optional `npm run test:ai` check** (about $0.10): every suggested phrase in all 3 languages on the real AI path. Run it before laptop demos and real calls.
+
 ## Revisit with the real AI
 
 - **Offers after "[Day] is full" can include an EARLIER day** (e.g. "Thursday is full" → Tuesday offered). A patient who can only come later in the week might pick one without noticing.
@@ -42,6 +51,13 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Health check: the approved Tamil fainting fix covers both word families: "mayakkam" (faint/dizzy, any ending) and "mayangi…" (fainted).
 - Health check (word-ending fix): a few extra spellings were added beyond the tested ones — "sirdard" (headache), Tamil-script "thala suthudhu" (colloquial) and the formal "thalai sutru…", "kiru kiru" written with or without a space, and "marathu po…" with or without the doubled "p". The "heavy rain" and "heartfelt" skips also cover their spaced / "nenjar…" spellings.
 - Health-check tests: Tamil-script versions of "heartfelt thanks", "heavy rain" and "waiting under the tree" were added (must NOT escalate), plus two messages mixing a harmless word with chest pain (must escalate).
+- AI day check: it only looks at the patient's CURRENT message (a weekday named in an earlier message isn't checked).
+- AI day check: it's skipped when the message suggests the named day is one to avoid (not / no / except / can't / busy / illa / mudiyadhu / venam / nahi / mat / chhodkar …), so "next week but not Monday" isn't forced onto Monday.
+- AI day check: corrections are written to the server log as "[DocDelay AI] day corrected: …".
+- AI calendar: each day shows its Tamil and Hindi weekday names in English letters only (the AI reads Tamil/Hindi script on its own).
+- Demo chat phrases: the heading reads "Try a reply (demo)"; offer picks show as "A / Pick offer A" and appear first; English phrases have no extra meaning line.
+- Demo chat phrases: tapping a phrase doesn't clear anything already typed in the box (only a typed message is cleared after sending).
+- Demo chat phrases: the phrase buttons are at least 44 px tall on every screen size (they're new, so no laptop layout changes).
 - Phone layout: text boxes (chat box, "Mark doctor unavailable" times) use 16 px text on phones so iPhones don't zoom in when you tap them.
 - Phone layout: the "easy to tap" rule (at least 44 px tall below 640 px) lives in one small file, `src/app/tapTarget.ts`, used by every small button and link.
 - Phone layout: phone numbers never split across two lines; very long words in chat bubbles and texts wrap instead of widening the page.
