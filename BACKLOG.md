@@ -46,6 +46,7 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Demo video recording: Ganesh Iyer and Gayathri Chandrasekaran answer "1 – Later today" off camera (Buttons mode), so the Hindi and Tamil patients come next in the call order.
 - Demo video: each scene's voice starts 0.5 s into the scene; scenes run 1–4 s longer than their voice (total 112 s).
 - Demo video captions: one per sentence, split at a comma when longer than 84 characters; white on a dark box, Arial. Audio is mono AAC 192 kbps.
+- Claude Code `.env` block: the rule `Read(./.env*)` is in the shared `.claude/settings.json` (committed, so it protects anyone using the repo), not the personal `settings.local.json`. It covers only top-level `.env*` files (the only place one exists) and blocks the file-reading tool, not shell commands like `cat`.
 - Demo video: title and closing cards use the app's light background and teal colour. Rehearsal and build files stay in `~/DocDelay-video/rehearsal/` and `~/DocDelay-video/build/`.
 - AI chat: after an outcome (booked / waiting / cancelled / staff / urgent), DocDelay sends its own fixed confirmation line instead of AI-written text, so the AM/PM and local-time-word rules are always met. (It also saves one API call.)
 - AI chat: when the daily AI message limit is hit, the simulator switches to Buttons (as before); when the AI errors or its reply fails the checks, only that message falls back to the rule-based stand-in.
