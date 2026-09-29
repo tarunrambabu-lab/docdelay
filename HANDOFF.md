@@ -28,8 +28,11 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | Tamil/Hindi health-word fix (word beginnings, lookalike guards) | Done, live. Needs a second native-speaker and a clinician review before real patients |
 | 7: guided demo tour, suggested chat phrases, phone-width polish | Done, live (29 Sep) |
 | AI weekday fix + day check in code | Done. 4 AI items in BACKLOG under "Must do before real calls or laptop demos" |
-| Demo video (without the real-call clip) | Next |
-| Real calls to my own phone | After the demo video |
+| Demo video v1 (without the real-call clip) | Done (29 Sep). 1 min 52 s, in `~/DocDelay-video/output/` (video, captions.srt, description.txt). Send-time stamps on the Messages screen were blanked in the recording browser, because it was recorded in the evening |
+| Optional: rebuild the video in the morning without the send-time blanking | Next (optional) |
+| Add the video to the README and portfolio | Next |
+| Phase 2: clinic interviews | After README/portfolio |
+| Real calls to my own phone | After the 4 AI backlog items |
 | Add the real-call clip to the video | After real calls |
 
 Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinics.
@@ -45,6 +48,7 @@ Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinic
 - Chat rules are frozen for the MVP; new edge cases go to BACKLOG.md.
 - After Phase 2: lighter safety net. Clinician-set red flags → staff welfare check; other health mentions → 108 line, normal rebooking, note for staff/doctor.
 - The demo never shows my face or voice. Video: Claude writes the script; Claude Code records automatically and joins video, voice and captions; voice from a free, licence-checked tool (first choice: Indic Parler-TTS).
+- Video must say the voices are AI-generated, and must carry this credit (end card or description): "Voices: Indic Parler-TTS by AI4Bharat (Apache 2.0), trained on IndicTTS (IIT Madras), SYSPIN (IISc), Rasa (AI4Bharat) and GLOBE." Voice tool lives in ~/DocDelay-video, never in the app repo.
 - Switch the AI off for laptop demos until the 4 backlog AI items are done.
 
 ## How I like to work
@@ -72,3 +76,18 @@ npm run dev
 Then open http://localhost:3000.
 
 To test on my phone (same Wi-Fi): `npm run build`, then `npx next start -H 0.0.0.0`, then open the laptop's Network address on the phone.
+
+## Rebuilding the demo video
+
+Everything lives in `~/DocDelay-video` (never in this repo). It records the LIVE site, so push and deploy any app change first.
+
+```
+cd ~/DocDelay-video
+.venv/bin/python build/record.py     # clicks through the live site, ~2.5 min
+.venv/bin/python build/assemble.py   # joins picture, voice, captions, ~1 min
+```
+
+Output: `~/DocDelay-video/output/DocDelay_demo_v1.mp4` and `captions.srt`.
+- Voiceover: `voiceover/scene_1.wav` … `scene_8.wav` (Mary, seed 1; spoken as "Dock Delay"). Remake with `.venv/bin/python make_voiceover.py` (~11 min).
+- Scene timings, clicks and the title/closing cards: `build/record.py`, `build/title.html`, `build/closing.html`. Captions: `build/assemble.py`.
+- To drop the send-time blanking (for a morning recording), delete the "Messages page: hide only the real Sent … clock stamps" rule in `build/overlay.js`.

@@ -33,6 +33,20 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - "Morning" requests must end by 12:00 PM and "afternoon" by 4:00 PM — treated like "before X".
 - A named day the clinic is closed on (Sunday) gets "The clinic is closed on …" instead of "… is full at that time".
 - Staff screens (staff call list, call-simulator header, Buttons screen) stay in English.
+- Demo video voice (Indic Parler-TTS): the Tamil and Hindi sample lines are written in Tamil/Hindi script (e.g. "நான் வெயிட் பண்றேன்", "मैं रुक जाऊँगा") rather than English letters, because the model reads native script best.
+- Demo video voice: the voice tool runs on the laptop's processor (CPU), not the graphics chip, because CPU is slower but more reliable. Switch to the graphics chip only if CPU is too slow.
+- Demo video voice: the voice tool may need Python 3.12 in its own folder if it won't install on the laptop's Python 3.13. (Not needed: it installed on 3.13.)
+- Demo video voice: Hindi sample uses the male voice Rohit ("jaunga" is the male form); Tamil uses Jaya (the model page's recommended Tamil voice).
+- Demo video voice: narrator is Mary, seed 1, "calm, warm and reassuring … very clear audio" description; the name is spoken as "Dock Delay" (captions say "DocDelay"). Mary is assumed to be a female voice.
+- Demo video voiceover: each sentence is made separately (seed 1) and joined with a 0.35 s pause; silence trimmed from sentence ends (50 ms cushion); every scene's loudest point set about 1 dB below full volume.
+- Demo video voiceover: the original scene 6 is kept as `scene_6_old.wav`, and the rejected versions are in `voiceover/rejected/`.
+- Demo video recording: frames are captured straight from the browser (sharper than Playwright's own video recorder), at 1920×1080 with the page zoomed to 125%.
+- Demo video recording: the recording browser only (never the app) adds the zoom, the teal click dot/highlight box, 280 px of extra space at the bottom of each page (so messages can scroll above the captions), and blanks the "Sent …" clock stamps on the Messages page.
+- Demo video recording: the "Mark unavailable" pop-up first shows the real clock time, so those few frames are dropped; the video goes straight to 9:00 AM – 12:00 PM.
+- Demo video recording: Ganesh Iyer and Gayathri Chandrasekaran answer "1 – Later today" off camera (Buttons mode), so the Hindi and Tamil patients come next in the call order.
+- Demo video: each scene's voice starts 0.5 s into the scene; scenes run 1–4 s longer than their voice (total 112 s).
+- Demo video captions: one per sentence, split at a comma when longer than 84 characters; white on a dark box, Arial. Audio is mono AAC 192 kbps.
+- Demo video: title and closing cards use the app's light background and teal colour. Rehearsal and build files stay in `~/DocDelay-video/rehearsal/` and `~/DocDelay-video/build/`.
 - AI chat: after an outcome (booked / waiting / cancelled / staff / urgent), DocDelay sends its own fixed confirmation line instead of AI-written text, so the AM/PM and local-time-word rules are always met. (It also saves one API call.)
 - AI chat: when the daily AI message limit is hit, the simulator switches to Buttons (as before); when the AI errors or its reply fails the checks, only that message falls back to the rule-based stand-in.
 - AI chat: in one turn the AI may check slots more than once; all slots offered in that turn are kept (up to 5, A–E). E.g. "kal subah ya parso shaam" also got a day-after-tomorrow morning option.
