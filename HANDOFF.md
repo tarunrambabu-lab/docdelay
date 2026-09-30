@@ -1,6 +1,6 @@
 # DocDelay — Handoff
 
-Last updated: 1 Oct 2026. Read this first when starting a new chat or a new Claude Code session.
+Last updated: 2 Oct 2026. Read this first when starting a new chat or a new Claude Code session.
 
 ## What DocDelay is
 
@@ -37,16 +37,16 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | claude-code-setup plugin | Installed |
 | Test-after-edit hook (runs `npm test` after Claude edits `src/`) | Done (1 Oct) |
 | /wrap-up skill | Next |
-| "5 – Another doctor today" (Buttons only, FRD 5.4), with Dr. Karthik Raman as a second cardiologist | Done (1 Oct) |
-| Fixed demo clock: 9:00 AM on India's date (`CLOCK_MODE` in `src/lib/clock.ts`, kept on "demo") | Done (1 Oct) |
-| Tour step 6 of 9: "Another doctor, same day" (Buttons, press 5, pick a time with Dr. Karthik) | Done (1 Oct) |
-| Tour step 2 on small phones: pop-up now sits above the tour card; checked at 4 phone sizes in Chrome and Safari engines | Done (1 Oct) |
-| Retake README screenshots (4 doctors, demo clock badge, button 5) | Next |
-| Optional: rebuild the video without the send-time blanking (not needed any more: "Sent" times now show the demo time, 9:00 AM) | Next (optional) |
+| "5 – Another doctor today" (FRD 5.4), Buttons + chat (basic and AI mode), with Dr. Karthik Raman as a second cardiologist | Done, live (2 Oct) |
+| Fixed demo clock: 9:00 AM on India's date (`CLOCK_MODE` in `src/lib/clock.ts`, kept on "demo") | Done, live (1 Oct) |
+| Tour step 6 of 9: "Another doctor, same day" (Buttons, press 5, pick a time with Dr. Karthik) | Done, live (1 Oct) |
+| Tour step 2 on small phones: pop-up now sits above the tour card; checked at 4 phone sizes in Chrome and Safari engines | Done, live (1 Oct) |
+| README screenshots retaken (4 doctors, demo clock badge, button 5) | Done (2 Oct) |
 | Add the video to the README and portfolio | Next |
-| Another doctor today in chat (basic and AI mode), with a suggested-phrase button | Done (1 Oct) — real-AI check cost $0.0907 |
-| AI can't show a confirmation it didn't make (fixed-wording rule enforced in code) | Done (2 Oct) — Tamil real-AI check cost $0.0215 |
-| After Another doctor in chat is done: plan the WhatsApp channel (alongside calls and texts, not replacing them). Open decisions are in the FRD backlog. | Next |
+| Another doctor in chat: suggested-phrase button; basic mode's "another doctor" reading wins over the AI | Done, live (2 Oct) — real-AI checks cost $0.1122 in total |
+| Confirmation guard: an AI reply that sounds like a confirmation with nothing booked is never shown | Done, live (2 Oct) |
+| Demo video v2 (4 doctors, demo clock, another doctor; no send-time blanking needed) | Next |
+| Then: plan the WhatsApp channel (alongside calls and texts, not replacing them). Open decisions are in the FRD backlog. | Next |
 | Phase 2: clinic interviews | After README/portfolio |
 | Real calls to my own phone | After the 4 AI backlog items |
 | Add the real-call clip to the video | After real calls |
