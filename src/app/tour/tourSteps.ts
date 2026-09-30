@@ -30,6 +30,27 @@ export interface TourStep {
   done?: (screen: TourScreen) => boolean;
 }
 
+// The outcome the Buttons-mode result shows after "5 – Another doctor today".
+const REBOOKED = "Rebooked – another doctor";
+
+// Get a patient to press "5 – Another doctor today" (Buttons mode), then pick
+// a time with the other doctor. Anything else the visitor presses (1–4, "Didn't
+// pick up", a chat reply) just moves the ring on to the next affected patient:
+//   - an outcome on screen → "Next patient";
+//   - other-day times on screen (after 2, or 1 with no room today) → the first
+//     time, which books it and shows "Next patient";
+//   - Chat on screen → the "Buttons" tab.
+function towardsAnotherDoctor(s: TourScreen): string | undefined {
+  if (s.outcome === REBOOKED) return "outcome"; // done: show the "was → now" line
+  if (s.markers.has("another-doctor-pick")) return "another-doctor-pick";
+  if (s.markers.has("another-doctor")) return "another-doctor";
+  if (s.markers.has("day-offer-pick")) return "day-offer-pick";
+  if (s.outcome && s.markers.has("next-patient")) return "next-patient";
+  if (s.markers.has("chat-box") && s.markers.has("buttons-tab")) return "buttons-tab";
+  if (s.markers.has("start-calling")) return "start-calling";
+  return undefined;
+}
+
 // Go to the first patient's chat: "Start calling patients", then "Chat".
 function towardsChat(s: TourScreen): string | undefined {
   if (s.markers.has("chat-box")) return undefined;
@@ -44,7 +65,8 @@ export const TOUR_STEPS: TourStep[] = [
     title: "Welcome to DocDelay",
     text:
       "When a doctor is suddenly called into emergency surgery, DocDelay contacts every affected " +
-      "patient and helps them choose: wait for a later time today, move to another day, or cancel. " +
+      "patient and helps them choose: wait for a later time today, move to another day, cancel, or " +
+      "see another doctor today. " +
       "Everything here is fictional (hospital, doctors, patients), and calls and texts are " +
       "simulated in your browser. Starting the tour resets the demo.",
     nextLabel: "Start the tour",
@@ -102,6 +124,17 @@ export const TOUR_STEPS: TourStep[] = [
           ? "symptom-example"
           : towardsChat(s),
     done: (s) => s.outcome === "URGENT – staff call now",
+  },
+  {
+    title: "Another doctor, same day",
+    text:
+      "Tap “Next patient”, then “Buttons” at the top. Tap “5 – Another doctor today” and pick any " +
+      "time with Dr. Karthik Raman, the hospital's other cardiologist. Only doctors the hospital " +
+      "has approved are offered, in empty slots, so nobody else moves.",
+    nextLabel: "Next",
+    // "Next" shows once the booking is made, so the "was → now" line can be read.
+    ready: (s) => s.outcome === REBOOKED,
+    target: towardsAnotherDoctor,
   },
   {
     title: "The staff call list",

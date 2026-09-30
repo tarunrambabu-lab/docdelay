@@ -4,6 +4,7 @@ Ideas and known gaps to pick up later.
 
 ## To do
 
+- **Tour at 320 × 640 px (found 1 Oct 2026, existing steps):** in step 2 the pop-up's "Mark unavailable" button, and in step 4 the "I'll wait" reply, sit mostly behind the tour card — only a thin strip shows. Also, right after "Start the tour", the page jumps back to the top AFTER the tour has scrolled to "Mark doctor unavailable", so that button starts off-screen on a phone. The new step 6 isn't affected.
 - **Before switching the clock to "real" (`CLOCK_MODE` in `src/lib/clock.ts`):** the booking rules ("later today", "5 – Another doctor today", other-day offers) need a "not before now" check. They don't look at the time today; with the fixed demo clock (9:00 AM, the first slot) nothing can be in the past, but with the real time a patient could be offered — and booked into — a slot that has already gone (e.g. 9:30 at 11 AM).
 - **"Another doctor" edge case:** if the covering doctor (Dr. Karthik) is later marked unavailable too, patients rebooked to him are affected like anyone else, and the 45-minute rule measures from their original time with Dr. Meera. Check this is what we want.
 - **A second "doctor unavailable" window on the same day:** the empty-slot search should avoid it. Right now, if a doctor has two absences in one day, a "later today" patient can be given a slot inside the second absence.
@@ -122,6 +123,11 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Demo clock: the dashboard label reads "Demo time: 9:00 AM (fixed)" in a small amber badge next to the date, with a tooltip explaining it; English only, like the rest of the staff screens.
 - Demo clock: in demo mode, "Sent" times on the Messages page show "9:00 AM" without seconds.
 - Demo clock: a test fails if any file other than `clock.ts` reads the computer's clock (the AI stopwatches in `claude.ts` and `aiChat.ts` are allowed).
+- Tour step 6 ("Another doctor, same day"): waits for "Next" (shown once the booking is made) instead of moving on by itself, so the "was → now" line can be read.
+- Tour step 6: the text says "pick any time"; it doesn't tell the visitor to pick A.
+- Tour step 6: if the visitor presses anything other than 5 (1–4, "Didn't pick up", or a chat reply), the ring moves on to the next affected patient; after 2 (or 1 with no room today) it first points at the first other-day time, which books it and shows "Next patient".
+- Tour: the Buttons result panel now carries the same "outcome" marker as the chat result, so a Buttons answer during step 4 also counts (the tour still asks for Chat there).
+- Tour: the 320 px check used the Playwright installed for the video tool in ~/DocDelay-video (nothing added to the app).
 
 ## Done
 

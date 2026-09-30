@@ -31,6 +31,8 @@ export default function OfferButtons({
         <button
           key={i}
           type="button"
+          // The guided tour points at these (another doctor, or another day)
+          data-tour={doctorNames?.[i] ? "another-doctor-pick" : "day-offer-pick"}
           disabled={isPending}
           onClick={() => choose(i)}
           className="rounded-xl bg-blue-600 px-4 py-3 text-left text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"

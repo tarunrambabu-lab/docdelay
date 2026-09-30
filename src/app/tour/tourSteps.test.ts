@@ -12,9 +12,9 @@ const screen = (markers: string[], outcome?: string): TourScreen => ({
 const step = (title: string) => TOUR_STEPS.findIndex((s) => s.title === title);
 
 describe("wording", () => {
-  it("has 6–8 steps, each with a title and text", () => {
+  it("has 6–9 steps, each with a title and text", () => {
     expect(TOUR_STEPS.length).toBeGreaterThanOrEqual(6);
-    expect(TOUR_STEPS.length).toBeLessThanOrEqual(8);
+    expect(TOUR_STEPS.length).toBeLessThanOrEqual(9);
     for (const s of TOUR_STEPS) {
       expect(s.title).toBeTruthy();
       expect(s.text).toBeTruthy();
@@ -44,6 +44,14 @@ describe("wording", () => {
     expect(TOUR_STEPS[step("The staff call list")].text).toContain(
       "Scroll down to see the first patient's new time",
     );
+  });
+
+  it("the welcome mentions seeing another doctor today", () => {
+    expect(TOUR_STEPS[0].text).toContain("cancel, or see another doctor today");
+  });
+
+  it("the another-doctor step comes right after the symptom step", () => {
+    expect(step("Another doctor, same day")).toBe(step("A patient mentions a symptom") + 1);
   });
 
   it("the tour's pop-up times are 9:00 AM – 12:00 PM", () => {
@@ -91,7 +99,52 @@ describe("where each step points, and when it moves on", () => {
     expect(tourView(i, screen(["next-patient"], "URGENT – staff call now")).done).toBe(true);
   });
 
-  it("6: Back to dashboard → the staff call list; Next only once the list is on screen", () => {
+  it("6: Next patient → Buttons → 5 → a Karthik time → the result, then Next", () => {
+    const i = step("Another doctor, same day");
+    const at = (markers: string[], outcome?: string) => tourView(i, screen(markers, outcome));
+    // Starts on the symptom patient's finished chat
+    expect(at(["next-patient", "outcome"], "URGENT – staff call now").target).toBe("next-patient");
+    // The next patient opens in Chat
+    expect(at(["chat-tab", "buttons-tab", "chat-box"]).target).toBe("buttons-tab");
+    // Buttons: "5 – Another doctor today"
+    expect(at(["chat-tab", "buttons-tab", "another-doctor"]).target).toBe("another-doctor");
+    // Times with Dr. Karthik
+    expect(at(["chat-tab", "buttons-tab", "another-doctor-pick"]).target).toBe(
+      "another-doctor-pick",
+    );
+    // Booked: ring around the "was → now" result, and only now the Next button
+    const booked = at(["outcome", "next-patient"], "Rebooked – another doctor");
+    expect(booked.target).toBe("outcome");
+    expect(booked.ready).toBe(true);
+    expect(booked.lost).toBe(false);
+    expect(at(["chat-tab", "buttons-tab", "another-doctor"]).ready).toBe(false);
+    expect(TOUR_STEPS[i].nextLabel).toBe("Next");
+    // Never "lost" along the way
+    for (const markers of [["chat-tab", "buttons-tab", "chat-box"], ["buttons-tab", "another-doctor"]]) {
+      expect(at(markers).lost).toBe(false);
+    }
+  });
+
+  it("6: pressing anything other than 5 moves the ring on to the next patient", () => {
+    const i = step("Another doctor, same day");
+    const at = (markers: string[], outcome?: string) => tourView(i, screen(markers, outcome));
+    // 1 – Later today → the result, with "Next patient"
+    expect(at(["outcome", "next-patient"], "Rescheduled – later today").target).toBe(
+      "next-patient",
+    );
+    // 2 – Another day (or 1 with no room today) → the first other-day time
+    expect(at(["buttons-tab", "day-offer-pick"]).target).toBe("day-offer-pick");
+    // …then its result → "Next patient"
+    expect(at(["outcome", "next-patient"], "Rescheduled – another day").target).toBe(
+      "next-patient",
+    );
+    // 3 / 4 / Didn't pick up → straight to the next patient's buttons
+    expect(at(["buttons-tab", "another-doctor"]).target).toBe("another-doctor");
+    // Wandered to the dashboard → "Start calling patients"
+    expect(at(["banner", "start-calling"]).target).toBe("start-calling");
+  });
+
+  it("7: Back to dashboard → the staff call list; Next only once the list is on screen", () => {
     const i = step("The staff call list");
     expect(tourView(i, screen(["back-to-dashboard"])).target).toBe("back-to-dashboard");
     expect(tourView(i, screen(["back-to-dashboard"])).ready).toBe(false);
@@ -99,7 +152,7 @@ describe("where each step points, and when it moves on", () => {
     expect(tourView(i, screen(["staff-list", "banner"])).ready).toBe(true);
   });
 
-  it("7: Messages → Send updates → done when a text is sent", () => {
+  it("8: Messages → Send updates → done when a text is sent", () => {
     const i = step("One text per patient");
     expect(tourView(i, screen(["back-to-dashboard"])).target).toBe("back-to-dashboard");
     expect(tourView(i, screen(["messages-link", "staff-list"])).target).toBe("messages-link");

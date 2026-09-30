@@ -9,7 +9,7 @@ import { useTransition } from "react";
 import { recordCallAction } from "@/app/actions";
 import type { CallResult } from "@/hms/types";
 
-const answers: { label: string; result: CallResult; className: string }[] = [
+const answers: { label: string; result: CallResult; className: string; tour?: string }[] = [
   {
     label: "1 – Later today",
     result: "Wants later today",
@@ -34,6 +34,7 @@ const answers: { label: string; result: CallResult; className: string }[] = [
     label: "5 – Another doctor today",
     result: "Wants another doctor today",
     className: "bg-violet-600 hover:bg-violet-700 text-white",
+    tour: "another-doctor", // the guided tour points here
   },
   {
     label: "Didn't pick up",
@@ -61,6 +62,7 @@ export default function AnswerButtons({
         <button
           key={a.result}
           type="button"
+          data-tour={a.tour}
           disabled={isPending}
           onClick={() => startTransition(() => recordCallAction(appointmentId, a.result))}
           className={`rounded-xl px-4 py-3 text-left text-sm font-medium shadow-sm transition disabled:opacity-50 ${a.className}`}

@@ -20,16 +20,21 @@ vi.mock("@/hms/visitorState", async (importOriginal) => ({
 }));
 
 import {
+  chooseOffer,
   getAffectedAppointments,
+  getAnotherDoctorOptions,
   getAppointment,
+  getDoctors,
   getMessages,
   getPendingUpdates,
   getStaffCallList,
   markDoctorUnavailable,
+  recordCallResult,
   resetDemo,
   sendChatMessage,
   sendPendingUpdates,
 } from "@/hms/mockHms";
+import { describeTimeChange } from "@/lib/status";
 import { interpretWithRules } from "@/lib/understanding";
 import { DEMO_PHRASES } from "@/app/calls/[id]/demoPhrases";
 import { TOUR_UNAVAILABLE } from "./tourSteps";
@@ -76,6 +81,7 @@ describe.each(WHEN)("the tour at %s", (_label, isoTime) => {
     expect(affected.length).toBeGreaterThan(0);
     expect(affected[0].id).toBe("appt-001"); // the first patient the chat calls (English)
     expect(affected[1].id).toBe("appt-002"); // the second (Tamil)
+    expect(affected[2].id).toBe("appt-003"); // the third (Hindi, 9:30 AM): another doctor
 
     // Step 4: the first patient taps "I'll wait for a later time today"
     const english = DEMO_PHRASES.English.replies.find((p) => p.intent === "later_today")!;
@@ -87,15 +93,34 @@ describe.each(WHEN)("the tour at %s", (_label, isoTime) => {
     const second = await patientSays("appt-002", DEMO_PHRASES.Tamil.symptom.text);
     expect(second.status).toBe("URGENT – staff call now");
 
-    // Step 6: the staff call list shows the URGENT patient first
+    // Step 6: the next patient presses "5 – Another doctor today" and picks A
+    const options = await getAnotherDoctorOptions("appt-003");
+    expect(options.map((o) => `${o.doctorId} ${o.startTime}`)).toEqual([
+      "doc-cardio-2 09:30",
+      "doc-cardio-2 10:45",
+      "doc-cardio-2 11:30",
+    ]);
+    expect(await recordCallResult("appt-003", "Wants another doctor today")).toBe(true);
+    expect(await chooseOffer("appt-003", 0)).toBe("booked");
+    const third = (await getAppointment("appt-003"))!;
+    expect(third.status).toBe("Rebooked – another doctor");
+    expect(describeTimeChange(third, await getDoctors())).toBe(
+      "was 9:30 AM, Dr. Meera Krishnan → now 9:30 AM, Dr. Karthik Raman",
+    );
+
+    // Step 7: the staff call list shows the URGENT patient first
     const staff = await getStaffCallList();
     expect(staff[0].id).toBe("appt-002");
 
-    // Step 7: one text waiting, sent when staff press "Send updates"
-    expect(await getPendingUpdates()).toHaveLength(1);
+    // Step 8: two texts waiting (one each), sent when staff press "Send updates"
+    expect(await getPendingUpdates()).toHaveLength(2);
     await sendPendingUpdates();
     const sent = await getMessages();
-    expect(sent).toHaveLength(1);
-    expect(sent[0].toName).toBe(first.patient.name);
+    expect(sent.map((m) => m.toName).sort()).toEqual(
+      [first.patient.name, third.patient.name].sort(),
+    );
+    expect(sent.find((m) => m.appointmentId === "appt-003")!.text).toContain(
+      "डॉ. कार्तिक रमन (Dr. Karthik Raman)",
+    );
   });
 });

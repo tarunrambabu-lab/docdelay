@@ -161,7 +161,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
           <Link
             key={value}
             href={href}
-            data-tour={value === "chat" ? "chat-tab" : undefined}
+            data-tour={value === "chat" ? "chat-tab" : "buttons-tab"}
             aria-current={mode === value ? "page" : undefined}
             className={`rounded-lg px-3 py-1.5 font-medium ${TAP} ${
               mode === value ? "bg-teal-700 text-white" : "text-slate-600 hover:bg-slate-100"
@@ -297,11 +297,17 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
             />
             <div>
               <h2 className="mb-3 text-sm font-medium text-slate-500">{justAnswered.status}</h2>
-              <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 text-sm text-emerald-800">
+              {/* The tour reads the outcome here, as on the chat result */}
+              <div
+                data-tour="outcome"
+                data-status={justAnswered.status}
+                className="mb-4 rounded-xl border border-slate-200 bg-white p-4 text-sm text-emerald-800"
+              >
                 {describeTimeChange(justAnswered, doctors)}
               </div>
               <Link
                 href={`/calls/${id}`}
+                data-tour="next-patient"
                 className="block rounded-xl bg-teal-700 px-4 py-3 text-center text-sm font-medium text-white hover:bg-teal-800"
               >
                 {current ? "Next patient →" : "See summary →"}

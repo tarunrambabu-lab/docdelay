@@ -26,7 +26,7 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | 6: chat mode | Done. Live site = basic word-list chat. Laptop = real AI (Claude Haiku 4.5) using my API key in `.env.local` |
 | Safety: wide health-keyword check runs first; "two unclear replies" counted in code | Done |
 | Alarm-fatigue fix ("tired of waiting", "heavy traffic", "work pressure", remove "doctor said") | Done |
-| Automated tests (npm test, 273 tests) | Done |
+| Automated tests (npm test, 281 tests) | Done |
 | Tamil/Hindi health-word fix (word beginnings, lookalike guards) | Done, live. Needs a second native-speaker and a clinician review before real patients |
 | 7: guided demo tour, suggested chat phrases, phone-width polish | Done, live (29 Sep) |
 | AI weekday fix + day check in code | Done. 4 AI items in BACKLOG under "Must do before real calls or laptop demos" |
@@ -39,6 +39,9 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | /wrap-up skill | Next |
 | "5 – Another doctor today" (Buttons only, FRD 5.4), with Dr. Karthik Raman as a second cardiologist | Done (1 Oct) |
 | Fixed demo clock: 9:00 AM on India's date (`CLOCK_MODE` in `src/lib/clock.ts`, kept on "demo") | Done (1 Oct) |
+| Tour step 6 of 9: "Another doctor, same day" (Buttons, press 5, pick a time with Dr. Karthik) | Done (1 Oct) |
+| Tour at 320 × 640: two older steps' buttons partly behind the tour card (see BACKLOG) | Next |
+| Retake README screenshots (4 doctors, demo clock badge, button 5) | Next |
 | Optional: rebuild the video without the send-time blanking (not needed any more: "Sent" times now show the demo time, 9:00 AM) | Next (optional) |
 | Add the video to the README and portfolio | Next |
 | Phase 2: clinic interviews | After README/portfolio |
