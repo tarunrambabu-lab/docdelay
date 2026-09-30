@@ -44,6 +44,7 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | Retake README screenshots (4 doctors, demo clock badge, button 5) | Next |
 | Optional: rebuild the video without the send-time blanking (not needed any more: "Sent" times now show the demo time, 9:00 AM) | Next (optional) |
 | Add the video to the README and portfolio | Next |
+| After Another doctor in chat is done: plan the WhatsApp channel (alongside calls and texts, not replacing them). Open decisions are in the FRD backlog. | Next |
 | Phase 2: clinic interviews | After README/portfolio |
 | Real calls to my own phone | After the 4 AI backlog items |
 | Add the real-call clip to the video | After real calls |
