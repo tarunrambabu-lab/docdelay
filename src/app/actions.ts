@@ -115,6 +115,9 @@ export async function sendUpdatesAction(): Promise<void> {
 // Chat mode: the operator typed what the patient said.
 // 1. SAFETY first: the rule-based health check runs on every message. Any
 //    health words → the rule-based URGENT escalation, never the AI.
+//    In the same way, if the rule-based reading is "another doctor" ("vera
+//    doctor paakanum", "doosre doctor", "5", …), the rule-based stand-in
+//    handles the message, never the AI (the AI sometimes missed it).
 // 2. If the AI is on (settings + API key): check the spending limits (hit →
 //    Buttons mode with a notice), then let the AI handle the message. If the
 //    AI fails for any reason, the rule-based stand-in handles THIS message.
@@ -130,16 +133,18 @@ export async function chatAction(
   if (!appt || appt.status !== "Affected – needs contact") return;
   const callsPage = `/calls/${appt.unavailabilityId}`;
 
+  // The rule-based reading wins for a health concern and for "another doctor".
+  const context = { language: appt.patient.preferredLanguage, offers: appt.offers ?? [] };
+  const rulesFirst =
+    mentionsHealth(text) || (await interpretWithRules(text, context)).intent === "another_doctor";
+
   let handled = false;
-  if (activeEngine() === "claude" && !mentionsHealth(text)) {
+  if (activeEngine() === "claude" && !rulesFirst) {
     if ((await countOneAiMessage()) !== "ok") redirect(`${callsPage}?mode=buttons&notice=limit`);
     handled = (await aiChatTurn(appointmentId, text)).ok; // failed → rule-based below
   }
   if (!handled) {
-    const understanding = await interpretWithRules(text, {
-      language: appt.patient.preferredLanguage,
-      offers: appt.offers ?? [],
-    });
+    const understanding = await interpretWithRules(text, context);
     const saved = await sendChatMessage(appointmentId, text, understanding);
     if (!saved) {
       return { error: "This demo has too much history. Press “Reset demo” to start again." };

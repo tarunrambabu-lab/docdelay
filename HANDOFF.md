@@ -26,7 +26,7 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | 6: chat mode | Done. Live site = basic word-list chat. Laptop = real AI (Claude Haiku 4.5) using my API key in `.env.local` |
 | Safety: wide health-keyword check runs first; "two unclear replies" counted in code | Done |
 | Alarm-fatigue fix ("tired of waiting", "heavy traffic", "work pressure", remove "doctor said") | Done |
-| Automated tests (npm test, 346 tests) | Done |
+| Automated tests (npm test, 358 tests) | Done |
 | Tamil/Hindi health-word fix (word beginnings, lookalike guards) | Done, live. Needs a second native-speaker and a clinician review before real patients |
 | 7: guided demo tour, suggested chat phrases, phone-width polish | Done, live (29 Sep) |
 | AI weekday fix + day check in code | Done. 4 AI items in BACKLOG under "Must do before real calls or laptop demos" |
@@ -68,6 +68,7 @@ Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinic
 - Video must say the voices are AI-generated, and must carry this credit (end card or description): "Voices: Indic Parler-TTS by AI4Bharat (Apache 2.0), trained on IndicTTS (IIT Madras), SYSPIN (IISc), Rasa (AI4Bharat) and GLOBE." Voice tool lives in ~/DocDelay-video, never in the app repo.
 - Demo clock: fixed at 9:00 AM on today's date in India (`CLOCK_MODE = "demo"` in `src/lib/clock.ts`). Don't switch to "real" until the booking rules have a "not before now" check (BACKLOG).
 - Switch the AI off for laptop demos until the 4 backlog AI items are done.
+- In chat, basic mode's reading wins over the AI for any health concern (always first) and for "another doctor"; the AI never handles those messages.
 - Confirmations only ever use DocDelay's fixed wording: an AI reply that sounds like a confirmation, with no booking saved in that message, is never shown; basic mode answers that message instead. The AI is also told never to say an appointment is booked, moved or confirmed.
 - Any browser test or local test server Claude runs must have the API key hidden, so it can never spend credit. Start the server with the key set to empty: `ANTHROPIC_API_KEY= npx next start …`. (Just removing the variable isn't enough: Next.js then reads the key from `.env.local` by itself.) Before testing, check the Chat tab says "basic mode", not "AI". (`npm test` never reaches the AI, and the test-after-edit hook hides the key too.)
 

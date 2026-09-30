@@ -24,7 +24,6 @@ These affect the AI chat only (laptop with an API key). The live site uses basic
 
 ## Revisit with the real AI
 
-- **AI sometimes misses "vera doctor paakanum" (2 Oct 2026, Tamil patient):** in 1 of 2 real-AI conversations it didn't treat it as asking for another doctor (it offered wait / another day / cancel instead; nothing wrong was booked). Basic mode reads it correctly. Ideas: if basic mode recognises "another doctor", let that win over the AI (like the "talk to a person" item), or list the Tamil/Hindi words in the AI instructions.
 - **"12:15 ku vera doctor kitta book pannunga" in basic mode** re-offers Dr. Karthik's earliest times (9:30, 10:45, 11:30) and ignores the time asked for. It could offer his times at or after that time instead.
 
 - **Offers after "[Day] is full" can include an EARLIER day** (e.g. "Thursday is full" → Tuesday offered). A patient who can only come later in the week might pick one without noticing.
@@ -149,8 +148,11 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Confirmation check: only "already done" wording counts ("booked", not "book"; "book ho gaya", not "book karna"), plus everyday "done" words in all three languages ("done", "fixed", "all sorted", "see you at"; "fix pannitten", "confirm aachu", "maathitten"; "kar diya", "ho gaya hai aapka"). A false alarm just means basic mode answers that message.
 - Confirmation check: if the AI truthfully says "that time was just booked" (by someone else), that message also falls back to basic mode — harmless.
 - Confirmation check: each fallback still costs that AI call (the reply was already made).
+- Another doctor, AI mode: when basic mode reads a message as "another doctor", basic mode handles THAT message (no AI call, not counted towards the AI limits). The next message (e.g. picking "A") goes to the AI as usual. "No another doctor" phrases still go to the AI.
 
 ## Done
+
+- ✅ **AI missed "vera doctor paakanum" (found 2 Oct 2026):** basic mode's "another doctor" reading now wins over the AI, the same way the health check runs first.
 
 - ✅ **AI can't show a confirmation it didn't make (2 Oct 2026):** found in the 1 Oct real-AI check ("You're confirmed…" with nothing booked). Such replies are now never shown; basic mode answers that message. Real-AI checks: 1 Oct $0.0907, 2 Oct (Tamil patient) $0.0215.
 
