@@ -2,29 +2,15 @@
 
 // The "Mark doctor unavailable" button and the small pop-up form it opens.
 // "use client" means this part runs in the browser, because it needs to
-// open/close the pop-up and fill in times from the browser's clock.
+// open/close the pop-up. The starting times come from the app's clock
+// (lib/clock.ts), not the browser's — see unavailableDefaults.ts.
 
 import { useActionState, useState } from "react";
 import { markUnavailableAction } from "./actions";
 import { UNAVAILABILITY_REASONS, type Doctor } from "@/hms/types";
-import { fromMinutes, toMinutes } from "@/lib/time";
 import { TAP } from "./tapTarget";
 import { useTour } from "./tour/DemoTour";
-import { TOUR_UNAVAILABLE } from "./tour/tourSteps";
-
-const LATEST_TIME = 23 * 60 + 45; // don't suggest times past 11:45 PM
-
-// Current time rounded UP to the next 15 minutes, e.g. 10:07 → 10:15.
-function nextQuarterHour(): number {
-  const now = new Date();
-  const minutes = now.getHours() * 60 + now.getMinutes();
-  return Math.min(Math.ceil(minutes / 15) * 15, LATEST_TIME);
-}
-
-// "From" time + 3 hours (but not past the end of the day).
-function threeHoursAfter(time: string): string {
-  return fromMinutes(Math.min(toMinutes(time) + 3 * 60, LATEST_TIME));
-}
+import { defaultUnavailableTimes, threeHoursAfter } from "./unavailableDefaults";
 
 export default function MarkUnavailableButton({ doctor }: { doctor: Doctor }) {
   const [open, setOpen] = useState(false);
@@ -47,15 +33,12 @@ export default function MarkUnavailableButton({ doctor }: { doctor: Doctor }) {
 // The pop-up form. It's a separate component so it starts fresh
 // (new default times, no old error message) every time it opens.
 function UnavailableForm({ doctor, onClose }: { doctor: Doctor; onClose: () => void }) {
-  // During the demo tour: always 9:00 AM – 12:00 PM, so the tour works at any
-  // time of day. Otherwise: from the next quarter-hour, for 3 hours.
+  // Starting times: 9:00 AM – 12:00 PM with the demo clock and in the tour
+  // (see unavailableDefaults.ts).
   const { active: inTour } = useTour();
-  const [fromTime, setFromTime] = useState(() =>
-    inTour ? TOUR_UNAVAILABLE.fromTime : fromMinutes(nextQuarterHour()),
-  );
-  const [untilTime, setUntilTime] = useState(() =>
-    inTour ? TOUR_UNAVAILABLE.untilTime : threeHoursAfter(fromTime),
-  );
+  const [defaults] = useState(() => defaultUnavailableTimes(inTour));
+  const [fromTime, setFromTime] = useState(defaults.fromTime);
+  const [untilTime, setUntilTime] = useState(defaults.untilTime);
   // Until the user edits "Expected until" themselves, keep it 3 hours after "From".
   const [untilEdited, setUntilEdited] = useState(false);
 

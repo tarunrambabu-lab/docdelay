@@ -91,6 +91,7 @@ import {
   unclearReply,
   urgentReply,
 } from "@/lib/chatReplies";
+import { realTimestamp } from "@/lib/clock";
 import { describeUnderstanding } from "@/lib/understanding/describe";
 import { doctorNameFor } from "@/lib/names";
 import type { Preferences, Understanding } from "@/lib/understanding/types";
@@ -315,7 +316,7 @@ export async function markDoctorUnavailable(input: {
   untilTime: string;
 }): Promise<Unavailability | null> {
   const steps = await readSteps();
-  const step: DemoStep = { kind: "unavailable", at: Date.now(), ...input };
+  const step: DemoStep = { kind: "unavailable", at: realTimestamp(), ...input };
   const unavailability = applyUnavailable(replay(steps), step);
   return (await writeSteps([...steps, step])) ? unavailability : null;
 }
@@ -357,7 +358,7 @@ export async function recordCallResult(
   result: CallResult,
 ): Promise<boolean> {
   const steps = await readSteps();
-  const step: DemoStep = { kind: "call", at: Date.now(), appointmentId, result };
+  const step: DemoStep = { kind: "call", at: realTimestamp(), appointmentId, result };
   if (!applyCall(replay(steps), step)) return false;
   return writeSteps([...steps, step]);
 }
@@ -403,7 +404,7 @@ export async function chooseOffer(
   choice: number | null,
 ): Promise<"booked" | "none" | "taken" | "skipped"> {
   const steps = await readSteps();
-  const step: DemoStep = { kind: "offer", at: Date.now(), appointmentId, choice };
+  const step: DemoStep = { kind: "offer", at: realTimestamp(), appointmentId, choice };
   const outcome = applyOffer(replay(steps), step);
   if (outcome === "skipped") return outcome;
   return (await writeSteps([...steps, step])) ? outcome : "skipped";
@@ -661,7 +662,7 @@ function bookWithAnotherDoctor(
 // Returns how many messages were "sent".
 export async function sendPendingUpdates(): Promise<number> {
   const steps = await readSteps();
-  const step: DemoStep = { kind: "send", at: Date.now() };
+  const step: DemoStep = { kind: "send", at: realTimestamp() };
   const sent = applySend(replay(steps), step);
   if (sent === 0) return 0;
   return (await writeSteps([...steps, step])) ? sent : 0;
@@ -738,7 +739,7 @@ export async function bookSlot(
   wish?: TimeWish,
 ): Promise<BookResult> {
   const steps = await readSteps();
-  const step: DemoStep = { kind: "book", at: Date.now(), appointmentId, ...slot };
+  const step: DemoStep = { kind: "book", at: realTimestamp(), appointmentId, ...slot };
   // (The wish only narrows what may be booked, so replaying the saved step
   // later without it gives the same result.)
   const result = applyBook(replay(steps), step, wish);
@@ -830,7 +831,7 @@ export async function sendChatMessage(
   understanding: Understanding,
 ): Promise<boolean> {
   const steps = await readSteps();
-  const step: DemoStep = { kind: "chat", at: Date.now(), appointmentId, text, understanding };
+  const step: DemoStep = { kind: "chat", at: realTimestamp(), appointmentId, text, understanding };
   if (!applyChat(replay(steps), step)) return false;
   return writeSteps([...steps, step]);
 }
@@ -1318,7 +1319,7 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
   const patient = patients.find((p) => p.id === appt.patientId)!;
   const doctor = doctors.find((d) => d.id === appt.doctorId)!;
   const language = patient.preferredLanguage;
-  const at = Date.now(); // this turn's time — used again when it's replayed
+  const at = realTimestamp(); // this turn's time — used again when it's replayed
   const say = (o: SlotOffer) =>
     `${dayLabelFor(o.dayOffset, language)}, ${formatTimeFor(o.startTime, language)}`;
   const toAiSlots = (offers: SlotOffer[]): AiSlot[] =>
@@ -1595,7 +1596,7 @@ function applyAi(state: HmsState, step: Extract<DemoStep, { kind: "ai" }>): bool
 // advantage, no penalty). It's logged with who and when.
 export async function markFalseAlarm(appointmentId: string): Promise<boolean> {
   const steps = await readSteps();
-  const step: DemoStep = { kind: "falseAlarm", at: Date.now(), appointmentId };
+  const step: DemoStep = { kind: "falseAlarm", at: realTimestamp(), appointmentId };
   if (!applyFalseAlarm(replay(steps), step)) return false;
   return writeSteps([...steps, step]);
 }

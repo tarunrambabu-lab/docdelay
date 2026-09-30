@@ -1,6 +1,17 @@
 // Small helpers for "HH:MM" (24-hour) time strings and for days.
 
 import type { Language } from "@/hms/types";
+import {
+  CLOCK_MODE,
+  DEMO_TIME,
+  HOSPITAL_TIME_ZONE,
+  hospitalTimeNow,
+  hospitalToday,
+  type ClockMode,
+} from "@/lib/clock";
+
+// (The time zone lives in clock.ts; re-exported here for the screens.)
+export { HOSPITAL_TIME_ZONE };
 
 // "13:45" → 825 (minutes since midnight)
 export function toMinutes(time: string): number {
@@ -31,17 +42,12 @@ export function isValidTime(time: string): boolean {
 // ---------- Days ----------
 // Appointments store a "dayOffset": 0 = today, 1 = tomorrow, and so on.
 
-// The hospital's time zone. "Today" always means today in the hospital,
-// even when the server runs somewhere else (e.g. Vercel servers use UTC).
-export const HOSPITAL_TIME_ZONE = "Asia/Kolkata";
-
 // The calendar date for a dayOffset, as a Date at midnight UTC.
 // Read it with getUTCDay() / getUTCDate() / getUTCMonth(), or format it with
 // timeZone: "UTC" — never with the local-time methods.
 export function dateForDayOffset(dayOffset: number): Date {
-  // Today's date in the hospital, e.g. "2026-09-26" ("en-CA" gives YYYY-MM-DD).
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: HOSPITAL_TIME_ZONE });
-  const [year, month, day] = today.split("-").map(Number);
+  // Today's date in the hospital, e.g. "2026-09-26" (from the clock).
+  const [year, month, day] = hospitalToday().split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day + dayOffset));
 }
 
@@ -70,13 +76,29 @@ export function formatWhen(dayOffset: number, time: string): string {
     : `${formatDate(dayOffset)}, ${formatTime(time)}`;
 }
 
-// "2026-09-27T05:10:00.000Z" → "10:40 AM" (hospital time) — for logs.
-export function formatClock(isoDateTime: string): string {
+// A stored stamp, as shown on screen — for logs and "Sent" times.
+//   Demo clock: always the demo time ("9:00 AM"), to match "Demo time: 9:00 AM".
+//   Real clock: "2026-09-27T05:10:00.000Z" → "10:40 am" (hospital time), with
+//   seconds if asked.
+export function formatClock(
+  isoDateTime: string,
+  options: { seconds?: boolean } = {},
+  mode: ClockMode = CLOCK_MODE,
+): string {
+  if (mode === "demo") return formatTime(DEMO_TIME);
   return new Date(isoDateTime).toLocaleTimeString("en-IN", {
     timeZone: HOSPITAL_TIME_ZONE,
     hour: "numeric",
     minute: "2-digit",
+    ...(options.seconds ? { second: "2-digit" } : {}),
   });
+}
+
+// The clock line on the dashboard: "Demo time: 9:00 AM" (demo clock), or
+// "Time now: 3:47 PM (India)" (real clock).
+export function clockLabel(mode: ClockMode = CLOCK_MODE): string {
+  const time = formatTime(hospitalTimeNow(mode));
+  return mode === "demo" ? `Demo time: ${time}` : `Time now: ${time} (India)`;
 }
 
 // A time as shown to a PATIENT, in their language:

@@ -4,7 +4,7 @@ Ideas and known gaps to pick up later.
 
 ## To do
 
-- **NEXT: a fixed "demo clock"** (e.g. "Demo time: 10:30 AM") that "later today", "5 – Another doctor today" and "Mark doctor unavailable" all use, so nothing is offered in the past. Today the booking rules don't know the time: e.g. marking Dr. Meera away 9–12 at 11 AM can offer a 9:00 patient Dr. Karthik at 9:30. (Decided 1 Oct 2026.)
+- **Before switching the clock to "real" (`CLOCK_MODE` in `src/lib/clock.ts`):** the booking rules ("later today", "5 – Another doctor today", other-day offers) need a "not before now" check. They don't look at the time today; with the fixed demo clock (9:00 AM, the first slot) nothing can be in the past, but with the real time a patient could be offered — and booked into — a slot that has already gone (e.g. 9:30 at 11 AM).
 - **"Another doctor" edge case:** if the covering doctor (Dr. Karthik) is later marked unavailable too, patients rebooked to him are affected like anyone else, and the 45-minute rule measures from their original time with Dr. Meera. Check this is what we want.
 - **A second "doctor unavailable" window on the same day:** the empty-slot search should avoid it. Right now, if a doctor has two absences in one day, a "later today" patient can be given a slot inside the second absence.
 - **Before switching the AI on for the public:** move the site-wide AI message counter to a shared store (e.g. Redis) — on Vercel each server instance has its own memory, so today's in-memory counter isn't a reliable site-wide limit — and set a monthly spend limit for the API key in the Anthropic Console.
@@ -114,8 +114,18 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Another doctor today: the text message says "your appointment is now with Dr. Karthik Raman (instead of Dr. Meera Krishnan) at …", keeping "Reply 1 to confirm, 2 to change".
 - Dashboard: the doctor cards are now 2 across on small screens and 4 across on large ones (were 3), to fit the fourth doctor.
 - The "Please choose A, B or C…" sentence now lives in one helper (`pleaseChoose` in callScript.ts), shared by other-day and another-doctor offers; the words are unchanged.
+- Demo clock: the setting `CLOCK_MODE` lives in the new `src/lib/clock.ts` (not in `settings.ts`, which holds only chat and AI settings).
+- Demo clock: the date is today's REAL date in India in both modes; it still changes at midnight India time.
+- Demo clock: the AI daily message limits keep using the real date (they protect real spending).
+- Demo clock: stored stamps (steps, call logs, "Sent") stay real; only how they're shown follows the clock. The AI's two stopwatches stay on real time.
+- Demo clock: "Mark doctor unavailable" starts at 9:00 AM – 12:00 PM ("until" is still 3 hours after "from"). In real mode it would use India's time, not the visitor's computer time.
+- Demo clock: the dashboard label reads "Demo time: 9:00 AM (fixed)" in a small amber badge next to the date, with a tooltip explaining it; English only, like the rest of the staff screens.
+- Demo clock: in demo mode, "Sent" times on the Messages page show "9:00 AM" without seconds.
+- Demo clock: a test fails if any file other than `clock.ts` reads the computer's clock (the AI stopwatches in `claude.ts` and `aiChat.ts` are allowed).
 
 ## Done
+
+- ✅ **Fixed demo clock (1 Oct 2026):** 9:00 AM on today's date in India, from `src/lib/clock.ts`; shown on the dashboard, used for "Mark doctor unavailable" and for every time stamp on screen.
 
 - ✅ **"Two unclear replies in a row → Needs staff call – Couldn't understand"** is counted by the hms module for both the rule-based chat and the AI (shared counter).
 - ✅ **Wider keyword health check** (tightness, heaviness, uneasy, discomfort, numb, sweating, … plus Tamil/Hindi) — still runs first, before the AI.

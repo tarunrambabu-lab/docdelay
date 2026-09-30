@@ -13,12 +13,13 @@
 
 import { cookies } from "next/headers";
 import { AI_MAX_MESSAGES_PER_SITE_PER_DAY, AI_MAX_MESSAGES_PER_VISITOR_PER_DAY } from "./settings";
-import { HOSPITAL_TIME_ZONE } from "@/lib/time";
+import { hospitalToday } from "@/lib/clock";
 
 const VISITOR_COOKIE = "docdelay-ai-usage";
 
-// Today's date in the hospital, e.g. "2026-09-27".
-const today = () => new Date().toLocaleDateString("en-CA", { timeZone: HOSPITAL_TIME_ZONE });
+// Today's REAL date in the hospital, e.g. "2026-09-27" (the limits protect
+// real spending, so they reset at real midnight in India — see clock.ts).
+const today = () => hospitalToday();
 
 // Site-wide count for today (see the warning above).
 const site = { day: "", count: 0 };

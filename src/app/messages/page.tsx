@@ -9,7 +9,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { getMessages, getPendingUpdates } from "@/hms/mockHms";
 import type { Language } from "@/hms/types";
-import { formatTime, formatWhen, HOSPITAL_TIME_ZONE } from "@/lib/time";
+import { formatClock, formatTime, formatWhen } from "@/lib/time";
 import { sendUpdatesAction } from "../actions";
 import { TAP } from "../tapTarget";
 
@@ -111,12 +111,7 @@ export default async function MessagesPage() {
                 </p>
                 <p className="text-xs text-slate-500">
                   Sent{" "}
-                  {new Date(m.sentAt).toLocaleTimeString("en-IN", {
-                    timeZone: HOSPITAL_TIME_ZONE,
-                    hour: "numeric",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })}
+                  {formatClock(m.sentAt, { seconds: true })}
                 </p>
               </div>
               <p

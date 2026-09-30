@@ -27,7 +27,14 @@ import {
 import type { Language } from "@/hms/types";
 import { DAYS_TO_SEARCH } from "@/lib/reschedulingRules";
 import { callSummary, describeTimeChange, statusColors } from "@/lib/status";
-import { formatDate, formatTime, formatWhen, HOSPITAL_TIME_ZONE } from "@/lib/time";
+import {
+  clockLabel,
+  dateForDayOffset,
+  formatDate,
+  formatTime,
+  formatWhen,
+} from "@/lib/time";
+import { CLOCK_MODE } from "@/lib/clock";
 import { resetDemoAction } from "./actions";
 import ClickableRow from "./ClickableRow";
 import FalseAlarmButton from "./FalseAlarmButton";
@@ -107,8 +114,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const here = `/?doctor=${selected.id}&day=${selectedDay}`; // this view, for links
   const opened = typeof appt === "string" ? await getAppointment(appt) : undefined;
 
-  const today = new Date().toLocaleDateString("en-IN", {
-    timeZone: HOSPITAL_TIME_ZONE,
+  // Today's date in the hospital (from the clock), e.g. "Thursday, 1 October 2026".
+  const today = dateForDayOffset(0).toLocaleDateString("en-IN", {
+    timeZone: "UTC", // dateForDayOffset gives midnight UTC on the right date
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -235,6 +243,18 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-sm text-slate-600">{today}</p>
+          {/* The clock (lib/clock.ts): fixed in the demo, so say so clearly. */}
+          <p
+            title={
+              CLOCK_MODE === "demo"
+                ? "The demo clock is fixed at this time, so the demo works the same whenever you visit."
+                : undefined
+            }
+            className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-900"
+          >
+            {clockLabel()}
+            {CLOCK_MODE === "demo" && <span className="font-normal"> (fixed)</span>}
+          </p>
           <TourStartButton
             className={`rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 ${TAP}`}
           />

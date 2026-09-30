@@ -26,7 +26,7 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | 6: chat mode | Done. Live site = basic word-list chat. Laptop = real AI (Claude Haiku 4.5) using my API key in `.env.local` |
 | Safety: wide health-keyword check runs first; "two unclear replies" counted in code | Done |
 | Alarm-fatigue fix ("tired of waiting", "heavy traffic", "work pressure", remove "doctor said") | Done |
-| Automated tests (npm test, 260 tests) | Done |
+| Automated tests (npm test, 273 tests) | Done |
 | Tamil/Hindi health-word fix (word beginnings, lookalike guards) | Done, live. Needs a second native-speaker and a clinician review before real patients |
 | 7: guided demo tour, suggested chat phrases, phone-width polish | Done, live (29 Sep) |
 | AI weekday fix + day check in code | Done. 4 AI items in BACKLOG under "Must do before real calls or laptop demos" |
@@ -38,8 +38,8 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | Test-after-edit hook (runs `npm test` after Claude edits `src/`) | Done (1 Oct) |
 | /wrap-up skill | Next |
 | "5 – Another doctor today" (Buttons only, FRD 5.4), with Dr. Karthik Raman as a second cardiologist | Done (1 Oct) |
-| Fixed "demo clock" for later-today, another doctor and marking a doctor away | Next (top of BACKLOG) |
-| Optional: rebuild the video in the morning without the send-time blanking | Next (optional) |
+| Fixed demo clock: 9:00 AM on India's date (`CLOCK_MODE` in `src/lib/clock.ts`, kept on "demo") | Done (1 Oct) |
+| Optional: rebuild the video without the send-time blanking (not needed any more: "Sent" times now show the demo time, 9:00 AM) | Next (optional) |
 | Add the video to the README and portfolio | Next |
 | Phase 2: clinic interviews | After README/portfolio |
 | Real calls to my own phone | After the 4 AI backlog items |
@@ -60,6 +60,7 @@ Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinic
 - After Phase 2: lighter safety net. Clinician-set red flags → staff welfare check; other health mentions → 108 line, normal rebooking, note for staff/doctor.
 - The demo never shows my face or voice. Video: Claude writes the script; Claude Code records automatically and joins video, voice and captions; voice from a free, licence-checked tool (first choice: Indic Parler-TTS).
 - Video must say the voices are AI-generated, and must carry this credit (end card or description): "Voices: Indic Parler-TTS by AI4Bharat (Apache 2.0), trained on IndicTTS (IIT Madras), SYSPIN (IISc), Rasa (AI4Bharat) and GLOBE." Voice tool lives in ~/DocDelay-video, never in the app repo.
+- Demo clock: fixed at 9:00 AM on today's date in India (`CLOCK_MODE = "demo"` in `src/lib/clock.ts`). Don't switch to "real" until the booking rules have a "not before now" check (BACKLOG).
 - Switch the AI off for laptop demos until the 4 backlog AI items are done.
 
 ## How I like to work
@@ -104,4 +105,4 @@ cd ~/DocDelay-video
 Output: `~/DocDelay-video/output/DocDelay_demo_v1.mp4` and `captions.srt`.
 - Voiceover: `voiceover/scene_1.wav` … `scene_8.wav` (Mary, seed 1; spoken as "Dock Delay"). Remake with `.venv/bin/python make_voiceover.py` (~11 min).
 - Scene timings, clicks and the title/closing cards: `build/record.py`, `build/title.html`, `build/closing.html`. Captions: `build/assemble.py`.
-- To drop the send-time blanking (for a morning recording), delete the "Messages page: hide only the real Sent … clock stamps" rule in `build/overlay.js`.
+- To drop the send-time blanking, delete the "Messages page: hide only the real Sent … clock stamps" rule in `build/overlay.js`. Since the demo clock (1 Oct), "Sent" times always show 9:00 AM, so it can go at any time of day.
