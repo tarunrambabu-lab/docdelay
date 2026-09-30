@@ -1,6 +1,6 @@
 # DocDelay — Handoff
 
-Last updated: 29 Sep 2026. Read this first when starting a new chat or a new Claude Code session.
+Last updated: 30 Sep 2026. Read this first when starting a new chat or a new Claude Code session.
 
 ## What DocDelay is
 
@@ -14,6 +14,8 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | Code (GitHub) | https://github.com/tarunrambabu-lab/docdelay |
 | FRD (every feature, rule, decision) | https://claude.ai/code/artifact/7d6ed743-f25b-42d4-81f4-da28c38083f9 |
 | Roadmap to a saleable product | https://claude.ai/code/artifact/b597391c-b2a0-4666-b917-5bcf1858e021 |
+| Demo video script | https://claude.ai/code/artifact/62726fe5-7d52-4823-a167-cbe4292f4242 |
+| Pitch deck (SRM incubator, 13 slides) | https://claude.ai/artifact/KgN538gVRAGqP1oQfMGv7Y |
 
 ## Where things stand
 
@@ -29,6 +31,11 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | 7: guided demo tour, suggested chat phrases, phone-width polish | Done, live (29 Sep) |
 | AI weekday fix + day check in code | Done. 4 AI items in BACKLOG under "Must do before real calls or laptop demos" |
 | Demo video v1 (without the real-call clip) | Done (29 Sep). 1 min 52 s, in `~/DocDelay-video/output/` (video, captions.srt, description.txt). Send-time stamps on the Messages screen were blanked in the recording browser, because it was recorded in the evening |
+| Pitch deck for the SRM incubator | Done (30 Sep). Asks for mentorship, introductions to SRM's hospital OPD team, legal and clinical advisers; no funding |
+| SRM incubator application | In progress |
+| .env Read deny rule + shell hook | Done |
+| claude-code-setup plugin | Installed |
+| Next session tooling: test-after-edit hook, /wrap-up | Next |
 | Optional: rebuild the video in the morning without the send-time blanking | Next (optional) |
 | Add the video to the README and portfolio | Next |
 | Phase 2: clinic interviews | After README/portfolio |
@@ -58,6 +65,8 @@ Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinic
 - Claude Council is installed in Claude Code — suggest it only for big, hard-to-undo decisions.
 - ECC plugin: add at Phase 3, not before.
 - Run `npm test` before every push.
+- Not using claude-mem or Headroom for now (decided 30 Sep).
+- Looking for a mentor, not a co-founder.
 
 ## Safety notes
 
@@ -65,6 +74,7 @@ Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinic
 - API key expires — check the Anthropic console and replace it before it lapses. Last replaced: 29 Sep 2026.
 - Never open `.env.local` while screen-sharing or taking screenshots, and remove it from Claude Code's context if it appears.
 - $5 prepaid API credit, auto-reload OFF.
+- Claude Code is blocked from reading .env files (a Read deny rule plus a shell hook). The hook also blocks harmless commands that mention .env; that's expected.
 
 ## Starting the app on my laptop
 
