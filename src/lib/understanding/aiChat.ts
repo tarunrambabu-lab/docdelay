@@ -54,10 +54,37 @@ function missingAmPm(reply: string, language: Language): boolean {
 const DID_NOT_UNDERSTAND =
   /(didn'?t|did not|couldn'?t|could not|don'?t|do not|wasn'?t able to)\s+(quite\s+)?(understand|catch|follow|get)|say (that|it) again|repeat (that|it)|समझ नहीं|समझ न|दोबारा|फिर से (कह|बोल|बता)|புரியவில்லை|புரியல|மீண்டும் (சொல்|கூற)|திரும்ப(ச்)? சொல்/i;
 
+// Does the AI's reply say something is ALREADY booked, moved or confirmed?
+// FRD rule: confirmations only ever use DocDelay's fixed wording. This is only
+// checked when NO outcome was recorded in the message (with an outcome, the
+// AI's text is never shown anyway) — so such a reply is never shown; the
+// rule-based stand-in answers that message instead.
+// Only "already done" forms: "booked", not "book"; "book ho gaya", not
+// "book karna" (the AI asking "shall I book it?" is fine).
+// ⚠️ The AI might still claim a booking in wording that isn't listed here —
+// see BACKLOG.md. Tamil and Hindi to be reviewed by native speakers.
+const CLAIMS_DONE: RegExp[] = [
+  // English
+  /\b(confirmed|booked|rescheduled|fixed|done|all sorted|all set|you'?re all set|your new (appointment|time)|has been (moved|changed)|i'?ve moved you|i have moved you|see you at)\b/i,
+  // Tamil (script)
+  /உறுதி ?செய்யப்பட்ட|உறுதிப்படுத்தப்பட்ட|பதிவு செய்யப்பட்ட|புக் செய்யப்பட்ட|புக் ஆகி|உங்கள் புதிய சந்திப்பு|உங்கள் புதிய நேரம்|மாற்றப்பட்டுள்ள|மாற்றப்பட்டது|ஃபிக்ஸ் பண்ணிட்ட|புக் பண்ணிட்ட|கன்ஃபர்ம் ஆச்சு|மாத்திட்ட/,
+  // Tamil (English letters)
+  /\b(uruthi ?seiyappatt|uruthippaduththappatt|padhivu seiyappatt|book aagi|book seiyappatt|ungal pudhiya sandhippu|ungal pudhiya neram|maatrappatt|fix pannitt|book pannitt|confirm aachu|confirm aagi|maathitt)/i,
+  // Hindi (script)
+  /पक्का हो|पक्की हो|कन्फ़?र्म हो|बुक हो (गया|गई|गयी|चुकी|चुका)|बुक कर (दी|दिया)|आपकी नई अपॉइंटमेंट|आपका नया समय|तय हो (गया|गई|गयी)|कर दिया|कर दी है|कर दी गई|फ़?िक्स कर दिया|हो गया है आपका|बदल (दी|दिया)/,
+  // Hindi (English letters)
+  /\b(pakka ho gay|pakki ho gay|confirm ho gay|book ho gay|book kar di|aapki nayi appointment|aapka naya samay|tay ho gay|kar diya|fix kar diya|ho gaya hai aapka)/i,
+];
+
+export function claimsDone(reply: string): boolean {
+  return CLAIMS_DONE.some((words) => words.test(reply));
+}
+
 // Why a reply can't be used (or undefined if it's fine).
 function problemWith(reply: string, allowed: Set<string>, language: Language): string | undefined {
   if (!reply) return "empty reply";
   if (reply.length > MAX_AI_REPLY) return `reply too long (${reply.length} characters)`;
+  if (claimsDone(reply)) return "reply sounds like a confirmation, but nothing was booked";
   const unknown = timesIn(reply).find((options) => !options.some((t) => allowed.has(t)));
   if (unknown) return `reply mentions a time the tools didn't give (${unknown[0]})`;
   if (missingAmPm(reply, language)) return "reply has a time without AM/PM in the required form";

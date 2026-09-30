@@ -15,8 +15,7 @@ Ideas and known gaps to pick up later.
 
 These affect the AI chat only (laptop with an API key). The live site uses basic mode and isn't affected.
 
-- **AI can claim a booking that didn't happen (found 1 Oct 2026):** in a real-AI check, after its booking tool was refused (a bug, now fixed), the AI still replied "You're confirmed for … 9:30 AM" although nothing was booked. The same could happen with any refused booking. Idea: if an AI reply sounds like a confirmation ("confirmed", "booked", and Tamil/Hindi equivalents) but no outcome was recorded, don't use it — fall back to basic mode for that message.
-- **Real-AI check of "another doctor" for a Tamil-speaking patient:** the checks on 1 Oct reached English-speaking patients (plus one Hindi-speaking patient who was offered one slot, correctly, in Hindi). A Tamil patient's AI reply hasn't been seen yet (~$0.02).
+- **The AI might still claim a booking in wording we haven't listed.** Since 2 Oct, an AI reply that sounds like a confirmation (word list in `src/lib/understanding/aiChat.ts`, `CLAIMS_DONE`) with no booking saved is never shown — basic mode answers instead — and the AI is told never to say it. But wording that isn't on the list would still get through. Extend the list with native speakers, and re-check with the real AI before real calls.
 
 - **"Talk to a person" code check:** if basic mode recognises a request for a person, it wins over the AI. (Found in the AI test run: Tamil "aal kitta pesanum" wasn't understood by the AI and got "please say that again".)
 - **Tamil/Hindi "I'll wait" phrases in the AI instructions** (no code override). (Found in the AI test run: Tamil "naan wait panren" got a choice of 3 empty times today instead of the automatic next fair slot, unlike English and Hindi.)
@@ -24,6 +23,9 @@ These affect the AI chat only (laptop with an API key). The live site uses basic
 - **Optional `npm run test:ai` check** (about $0.10): every suggested phrase in all 3 languages on the real AI path. Run it before laptop demos and real calls.
 
 ## Revisit with the real AI
+
+- **AI sometimes misses "vera doctor paakanum" (2 Oct 2026, Tamil patient):** in 1 of 2 real-AI conversations it didn't treat it as asking for another doctor (it offered wait / another day / cancel instead; nothing wrong was booked). Basic mode reads it correctly. Ideas: if basic mode recognises "another doctor", let that win over the AI (like the "talk to a person" item), or list the Tamil/Hindi words in the AI instructions.
+- **"12:15 ku vera doctor kitta book pannunga" in basic mode** re-offers Dr. Karthik's earliest times (9:30, 10:45, 11:30) and ignores the time asked for. It could offer his times at or after that time instead.
 
 - **Offers after "[Day] is full" can include an EARLIER day** (e.g. "Thursday is full" → Tuesday offered). A patient who can only come later in the week might pick one without noticing.
 - **"Thursday before 8" doesn't lead with Thursday:** outside-clinic-hours requests on a named day offer the closest slots one per day from that day on, instead of putting the named day first.
@@ -144,8 +146,13 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Another doctor in chat: the Chat tab's "only available in Buttons mode" note is gone; a patient who pressed 5 in Buttons can finish in Chat.
 - Another doctor in chat: an AI turn uses the demo as it was when the message arrived; like the existing book tool, it doesn't expect changes from another browser tab during that one message.
 - Native-speaker review list: add the new Tamil/Hindi "another doctor" words and "no" phrases (`src/lib/understanding/rules.ts`) and the new "no other doctor is free today" line (`src/lib/chatReplies.ts`). The owner isn't sure of the Tamil version of that line: check it first.
+- Confirmation check: only "already done" wording counts ("booked", not "book"; "book ho gaya", not "book karna"), plus everyday "done" words in all three languages ("done", "fixed", "all sorted", "see you at"; "fix pannitten", "confirm aachu", "maathitten"; "kar diya", "ho gaya hai aapka"). A false alarm just means basic mode answers that message.
+- Confirmation check: if the AI truthfully says "that time was just booked" (by someone else), that message also falls back to basic mode — harmless.
+- Confirmation check: each fallback still costs that AI call (the reply was already made).
 
 ## Done
+
+- ✅ **AI can't show a confirmation it didn't make (2 Oct 2026):** found in the 1 Oct real-AI check ("You're confirmed…" with nothing booked). Such replies are now never shown; basic mode answers that message. Real-AI checks: 1 Oct $0.0907, 2 Oct (Tamil patient) $0.0215.
 
 - ✅ **Tour step 2 on small phones (1 Oct 2026):** the pop-up's "Mark unavailable" button is fully visible and tappable at 320 × 568, 320 × 640, 375 × 667 and 390 × 844, in Chrome's and Safari's engines; "09:00 AM" / "12:00 PM" no longer cut off at 320 px. Screenshots: ~/Desktop/DocDelay-tour-320px/step2-fix.
 
