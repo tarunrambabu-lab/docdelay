@@ -1,6 +1,6 @@
 # DocDelay — Handoff
 
-Last updated: 30 Sep 2026. Read this first when starting a new chat or a new Claude Code session.
+Last updated: 1 Oct 2026. Read this first when starting a new chat or a new Claude Code session.
 
 ## What DocDelay is
 
@@ -26,7 +26,7 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | 6: chat mode | Done. Live site = basic word-list chat. Laptop = real AI (Claude Haiku 4.5) using my API key in `.env.local` |
 | Safety: wide health-keyword check runs first; "two unclear replies" counted in code | Done |
 | Alarm-fatigue fix ("tired of waiting", "heavy traffic", "work pressure", remove "doctor said") | Done |
-| Automated tests (npm test, 245 tests) | Done |
+| Automated tests (npm test, 260 tests) | Done |
 | Tamil/Hindi health-word fix (word beginnings, lookalike guards) | Done, live. Needs a second native-speaker and a clinician review before real patients |
 | 7: guided demo tour, suggested chat phrases, phone-width polish | Done, live (29 Sep) |
 | AI weekday fix + day check in code | Done. 4 AI items in BACKLOG under "Must do before real calls or laptop demos" |
@@ -35,7 +35,10 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | SRM incubator application | In progress |
 | .env Read deny rule + shell hook | Done |
 | claude-code-setup plugin | Installed |
-| Next session tooling: test-after-edit hook, /wrap-up | Next |
+| Test-after-edit hook (runs `npm test` after Claude edits `src/`) | Done (1 Oct) |
+| /wrap-up skill | Next |
+| "5 – Another doctor today" (Buttons only, FRD 5.4), with Dr. Karthik Raman as a second cardiologist | Done (1 Oct) |
+| Fixed "demo clock" for later-today, another doctor and marking a doctor away | Next (top of BACKLOG) |
 | Optional: rebuild the video in the morning without the send-time blanking | Next (optional) |
 | Add the video to the README and portfolio | Next |
 | Phase 2: clinic interviews | After README/portfolio |
@@ -50,6 +53,7 @@ Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinic
 - Later today: empty slots first, then push, max 45 minutes for any unaffected patient, nothing after 7 PM.
 - A patient's chosen time never pushes anyone; chosen times only up to 5 PM.
 - Other days: empty slots only, one offer per day; bookings on other days are never moved.
+- Another doctor today (Buttons only; chat unchanged): only doctors of the same specialty that the hospital approved to cover; today, empty slots only, at or after the original time, ending by 5 PM; up to 3, earliest first; never pushes their patients; option hidden if none. Slot taken and none left → back to the 1–4 menu with "Sorry, that time was just taken". No fee mention.
 - Any health mention → URGENT, straight to staff. The app never judges severity. Escalation gives no booking advantage.
 - One text per patient, sent only when staff approve.
 - Chat rules are frozen for the MVP; new edge cases go to BACKLOG.md.

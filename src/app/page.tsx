@@ -259,7 +259,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
       {/* Doctor picker */}
       <h2 className="mb-3 text-sm font-medium text-slate-500">Choose a doctor</h2>
-      <nav className="mb-6 grid gap-3 sm:grid-cols-3">
+      <nav className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {doctors.map((d) => {
           const isSelected = d.id === selected.id;
           return (
@@ -379,7 +379,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                       </p>
                       {/* If the time changed: first booked time → current time */}
                       {a.timeHistory && (
-                        <p className="mt-1 text-xs text-slate-600">{describeTimeChange(a)}</p>
+                        <p className="mt-1 text-xs text-slate-600">{describeTimeChange(a, doctors)}</p>
                       )}
                       {a.note && (
                         <p className="mt-1 text-xs wrap-break-word text-orange-700">{a.note}</p>
@@ -457,7 +457,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                           {/* If the time changed: first booked time → current time */}
                           {a.timeHistory && (
                             <p className="mt-1 whitespace-nowrap text-xs text-slate-600">
-                              {describeTimeChange(a)}
+                              {describeTimeChange(a, doctors)}
                             </p>
                           )}
                           {a.note && <p className="mt-1 text-xs text-orange-700">{a.note}</p>}
@@ -482,6 +482,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         <PatientDetails
           appointment={opened}
           doctorName={doctors.find((d) => d.id === opened.doctorId)?.name ?? ""}
+          doctors={doctors}
           closeHref={here}
         />
       )}

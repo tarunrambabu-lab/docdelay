@@ -11,6 +11,9 @@ export const CALL_RESULTS = [
   "Cancelled",
   "Needs staff call",
   "No answer",
+  // Buttons only. Added LAST on purpose: each saved demo step stores a
+  // result by its position in this list (see visitorState.ts).
+  "Wants another doctor today",
 ] as const;
 export type CallResult = (typeof CALL_RESULTS)[number];
 
@@ -23,6 +26,7 @@ export type AppointmentStatus =
   | "Needs staff call"
   | "No answer"
   | "Time moved" // pushed back to make room for a rescheduled patient
+  | "Rebooked – another doctor" // pressed 5: now with an approved doctor of the same specialty, today
   | "URGENT – staff call now"; // patient mentioned a health concern — a person must call NOW
 
 // One line in an appointment's call log.
@@ -54,6 +58,9 @@ export interface TimeChange {
   oldStartTime: string; // "HH:MM"
   newDayOffset: number;
   newStartTime: string; // "HH:MM"
+  // Only when the patient moved to a different doctor ("another doctor today").
+  oldDoctorId?: string;
+  newDoctorId?: string;
   why: string;
 }
 
@@ -61,6 +68,7 @@ export interface TimeChange {
 export interface SlotOffer {
   dayOffset: number;
   startTime: string; // "HH:MM"
+  doctorId?: string; // only for "another doctor today" offers: which doctor
 }
 
 export const UNAVAILABILITY_REASONS = ["Emergency surgery", "Personal emergency", "Other"] as const;
@@ -89,6 +97,9 @@ export interface Doctor {
   // The name in Tamil / Hindi script, e.g. "டாக்டர் மீரா கிருஷ்ணன்". A real
   // HMS may or may not supply these; messages fall back to `name`.
   localNames?: { Tamil?: string; Hindi?: string };
+  // Doctors this doctor is approved (by the hospital) to cover for, e.g.
+  // ["doc-cardio"]. Only used if the specialty is the same, too.
+  canCoverFor?: string[];
 }
 
 export interface Patient {
@@ -113,7 +124,11 @@ export interface Appointment {
   timeHistory?: TimeChange[]; // only there once its time has changed
   // Other-day slots offered on the phone, waiting for the patient to pick one.
   offers?: SlotOffer[];
-  offersBecause?: "asked" | "no room today"; // pressed 2, or pressed 1 but today was full
+  // Pressed 2, pressed 1 but today was full, or pressed 5 (offers with another doctor today).
+  offersBecause?: "asked" | "no room today" | "another doctor";
+  // Pressed 5, but the chosen slot was just taken and no other was left: back
+  // to the 1–4 menu, which starts with "Sorry, that time was just taken".
+  slotJustTaken?: boolean;
   chat?: ChatTurn[]; // the full chat, if the call was done in Chat mode
   unclearInARow?: number; // chat replies in a row that couldn't be understood
   // A time the patient gave without a day ("after 4"), kept while DocDelay

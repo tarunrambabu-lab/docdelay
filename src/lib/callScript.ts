@@ -26,9 +26,26 @@ export interface CallScriptDetails {
   reason: UnavailabilityReason;
   appointmentTime: string; // "HH:MM", e.g. "10:15"
   untilTime: string; // "HH:MM" — the doctor's expected return
+  // Buttons only: add "Press 5 to see another doctor from the same department
+  // today" (only when there's a slot — the hms module checks).
+  anotherDoctorToday?: boolean;
 }
 
 export function callScript(details: CallScriptDetails): string {
+  const menu = callMenuScript(details);
+  return details.anotherDoctorToday ? `${menu} ${ANOTHER_DOCTOR_LINE[details.language]}` : menu;
+}
+
+// "5 – Another doctor today" (Buttons only), said at the end of the opening.
+// (Tamil and Hindi need native-speaker review — see note at the top.)
+const ANOTHER_DOCTOR_LINE: Record<Language, string> = {
+  English: "Press 5 to see another doctor from the same department today.",
+  Tamil: "இன்றே அதே பிரிவைச் சேர்ந்த வேறு மருத்துவரைப் பார்க்க 5 ஐ அழுத்தவும்.",
+  Hindi: "आज ही उसी विभाग के किसी दूसरे डॉक्टर से मिलने के लिए 5 दबाएँ।",
+};
+
+// The opening message with options 1–4 (unchanged; chat mode uses only this).
+function callMenuScript(details: CallScriptDetails): string {
   // Times as the patient should see them (e.g. "காலை 10:15 (10:15 AM)").
   const d = {
     ...details,
@@ -123,32 +140,43 @@ export function otherDayOffersScript(
         `${OFFER_LETTERS[i]}) ${dayLabelFor(o.dayOffset, language)}, ${formatTimeFor(o.startTime, language)}`,
     )
     .join(", ");
-  // "A, B or C" (with the word for "or" in each language); just "A" if there's one offer.
-  const letters = (or: string) => {
-    const l = OFFER_LETTERS.slice(0, offers.length);
-    return l.length === 1 ? l[0] : `${l.slice(0, -1).join(", ")} ${or} ${l.at(-1)}`;
-  };
 
   switch (language) {
     case "English":
       return (
         (noRoomToday ? "Sorry, there is no free time left today. " : "") +
         `${intro ?? "We can offer:"} ${list}. ` +
-        `Please choose ${letters("or")}. If none of these suit you, our front desk will call you.`
+        pleaseChoose(language, offers.length)
       );
     case "Tamil":
       return (
         (noRoomToday ? "மன்னிக்கவும், இன்று நேரம் எதுவும் இல்லை. " : "") +
         `${intro ?? "நாங்கள் வழங்கக்கூடிய நேரங்கள்:"} ${list}. ` +
-        `${letters("அல்லது")} இல் ஒன்றைத் தேர்ந்தெடுக்கவும். இவை எதுவும் பொருந்தவில்லை என்றால், எங்கள் வரவேற்பு மேசையிலிருந்து உங்களை அழைப்பார்கள்.`
+        pleaseChoose(language, offers.length)
       );
     case "Hindi":
       return (
         (noRoomToday ? "माफ़ कीजिए, आज कोई समय खाली नहीं है। " : "") +
         `${intro ?? "हम ये समय दे सकते हैं:"} ${list}। ` +
-        `${letters("या")} में से एक चुनें। अगर इनमें से कोई भी ठीक नहीं है, तो हमारा फ्रंट डेस्क आपको कॉल करेगा।`
+        pleaseChoose(language, offers.length)
       );
   }
+}
+
+// "Please choose A, B or C. If none of these suit you, our front desk will
+// call you." — the end of every list of offers. `count` = how many offers.
+// (Tamil and Hindi need native-speaker review — see note at the top.)
+function pleaseChoose(language: Language, count: number): string {
+  // "A, B or C" (with the word for "or" in each language); just "A" if there's one offer.
+  const letters = (or: string) => {
+    const l = OFFER_LETTERS.slice(0, count);
+    return l.length === 1 ? l[0] : `${l.slice(0, -1).join(", ")} ${or} ${l.at(-1)}`;
+  };
+  return {
+    English: `Please choose ${letters("or")}. If none of these suit you, our front desk will call you.`,
+    Tamil: `${letters("அல்லது")} இல் ஒன்றைத் தேர்ந்தெடுக்கவும். இவை எதுவும் பொருந்தவில்லை என்றால், எங்கள் வரவேற்பு மேசையிலிருந்து உங்களை அழைப்பார்கள்.`,
+    Hindi: `${letters("या")} में से एक चुनें। अगर इनमें से कोई भी ठीक नहीं है, तो हमारा फ्रंट डेस्क आपको कॉल करेगा।`,
+  }[language];
 }
 
 // What DocDelay says after the patient picks one of the other-day offers
@@ -161,5 +189,38 @@ export function anotherDayReply(language: Language, dayOffset: number, time: str
     English: `Thank you. Your new appointment is on ${date} at ${at}.`,
     Tamil: `நன்றி. உங்கள் புதிய சந்திப்பு ${date} அன்று ${at} மணிக்கு.`,
     Hindi: `धन्यवाद। आपकी नई अपॉइंटमेंट ${date} को ${at} पर है।`,
+  }[language];
+}
+
+// "5 – Another doctor today": read out the options, e.g. "Another doctor from
+// the same department can see you today: A) Dr. Karthik Raman, 11:30 AM, …".
+// All offers are for today. `doctorNames` are already in the patient's
+// language (see doctorNameFor), one per offer.
+// (Tamil and Hindi need native-speaker review — see note at the top.)
+export function anotherDoctorOffersScript(
+  language: Language,
+  offers: { startTime: string; doctorName: string }[],
+): string {
+  const intro = {
+    English: "Another doctor from the same department can see you today:",
+    Tamil: "அதே பிரிவைச் சேர்ந்த வேறு மருத்துவர் இன்று உங்களைப் பார்க்க முடியும்:",
+    Hindi: "उसी विभाग के एक दूसरे डॉक्टर आज आपसे मिल सकते हैं:",
+  }[language];
+  const list = offers
+    .map((o, i) => `${OFFER_LETTERS[i]}) ${o.doctorName}, ${formatTimeFor(o.startTime, language)}`)
+    .join(", ");
+  const stop = language === "Hindi" ? "।" : ".";
+  return `${intro} ${list}${stop} ${pleaseChoose(language, offers.length)}`;
+}
+
+// What DocDelay says after the patient books with another doctor today.
+// `doctorName` is already in the patient's language (see doctorNameFor).
+// (Tamil and Hindi need native-speaker review — see note at the top.)
+export function anotherDoctorReply(language: Language, time: string, doctorName: string): string {
+  const at = formatTimeFor(time, language);
+  return {
+    English: `Thank you. Your new appointment is today at ${at} with ${doctorName}.`,
+    Tamil: `நன்றி. உங்கள் புதிய சந்திப்பு இன்று ${at} மணிக்கு ${doctorName} உடன்.`,
+    Hindi: `धन्यवाद। आपकी नई अपॉइंटमेंट आज ${at} पर ${doctorName} के साथ है।`,
   }[language];
 }

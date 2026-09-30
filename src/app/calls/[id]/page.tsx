@@ -7,7 +7,9 @@
 // When nobody is left, we show the summary.
 //
 // Pressing "2 – Another day" (or "1" when there's no room today) keeps the
-// same patient on screen with 3 other-day offers (A / B / C).
+// same patient on screen with 3 other-day offers (A / B / C). Pressing
+// "5 – Another doctor today" (Buttons only, shown only when an approved
+// doctor has an empty slot) does the same with slots today with that doctor.
 //
 // When a patient gets a new time (later today, or an offer they picked), the
 // address becomes /calls/<id>?answered=<appointment id>, and the phone card
@@ -22,18 +24,23 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   getAffectedAppointments,
+  getAnotherDoctorOptions,
   getAppointment,
   getDoctor,
+  getDoctors,
   getHospital,
   getUnavailability,
 } from "@/hms/mockHms";
 import type { AppointmentWithPatient, Language } from "@/hms/types";
 import {
   anotherDayReply,
+  anotherDoctorOffersScript,
+  anotherDoctorReply,
   callScript,
   laterTodayReply,
   otherDayOffersScript,
 } from "@/lib/callScript";
+import { slotTakenPrefix } from "@/lib/chatReplies";
 import { callSummary, describeTimeChange, statusColors } from "@/lib/status";
 import { formatTime } from "@/lib/time";
 import { doctorNameFor } from "@/lib/names";
@@ -69,13 +76,24 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
   const current = toCall[0]; // undefined when everyone has been called
   const calledCount = appointments.length - toCall.length;
   const dashboardLink = `/?doctor=${doctor.id}`;
+  const doctors = await getDoctors();
+  // A doctor's name as a patient hears it (e.g. "Dr. Karthik Raman", or with
+  // the Tamil / Hindi spelling first).
+  const nameFor = (doctorId: string | undefined, language: Language) => {
+    const d = doctors.find((x) => x.id === doctorId);
+    return d ? doctorNameFor(d, language) : "";
+  };
+  // Buttons only: can the current patient be offered "5 – Another doctor today"?
+  const anotherDoctorToday =
+    mode === "buttons" && current ? (await getAnotherDoctorOptions(current.id)).length > 0 : false;
 
   // Did a patient just get a new time? Then tell them.
   const justAnswered = typeof answered === "string" ? await getAppointment(answered) : undefined;
   const showReply =
     justAnswered?.unavailabilityId === id &&
     (justAnswered.status === "Rescheduled – later today" ||
-      justAnswered.status === "Rescheduled – another day");
+      justAnswered.status === "Rescheduled – another day" ||
+      justAnswered.status === "Rebooked – another doctor");
   // Chat mode: a conversation just ended with an outcome — show the whole chat.
   const chatDone =
     mode === "chat" &&
@@ -83,23 +101,32 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
     justAnswered.status !== "Affected – needs contact";
 
   // What DocDelay says first to the current patient.
+  const language = current?.patient.preferredLanguage ?? "English";
   const opening = current
     ? current.offers
-      ? otherDayOffersScript(
-          current.patient.preferredLanguage,
-          current.offers,
-          current.offersBecause === "no room today",
-        )
+      ? current.offersBecause === "another doctor"
+        ? anotherDoctorOffersScript(
+            language,
+            current.offers.map((o) => ({
+              startTime: o.startTime,
+              doctorName: nameFor(o.doctorId, language),
+            })),
+          )
+        : otherDayOffersScript(language, current.offers, current.offersBecause === "no room today")
       : callScript({
-          language: current.patient.preferredLanguage,
+          language,
           patientName: current.patient.name,
           hospitalName: hospital.name,
-          doctorName: doctorNameFor(doctor, current.patient.preferredLanguage),
+          doctorName: doctorNameFor(doctor, language),
           reason: unavailability.reason,
           appointmentTime: current.startTime,
           untilTime: unavailability.untilTime,
+          anotherDoctorToday,
         })
     : "";
+  // Buttons: if the slot they picked with another doctor was just taken,
+  // start with "Sorry, that time was just taken".
+  const buttonsOpening = current?.slotJustTaken ? `${slotTakenPrefix(language)} ${opening}` : opening;
   const chatLabel =
     activeEngine() === "claude" ? "Chat (AI)" : "Chat (basic mode – AI coming soon)";
 
@@ -189,7 +216,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
                 )}
                 {justAnswered.note && <p className="wrap-break-word text-orange-800">{justAnswered.note}</p>}
                 {justAnswered.timeHistory && (
-                  <p className="text-emerald-800">{describeTimeChange(justAnswered)}</p>
+                  <p className="text-emerald-800">{describeTimeChange(justAnswered, doctors)}</p>
                 )}
               </div>
               <Link
@@ -202,6 +229,17 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
             </div>
           </div>
         </>
+      ) : mode === "chat" && current?.offersBecause === "another doctor" ? (
+        // ----- Chat mode, but this patient is choosing another doctor (Buttons only) -----
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+          <p className="mb-3">
+            {current.patient.name} pressed “5 – Another doctor today” and is choosing a time. That
+            choice is only available in Buttons mode.
+          </p>
+          <Link href={`/calls/${id}`} className={`font-medium text-teal-700 hover:underline ${TAP}`}>
+            Continue in Buttons →
+          </Link>
+        </div>
       ) : mode === "chat" && current ? (
         // ----- Chat mode: talking to the current patient -----
         <>
@@ -244,7 +282,13 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
               message={
                 justAnswered.status === "Rescheduled – later today"
                   ? laterTodayReply(justAnswered.patient.preferredLanguage, justAnswered.startTime)
-                  : anotherDayReply(
+                  : justAnswered.status === "Rebooked – another doctor"
+                    ? anotherDoctorReply(
+                        justAnswered.patient.preferredLanguage,
+                        justAnswered.startTime,
+                        nameFor(justAnswered.doctorId, justAnswered.patient.preferredLanguage),
+                      )
+                    : anotherDayReply(
                       justAnswered.patient.preferredLanguage,
                       justAnswered.dayOffset,
                       justAnswered.startTime,
@@ -254,7 +298,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
             <div>
               <h2 className="mb-3 text-sm font-medium text-slate-500">{justAnswered.status}</h2>
               <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 text-sm text-emerald-800">
-                {describeTimeChange(justAnswered)}
+                {describeTimeChange(justAnswered, doctors)}
               </div>
               <Link
                 href={`/calls/${id}`}
@@ -275,7 +319,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
             <PhoneCard
               appointment={current}
               label={current.offers ? "On call" : "Calling…"}
-              message={opening}
+              message={buttonsOpening}
             />
             {/* Right: you play the patient */}
             {current.offers ? (
@@ -283,7 +327,9 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
                 <h2 className="mb-3 text-sm font-medium text-slate-500">
                   {current.offersBecause === "no room today"
                     ? "Pressed “1 – Later today”, but there’s no room today"
-                    : "Pressed “2 – Another day”"}{" "}
+                    : current.offersBecause === "another doctor"
+                      ? "Pressed “5 – Another doctor today”"
+                      : "Pressed “2 – Another day”"}{" "}
                   — the patient chooses…
                 </h2>
                 {/* Why there was no room (e.g. the 45-minute fairness rule) */}
@@ -292,13 +338,22 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
                     {current.callLog?.at(-1)?.detail}
                   </p>
                 )}
-                <OfferButtons key={current.id} appointmentId={current.id} offers={current.offers} />
+                <OfferButtons
+                  key={current.id}
+                  appointmentId={current.id}
+                  offers={current.offers}
+                  doctorNames={current.offers.map((o) => nameFor(o.doctorId, "English"))}
+                />
               </div>
             ) : (
               <div>
                 <h2 className="mb-3 text-sm font-medium text-slate-500">The patient answers…</h2>
                 {/* key = new buttons for each patient */}
-                <AnswerButtons key={current.id} appointmentId={current.id} />
+                <AnswerButtons
+                  key={current.id}
+                  appointmentId={current.id}
+                  anotherDoctorToday={anotherDoctorToday}
+                />
               </div>
             )}
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
-// The buttons where you "play the patient" when they're offered other days:
+// The buttons where you "play the patient" when they're offered other days
+// (or, after "5 – Another doctor today", slots today with another doctor):
 // A / B / C (book that slot) or "None of these – call me".
 
 import { useTransition } from "react";
@@ -12,9 +13,11 @@ import { formatWhen } from "@/lib/time";
 export default function OfferButtons({
   appointmentId,
   offers,
+  doctorNames,
 }: {
   appointmentId: string;
   offers: SlotOffer[];
+  doctorNames?: string[]; // one per offer; "" = the patient's own doctor
 }) {
   // isPending is true while the choice is being saved, so buttons can't be
   // clicked twice.
@@ -35,6 +38,7 @@ export default function OfferButtons({
           {OFFER_LETTERS[i]}
           <span className="ml-2 font-normal text-blue-100">
             {formatWhen(offer.dayOffset, offer.startTime)}
+            {doctorNames?.[i] ? ` · ${doctorNames[i]}` : ""}
           </span>
         </button>
       ))}

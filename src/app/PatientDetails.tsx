@@ -3,7 +3,7 @@
 // (It's in the web address as &appt=<id>, so it can be linked and closed.)
 
 import Link from "next/link";
-import type { AppointmentWithPatient } from "@/hms/types";
+import type { AppointmentWithPatient, Doctor } from "@/hms/types";
 import { describeTimeChange, statusColors } from "@/lib/status";
 import { formatClock, formatWhen } from "@/lib/time";
 import ChatTranscript from "./ChatTranscript";
@@ -13,10 +13,12 @@ import { TAP } from "./tapTarget";
 export default function PatientDetails({
   appointment: a,
   doctorName,
+  doctors,
   closeHref,
 }: {
   appointment: AppointmentWithPatient;
   doctorName: string;
+  doctors: Doctor[]; // for "was …, Dr. X → now …, Dr. Y"
   closeHref: string;
 }) {
   return (
@@ -51,7 +53,7 @@ export default function PatientDetails({
           <p className="text-slate-700">
             {formatWhen(a.dayOffset, a.startTime)} · {a.reason}
           </p>
-          {a.timeHistory && <p className="text-slate-600">{describeTimeChange(a)}</p>}
+          {a.timeHistory && <p className="text-slate-600">{describeTimeChange(a, doctors)}</p>}
           {a.note && <p className="wrap-break-word text-orange-700">{a.note}</p>}
           {a.status === "URGENT – staff call now" && (
             <div className="rounded-lg bg-red-50 p-3">

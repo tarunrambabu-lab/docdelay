@@ -48,6 +48,7 @@ import {
   anchorTime,
   DAY_START,
   DAYS_TO_SEARCH,
+  findAnotherDoctorSlots,
   findOtherDaySlots,
   emptySlotsToday,
   isOutsideClinicHours,
@@ -225,19 +226,20 @@ export async function getAppointmentsForDay(
     .map(withPatient);
 }
 
-// Appointments that were first booked on this day but have since moved to
-// another day (so the front desk can still see where they went).
+// Appointments that were first booked with this doctor on this day but have
+// since moved to another day or another doctor (so the front desk can still
+// see where they went).
 export async function getAppointmentsMovedAwayFrom(
   doctorId: string,
   dayOffset: number,
 ): Promise<AppointmentWithPatient[]> {
   return (await loadState()).appointments
-    .filter(
-      (a) =>
-        a.doctorId === doctorId &&
-        a.dayOffset !== dayOffset &&
-        a.timeHistory?.[0]?.oldDayOffset === dayOffset,
-    )
+    .filter((a) => {
+      const first = a.timeHistory?.[0];
+      if (!first || first.oldDayOffset !== dayOffset) return false;
+      const firstDoctorId = first.oldDoctorId ?? a.doctorId;
+      return firstDoctorId === doctorId && (a.dayOffset !== dayOffset || a.doctorId !== doctorId);
+    })
     .map(withPatient);
 }
 
@@ -264,6 +266,15 @@ export async function getAffectedAppointments(
 export async function getAppointment(id: string): Promise<AppointmentWithPatient | undefined> {
   const appt = (await loadState()).appointments.find((a) => a.id === id);
   return appt && withPatient(appt);
+}
+
+// "5 – Another doctor today" (Buttons only): the slots this patient would be
+// offered right now. Empty = don't show the option at all.
+export async function getAnotherDoctorOptions(appointmentId: string): Promise<SlotOffer[]> {
+  const state = await loadState();
+  const appt = state.appointments.find((a) => a.id === appointmentId);
+  if (!appt || appt.status !== "Affected – needs contact" || appt.offers) return [];
+  return anotherDoctorSlotsIn(state, appt);
 }
 
 // Texts waiting to be sent, oldest change first, with appointment details.
@@ -356,10 +367,20 @@ function applyCall(state: HmsState, step: Extract<DemoStep, { kind: "call" }>): 
   const appt = state.appointments.find((a) => a.id === appointmentId);
   if (!appt || appt.status !== "Affected – needs contact" || appt.offers) return false;
 
+  // "5 – Another doctor today" only counts if there's a slot right now
+  // (the button is hidden otherwise; this also catches an out-of-date page).
+  const anotherDoctorOffers =
+    result === "Wants another doctor today" ? anotherDoctorSlotsIn(state, appt) : [];
+  if (result === "Wants another doctor today" && anotherDoctorOffers.length === 0) return false;
+
   const logEntry: CallLogEntry = { calledAt: new Date(at).toISOString(), result };
   appt.callLog = [...(appt.callLog ?? []), logEntry];
+  delete appt.slotJustTaken; // the "Sorry, that time was just taken" line has been heard
 
-  if (result === "Wants later today") {
+  if (result === "Wants another doctor today") {
+    appt.offers = anotherDoctorOffers;
+    appt.offersBecause = "another doctor";
+  } else if (result === "Wants later today") {
     const noRoomBecause = rescheduleLaterToday(state, appt, at);
     if (noRoomBecause) {
       logEntry.detail = `No room today: ${noRoomBecause}`;
@@ -395,18 +416,24 @@ function applyOffer(
   const { appointmentId, choice, at } = step;
   const appt = state.appointments.find((a) => a.id === appointmentId);
   if (!appt?.offers || appt.status !== "Affected – needs contact") return "skipped";
+  const anotherDoctor = appt.offersBecause === "another doctor";
 
   const log = (detail: string) =>
     (appt.callLog = [
       ...(appt.callLog ?? []),
-      { calledAt: new Date(at).toISOString(), result: "Wants another day", detail },
+      {
+        calledAt: new Date(at).toISOString(),
+        result: anotherDoctor ? "Wants another doctor today" : "Wants another day",
+        detail,
+      },
     ]);
 
   if (choice === null) {
     appt.status = "Needs staff call";
-    appt.note = "Wants a different day";
+    appt.note = anotherDoctor ? "Wanted another doctor today" : "Wants a different day";
     delete appt.offers;
     delete appt.offersBecause;
+    delete appt.slotJustTaken;
     log("None of these – call me");
     return "none";
   }
@@ -414,9 +441,31 @@ function applyOffer(
   const offer = appt.offers[choice];
   if (!offer) return "skipped";
 
+  if (anotherDoctor) {
+    // Book it — bookWithAnotherDoctor re-checks the slot is still empty.
+    if (!bookWithAnotherDoctor(state, appt, offer, at)) {
+      // Taken meanwhile: fresh options if there are any, otherwise back to
+      // the 1–4 menu. Either way the patient first hears "Sorry, that time
+      // was just taken".
+      const fresh = anotherDoctorSlotsIn(state, appt);
+      log(`Picked ${OFFER_LETTERS[choice]}, but it was just taken`);
+      appt.slotJustTaken = true;
+      if (fresh.length > 0) {
+        appt.offers = fresh;
+      } else {
+        delete appt.offers;
+        delete appt.offersBecause;
+      }
+      return "taken";
+    }
+    const doctor = doctors.find((d) => d.id === offer.doctorId)!;
+    log(`Picked ${OFFER_LETTERS[choice]}: ${formatWhen(0, offer.startTime)} with ${doctor.name}`);
+    return "booked";
+  }
+
   // Book it — bookSlotIn re-checks every rule (e.g. nobody took it meanwhile).
   if (!bookSlotIn(state, appt, offer, at).ok) {
-    offerOtherDays(state, appt, appt.offersBecause ?? "asked");
+    offerOtherDays(state, appt, appt.offersBecause === "no room today" ? "no room today" : "asked");
     return "taken";
   }
   log(`Picked ${OFFER_LETTERS[choice]}: ${formatWhen(offer.dayOffset, offer.startTime)}`);
@@ -504,8 +553,13 @@ function moveAppointment(
   why: string,
   unavailability: Unavailability,
   at: number, // when it happened (the step's time)
+  newDoctorId?: string, // only when the patient moves to a different doctor
 ): void {
   const now = new Date(at).toISOString();
+  const doctorChange =
+    newDoctorId && newDoctorId !== appt.doctorId
+      ? { oldDoctorId: appt.doctorId, newDoctorId }
+      : {};
   appt.timeHistory = [
     ...(appt.timeHistory ?? []),
     {
@@ -514,9 +568,11 @@ function moveAppointment(
       oldStartTime: appt.startTime,
       newDayOffset,
       newStartTime,
+      ...doctorChange,
       why,
     },
   ];
+  if (newDoctorId) appt.doctorId = newDoctorId;
   appt.dayOffset = newDayOffset;
   appt.startTime = newStartTime;
   appt.endTime = fromMinutes(toMinutes(newStartTime) + SLOT_MINUTES);
@@ -530,6 +586,73 @@ function moveAppointment(
     reason: unavailability.reason,
     updatedAt: now,
   });
+}
+
+// ---------- "5 – Another doctor today" (Buttons only) ----------
+
+// Doctors approved to cover for this doctor: on the hospital's "can cover
+// for" list (mockData.json) AND the same specialty.
+function coveringDoctorsFor(doctorId: string): Doctor[] {
+  const doctor = doctors.find((d) => d.id === doctorId);
+  if (!doctor) return [];
+  return doctors.filter(
+    (d) =>
+      d.id !== doctorId &&
+      d.canCoverFor?.includes(doctorId) === true &&
+      d.specialty === doctor.specialty,
+  );
+}
+
+// The slots to offer this patient with another doctor today (see
+// findAnotherDoctorSlots in lib/reschedulingRules.ts for the rules).
+function anotherDoctorSlotsIn(state: HmsState, appt: Appointment): SlotOffer[] {
+  return findAnotherDoctorSlots(
+    originalTimeOf(appt),
+    coveringDoctorsFor(appt.doctorId).map((d) => ({
+      doctorId: d.id,
+      appointments: state.appointments.filter((a) => a.doctorId === d.id),
+    })),
+  );
+}
+
+// Book a slot with another doctor: re-check it's STILL one of the allowed
+// empty slots (approved doctor, today, at or after the original time, ending
+// by 5 PM), then move the appointment there. Moving it frees the patient's
+// original slot. Nobody else moves. Returns false if the slot isn't allowed
+// any more. Changes `state`; the caller saves it.
+function bookWithAnotherDoctor(
+  state: HmsState,
+  appt: Appointment,
+  offer: SlotOffer,
+  at: number,
+): boolean {
+  if (appt.status !== "Affected – needs contact") return false;
+  const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId);
+  if (!unavailability || !offer.doctorId || offer.dayOffset !== 0) return false;
+
+  const stillFree = listFreeSlots(
+    state.appointments.filter((a) => a.doctorId === offer.doctorId),
+    { days: [0] },
+    { todayFrom: originalTimeOf(appt) },
+  ).some((f) => f.startTime === offer.startTime);
+  const approved = coveringDoctorsFor(appt.doctorId).some((d) => d.id === offer.doctorId);
+  if (!stillFree || !approved) return false;
+
+  moveAppointment(
+    state,
+    appt,
+    0,
+    offer.startTime,
+    "Patient chose another doctor today",
+    unavailability,
+    at,
+    offer.doctorId,
+  );
+  appt.status = "Rebooked – another doctor";
+  delete appt.offers;
+  delete appt.offersBecause;
+  delete appt.slotJustTaken;
+  return true;
 }
 
 // "Send" every pending update: turn each into a text message in the outbox
@@ -551,6 +674,12 @@ function applySend(state: HmsState, step: Extract<DemoStep, { kind: "send" }>): 
     const appt = state.appointments.find((a) => a.id === update.appointmentId)!;
     const patient = patients.find((p) => p.id === appt.patientId)!;
     const doctor = doctors.find((d) => d.id === appt.doctorId)!;
+    // Moved to another doctor? Then the text also says "instead of Dr. …".
+    const firstDoctorId = appt.timeHistory?.[0]?.oldDoctorId;
+    const previousDoctor =
+      firstDoctorId && firstDoctorId !== appt.doctorId
+        ? doctors.find((d) => d.id === firstDoctorId)
+        : undefined;
     state.messages.push({
       id: `sms-${state.messages.length + 1}`,
       sentAt: now,
@@ -562,6 +691,8 @@ function applySend(state: HmsState, step: Extract<DemoStep, { kind: "send" }>): 
         language: patient.preferredLanguage,
         hospitalName: hospital.name,
         doctorName: doctorNameFor(doctor, patient.preferredLanguage),
+        previousDoctorName:
+          previousDoctor && doctorNameFor(previousDoctor, patient.preferredLanguage),
         reason: update.reason,
         newDayOffset: update.newDayOffset,
         newStartTime: update.newStartTime,
@@ -887,6 +1018,7 @@ function offerText(language: Language, found: OfferResult, doctorName: string): 
 function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): boolean {
   const appt = state.appointments.find((a) => a.id === step.appointmentId);
   if (!appt || appt.status !== "Affected – needs contact") return false;
+  if (appt.offersBecause === "another doctor") return false; // Buttons only
   const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId);
   if (!unavailability) return false;
 
@@ -1179,6 +1311,7 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
   const state = replay(steps);
   const appt = state.appointments.find((a) => a.id === appointmentId);
   if (!appt || appt.status !== "Affected – needs contact") return undefined;
+  if (appt.offersBecause === "another doctor") return undefined; // Buttons only
   const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId);
   if (!unavailability) return undefined;
 
@@ -1366,6 +1499,7 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
 function applyAi(state: HmsState, step: Extract<DemoStep, { kind: "ai" }>): boolean {
   const appt = state.appointments.find((a) => a.id === step.appointmentId);
   if (!appt || appt.status !== "Affected – needs contact") return false;
+  if (appt.offersBecause === "another doctor") return false; // Buttons only
   const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId);
   if (!unavailability) return false;
   const language = patients.find((p) => p.id === appt.patientId)!.preferredLanguage;

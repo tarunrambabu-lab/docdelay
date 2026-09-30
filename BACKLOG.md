@@ -4,6 +4,8 @@ Ideas and known gaps to pick up later.
 
 ## To do
 
+- **NEXT: a fixed "demo clock"** (e.g. "Demo time: 10:30 AM") that "later today", "5 – Another doctor today" and "Mark doctor unavailable" all use, so nothing is offered in the past. Today the booking rules don't know the time: e.g. marking Dr. Meera away 9–12 at 11 AM can offer a 9:00 patient Dr. Karthik at 9:30. (Decided 1 Oct 2026.)
+- **"Another doctor" edge case:** if the covering doctor (Dr. Karthik) is later marked unavailable too, patients rebooked to him are affected like anyone else, and the 45-minute rule measures from their original time with Dr. Meera. Check this is what we want.
 - **A second "doctor unavailable" window on the same day:** the empty-slot search should avoid it. Right now, if a doctor has two absences in one day, a "later today" patient can be given a slot inside the second absence.
 - **Before switching the AI on for the public:** move the site-wide AI message counter to a shared store (e.g. Redis) — on Vercel each server instance has its own memory, so today's in-memory counter isn't a reliable site-wide limit — and set a monthly spend limit for the API key in the Anthropic Console.
 - **After Phase 2 (planned, don't build yet): a lighter safety net.** Red-flag phrases set by a clinician → straight to staff. Any other health mention → the 108 line, normal rebooking, and a note. Detecting EVERY health mention still matters under this plan, so the health-check tests stay required.
@@ -100,6 +102,18 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Test-after-edit hook: if `/usr/bin/jq` is missing, it skips the tests with a warning instead of blocking.
 - Test-after-edit hook: only files in `src/` trigger it; editing `vitest.config.mts` or `package.json` does not.
 - Test-after-edit hook: runs after every single file edit (~4 s), so tests may fail partway through a multi-file change; that's expected.
+- Another doctor today: the mock hospital's second cardiologist is Dr. Karthik Raman (`doc-cardio-2`), fictional, with 25 of 32 slots booked today (empty: 9:30, 10:45, 11:30, 1:15, 2:30, 3:45, 4:30) and about 70% booked on other days, with new fictional patients (pat-491 onwards).
+- Another doctor today: Dr. Karthik covers for Dr. Meera, but not the other way round (the "can cover for" list is one-way).
+- Another doctor today: "approved" = on the doctor's `canCoverFor` list AND the same specialty; the code checks both.
+- Another doctor today: the "was → now" line uses full doctor names ("Dr. Meera Krishnan", not "Dr. Meera"), in case two doctors share a first name.
+- Another doctor today: "None of these – call me" → Needs staff call, note "Wanted another doctor today".
+- Another doctor today: option 5 appears only in the first menu (not on the "no room today" or other-day screens), and only in Buttons mode.
+- Another doctor today: if the chosen slot is taken but other slots are left, the patient hears "Sorry, that time was just taken" before the fresh options too (not only when none are left).
+- Another doctor today: if staff switch to the Chat tab while a patient is choosing another doctor, the chat shows "only available in Buttons mode" with a link back, and nothing (including the AI) handles that patient in chat.
+- Another doctor today: button "5 – Another doctor today" is violet; the status badge "Rebooked – another doctor" is violet too; the call summary counts it as "another doctor".
+- Another doctor today: the text message says "your appointment is now with Dr. Karthik Raman (instead of Dr. Meera Krishnan) at …", keeping "Reply 1 to confirm, 2 to change".
+- Dashboard: the doctor cards are now 2 across on small screens and 4 across on large ones (were 3), to fit the fourth doctor.
+- The "Please choose A, B or C…" sentence now lives in one helper (`pleaseChoose` in callScript.ts), shared by other-day and another-doctor offers; the words are unchanged.
 
 ## Done
 

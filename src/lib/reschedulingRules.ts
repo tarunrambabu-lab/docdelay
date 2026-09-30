@@ -45,6 +45,13 @@
 //   afternoon → afternoon), then the earliest days, then the time closest to
 //   the original.
 //
+// "5 – Another doctor today" (Buttons mode only):
+//   Only doctors the hospital has approved to cover for this doctor, with the
+//   same specialty (the hms module picks them). TODAY only, EMPTY slots only,
+//   starting at or after the patient's original time and ending by
+//   NORMAL_DAY_END (5:00 PM). Up to OFFERS_TO_MAKE, earliest first. The other
+//   doctor's patients are never moved. (See findAnotherDoctorSlots.)
+//
 // Any other day: EMPTY SLOTS ONLY. Nobody's booking on another day is ever
 // moved or pushed. Every slot DocDelay mentions comes from listFreeSlots.
 
@@ -405,4 +412,32 @@ export function findOtherDaySlots(
     },
   );
   return pickOffers(free, originalStartTime(patientAppointment));
+}
+
+// ---------- "5 – Another doctor today" ----------
+
+// One approved covering doctor and their appointments (the hms module has
+// already checked they're approved and of the same specialty).
+export interface CoveringDoctor {
+  doctorId: string;
+  appointments: Appointment[]; // ALL of this doctor's appointments
+}
+
+// Up to OFFERS_TO_MAKE EMPTY slots today with the covering doctors, starting
+// at or after `originalTime` and ending by 5:00 PM, earliest first. Each offer
+// says which doctor it's with. If two doctors are free at the same time, the
+// one listed first wins. Nobody is ever moved.
+export function findAnotherDoctorSlots(
+  originalTime: string, // the time the patient was first booked for
+  coveringDoctors: CoveringDoctor[],
+  count = OFFERS_TO_MAKE,
+): SlotOffer[] {
+  const all = coveringDoctors.flatMap((d) =>
+    listFreeSlots(d.appointments, { days: [0] }, { todayFrom: originalTime }).map((slot) => ({
+      ...slot,
+      doctorId: d.doctorId,
+    })),
+  );
+  // (sort keeps the doctors' order for equal times)
+  return all.sort((a, b) => a.startTime.localeCompare(b.startTime)).slice(0, count);
 }

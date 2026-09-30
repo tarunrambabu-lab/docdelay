@@ -2,6 +2,8 @@
 
 // The buttons where you "play the patient" in the call simulator.
 // Clicking one saves the answer, and the page moves on to the next patient.
+// "5 – Another doctor today" only shows when an approved doctor has an empty
+// slot for this patient (the page asks the hms module).
 
 import { useTransition } from "react";
 import { recordCallAction } from "@/app/actions";
@@ -29,20 +31,33 @@ const answers: { label: string; result: CallResult; className: string }[] = [
     className: "bg-orange-500 hover:bg-orange-600 text-white",
   },
   {
+    label: "5 – Another doctor today",
+    result: "Wants another doctor today",
+    className: "bg-violet-600 hover:bg-violet-700 text-white",
+  },
+  {
     label: "Didn't pick up",
     result: "No answer",
     className: "border border-slate-300 bg-white hover:bg-slate-100 text-slate-700",
   },
 ];
 
-export default function AnswerButtons({ appointmentId }: { appointmentId: string }) {
+export default function AnswerButtons({
+  appointmentId,
+  anotherDoctorToday,
+}: {
+  appointmentId: string;
+  anotherDoctorToday: boolean; // show "5 – Another doctor today"?
+}) {
   // isPending is true while the answer is being saved, so buttons can't be
   // clicked twice.
   const [isPending, startTransition] = useTransition();
 
   return (
     <div className="grid gap-3">
-      {answers.map((a) => (
+      {answers
+        .filter((a) => anotherDoctorToday || a.result !== "Wants another doctor today")
+        .map((a) => (
         <button
           key={a.result}
           type="button"

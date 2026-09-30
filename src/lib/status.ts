@@ -1,7 +1,7 @@
 // Colours for each appointment status, the short call summary text, and the
 // "was → now" line. Shared by the dashboard, call simulator and messages.
 
-import type { Appointment, AppointmentStatus } from "@/hms/types";
+import type { Appointment, AppointmentStatus, Doctor } from "@/hms/types";
 import { formatTime, formatWhen } from "@/lib/time";
 
 // Tailwind classes for each status badge.
@@ -14,6 +14,7 @@ export const statusColors: Record<AppointmentStatus, string> = {
   "Needs staff call": "bg-orange-100 text-orange-800",
   "No answer": "bg-yellow-100 text-yellow-800",
   "Time moved": "bg-cyan-100 text-cyan-800",
+  "Rebooked – another doctor": "bg-violet-100 text-violet-800",
   "URGENT – staff call now": "bg-red-600 text-white font-semibold",
 };
 
@@ -22,6 +23,7 @@ export const statusColors: Record<AppointmentStatus, string> = {
 const summaryWords: Partial<Record<AppointmentStatus, string>> = {
   "Rescheduled – later today": "later today",
   "Rescheduled – another day": "another day",
+  "Rebooked – another doctor": "another doctor",
   Cancelled: "cancelled",
   "Needs staff call": "needs staff",
   "No answer": "no answer",
@@ -42,12 +44,23 @@ export function callSummary(statuses: AppointmentStatus[]): string {
   return `${called.length} called: ${parts.join(", ")}`;
 }
 
-// "was 9:00 AM → now 11:00 AM" (moved within the same day), or
-// "was Today 10:00 AM → now Mon 28 Sep, 10:15 AM" (moved to another day).
+// "was 9:00 AM → now 11:00 AM" (moved within the same day),
+// "was Today 10:00 AM → now Mon 28 Sep, 10:15 AM" (moved to another day), or
+// "was 11:00 AM, Dr. Meera Krishnan → now 11:30 AM, Dr. Karthik Raman"
+// (moved to another doctor; `doctors` gives the names).
 // Returns "" if the appointment never moved.
-export function describeTimeChange(appt: Appointment): string {
+export function describeTimeChange(appt: Appointment, doctors: Doctor[] = []): string {
   const first = appt.timeHistory?.[0];
   if (!first) return "";
+  if (first.oldDoctorId && first.oldDoctorId !== appt.doctorId) {
+    const name = (id: string) => doctors.find((d) => d.id === id)?.name ?? id;
+    const sameDay = first.oldDayOffset === appt.dayOffset;
+    const when = (day: number, time: string) => (sameDay ? formatTime(time) : formatWhen(day, time));
+    return (
+      `was ${when(first.oldDayOffset, first.oldStartTime)}, ${name(first.oldDoctorId)} → ` +
+      `now ${when(appt.dayOffset, appt.startTime)}, ${name(appt.doctorId)}`
+    );
+  }
   return first.oldDayOffset === appt.dayOffset
     ? `was ${formatTime(first.oldStartTime)} → now ${formatTime(appt.startTime)}`
     : `was ${formatWhen(first.oldDayOffset, first.oldStartTime)} → now ${formatWhen(appt.dayOffset, appt.startTime)}`;
