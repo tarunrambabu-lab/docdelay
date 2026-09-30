@@ -40,7 +40,7 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | "5 – Another doctor today" (Buttons only, FRD 5.4), with Dr. Karthik Raman as a second cardiologist | Done (1 Oct) |
 | Fixed demo clock: 9:00 AM on India's date (`CLOCK_MODE` in `src/lib/clock.ts`, kept on "demo") | Done (1 Oct) |
 | Tour step 6 of 9: "Another doctor, same day" (Buttons, press 5, pick a time with Dr. Karthik) | Done (1 Oct) |
-| Tour at 320 × 640: two older steps' buttons partly behind the tour card (see BACKLOG) | Next |
+| Tour step 2 on small phones: "Mark unavailable" partly behind the tour card at 320 and 375 px (see BACKLOG) | Next |
 | Retake README screenshots (4 doctors, demo clock badge, button 5) | Next |
 | Optional: rebuild the video without the send-time blanking (not needed any more: "Sent" times now show the demo time, 9:00 AM) | Next (optional) |
 | Add the video to the README and portfolio | Next |
@@ -65,6 +65,7 @@ Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinic
 - Video must say the voices are AI-generated, and must carry this credit (end card or description): "Voices: Indic Parler-TTS by AI4Bharat (Apache 2.0), trained on IndicTTS (IIT Madras), SYSPIN (IISc), Rasa (AI4Bharat) and GLOBE." Voice tool lives in ~/DocDelay-video, never in the app repo.
 - Demo clock: fixed at 9:00 AM on today's date in India (`CLOCK_MODE = "demo"` in `src/lib/clock.ts`). Don't switch to "real" until the booking rules have a "not before now" check (BACKLOG).
 - Switch the AI off for laptop demos until the 4 backlog AI items are done.
+- Any browser test or local test server Claude runs must have the API key hidden, so it can never spend credit. Start the server with the key set to empty: `ANTHROPIC_API_KEY= npx next start …`. (Just removing the variable isn't enough: Next.js then reads the key from `.env.local` by itself.) Before testing, check the Chat tab says "basic mode", not "AI". (`npm test` never reaches the AI, and the test-after-edit hook hides the key too.)
 
 ## How I like to work
 
