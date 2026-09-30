@@ -30,7 +30,7 @@ These affect the AI chat only (laptop with an API key). The live site uses basic
 
 Claude Code automations suggested by the claude-code-setup plugin (30 Sep 2026).
 
-- **Next session:** test-after-edit hook (run `npm test` after Claude edits code in `src/`).
+- ✅ **Done (1 Oct):** test-after-edit hook (`.claude/hooks/test-after-edit.sh` runs `npm test` after Claude edits code in `src/`).
 - **Next session:** `/wrap-up` skill — `npm test`, update HANDOFF's "Where things stand", log minor assumptions here, two-group assumptions report, then commit; push only after my OK.
 - **Later:** `docdelay-safety-rules` skill that points to HANDOFF.md's "Rules we've agreed" instead of copying the rules (one source of truth).
 - **Later:** `safety-reviewer` subagent that checks changes to rescheduling rules, health keywords and AI instructions against the agreed rules — run on demand only, never automatically.
@@ -96,6 +96,10 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Phone layout: phone numbers never split across two lines; very long words in chat bubbles and texts wrap instead of widening the page.
 - Phone layout: on the dashboard cards, the patient's phone number sits next to their name, and the language badge next to the reason.
 - Health-check tests: two messages using the English word "valid" were added to the must-NOT-escalate list, to guard against a future "vali…" word-beginning rule.
+- Test-after-edit hook: hides `ANTHROPIC_API_KEY` from the tests as an extra guard (the tests never reach the AI anyway).
+- Test-after-edit hook: if `/usr/bin/jq` is missing, it skips the tests with a warning instead of blocking.
+- Test-after-edit hook: only files in `src/` trigger it; editing `vitest.config.mts` or `package.json` does not.
+- Test-after-edit hook: runs after every single file edit (~4 s), so tests may fail partway through a multi-file change; that's expected.
 
 ## Done
 
