@@ -143,7 +143,7 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Another doctor in chat: the suggested-phrase button ("I'd like to see another doctor today"; Tamil "innaikku vera doctor paakanum"; Hindi "aaj doosre doctor se milna hai") shows only when a slot is free. The Tamil and Hindi phrases are NOT yet checked by a native speaker, unlike the other phrases.
 - Another doctor in chat: the Chat tab's "only available in Buttons mode" note is gone; a patient who pressed 5 in Buttons can finish in Chat.
 - Another doctor in chat: an AI turn uses the demo as it was when the message arrived; like the existing book tool, it doesn't expect changes from another browser tab during that one message.
-- Native-speaker review list: add the new Tamil/Hindi "another doctor" words and "no" phrases (`src/lib/understanding/rules.ts`) and the new "no other doctor is free today" line (`src/lib/chatReplies.ts`).
+- Native-speaker review list: add the new Tamil/Hindi "another doctor" words and "no" phrases (`src/lib/understanding/rules.ts`) and the new "no other doctor is free today" line (`src/lib/chatReplies.ts`). The owner isn't sure of the Tamil version of that line: check it first.
 
 ## Done
 

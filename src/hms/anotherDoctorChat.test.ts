@@ -83,9 +83,14 @@ describe("basic mode: what counts as asking for another doctor", () => {
     ["Hindi", "doosre doctor se milna hai"],
     ["Hindi", "kisi aur doctor ko dikhana hai"],
     ["Hindi", "दूसरे डॉक्टर से मिलना है"],
+    // With "today" in them — still another doctor, not "later today" or another day
+    ["Tamil", "vera doctor inikki paakanum"],
+    ["Hindi", "doosre doctor ke saath aaj milna hai"],
   ];
   it.each(ASKS)("%s: %s → another doctor", async (language, text) => {
-    expect((await understand(text, language)).intent).toBe("another_doctor");
+    const understood = await understand(text, language);
+    expect(understood.intent).toBe("another_doctor");
+    expect(understood.intent).not.toBe("another_day");
     expect(mentionsHealth(text)).toBe(false);
   });
 
