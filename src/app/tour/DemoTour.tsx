@@ -139,16 +139,22 @@ export function TourProvider({ children }: { children: ReactNode }) {
   }, [step, target]);
 
   // Leave room at the bottom of the page for the card, so nothing hides behind it.
+  // The card's height is also shared as --tour-card-height, so pop-ups (e.g.
+  // "Mark doctor unavailable") can sit in the space above the card.
   useEffect(() => {
     if (step === null) return;
+    const root = document.documentElement;
     const pad = () => {
-      document.body.style.paddingBottom = `${(cardRef.current?.offsetHeight ?? 0) + 16}px`;
+      const height = cardRef.current?.offsetHeight ?? 0;
+      document.body.style.paddingBottom = `${height + 16}px`;
+      root.style.setProperty("--tour-card-height", `${height}px`);
     };
     pad();
     window.addEventListener("resize", pad);
     return () => {
       window.removeEventListener("resize", pad);
       document.body.style.paddingBottom = "";
+      root.style.removeProperty("--tour-card-height");
     };
   }, [step, lost]);
 

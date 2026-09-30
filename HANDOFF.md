@@ -40,10 +40,11 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | "5 – Another doctor today" (Buttons only, FRD 5.4), with Dr. Karthik Raman as a second cardiologist | Done (1 Oct) |
 | Fixed demo clock: 9:00 AM on India's date (`CLOCK_MODE` in `src/lib/clock.ts`, kept on "demo") | Done (1 Oct) |
 | Tour step 6 of 9: "Another doctor, same day" (Buttons, press 5, pick a time with Dr. Karthik) | Done (1 Oct) |
-| Tour step 2 on small phones: "Mark unavailable" partly behind the tour card at 320 and 375 px (see BACKLOG) | Next |
+| Tour step 2 on small phones: pop-up now sits above the tour card; checked at 4 phone sizes in Chrome and Safari engines | Done (1 Oct) |
 | Retake README screenshots (4 doctors, demo clock badge, button 5) | Next |
 | Optional: rebuild the video without the send-time blanking (not needed any more: "Sent" times now show the demo time, 9:00 AM) | Next (optional) |
 | Add the video to the README and portfolio | Next |
+| Add Another doctor today to chat (basic and AI mode): the chat opening mentions it when a slot is free; a new AI tool returns only hospital-approved, same-specialty empty slots; English, Tamil and Hindi words for basic mode; health check still runs first. All other chat rules stay frozen, proven by the existing chat tests passing unchanged. | Next |
 | After Another doctor in chat is done: plan the WhatsApp channel (alongside calls and texts, not replacing them). Open decisions are in the FRD backlog. | Next |
 | Phase 2: clinic interviews | After README/portfolio |
 | Real calls to my own phone | After the 4 AI backlog items |

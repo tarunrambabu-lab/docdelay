@@ -52,15 +52,21 @@ function UnavailableForm({ doctor, onClose }: { doctor: Doctor; onClose: () => v
     {},
   );
 
+  // 16 px text on phones, so iPhones don't zoom in. On very narrow screens
+  // (under 360 px) a little less padding, so "09:00 AM" fits in the time boxes.
   const inputClass =
-    "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600 max-sm:text-base"; // 16 px on phones, so iPhones don't zoom in
+    "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600 max-sm:text-base max-[360px]:px-2";
 
   return (
-    // Dark see-through background behind the pop-up.
-    <div className="fixed inset-0 z-10 flex items-center justify-center bg-slate-900/40 p-4">
+    // Dark see-through background behind the pop-up. During the guided tour
+    // the pop-up is centred in the space ABOVE the tour card (the tour shares
+    // its height as --tour-card-height), so the tour never hides its buttons.
+    // If there isn't room, this area scrolls. (m-auto centres the pop-up and
+    // still lets it scroll when it's taller than the space.)
+    <div className="fixed inset-0 z-10 flex overflow-y-auto bg-slate-900/40 p-4 pb-[calc(var(--tour-card-height,0px)+1rem)] max-[360px]:px-3">
       <form
         action={submit}
-        className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
+        className="m-auto w-full max-w-sm rounded-xl bg-white p-6 shadow-xl max-[360px]:p-4"
       >
         <h2 className="text-lg font-semibold text-slate-900">Mark doctor unavailable</h2>
         <p className="mb-5 text-sm text-slate-500">
@@ -80,7 +86,7 @@ function UnavailableForm({ doctor, onClose }: { doctor: Doctor; onClose: () => v
           </select>
         </label>
 
-        <div className="mb-5 grid grid-cols-2 gap-3">
+        <div className="mb-5 grid grid-cols-2 gap-3 max-[360px]:gap-2">
           <label className="block text-sm font-medium text-slate-700">
             From
             <input

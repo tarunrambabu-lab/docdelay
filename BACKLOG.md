@@ -4,7 +4,6 @@ Ideas and known gaps to pick up later.
 
 ## To do
 
-- **Tour step 2 on small phones (checked 1 Oct 2026):** the pop-up's "Mark unavailable" button sits partly behind the tour card — 44% visible at 320 × 640 (its centre can't be tapped), 74% at 375 × 667 (tappable), fine at 390 × 844. At 320 px the pop-up's time boxes also cut off "AM"/"PM". Step 4 and the "Start the tour" scroll were fine at all three sizes on a production build (an earlier report of those came from a dev-server run and was wrong). Screenshots: ~/Desktop/DocDelay-tour-320px.
 - **Before switching the clock to "real" (`CLOCK_MODE` in `src/lib/clock.ts`):** the booking rules ("later today", "5 – Another doctor today", other-day offers) need a "not before now" check. They don't look at the time today; with the fixed demo clock (9:00 AM, the first slot) nothing can be in the past, but with the real time a patient could be offered — and booked into — a slot that has already gone (e.g. 9:30 at 11 AM).
 - **"Another doctor" edge case:** if the covering doctor (Dr. Karthik) is later marked unavailable too, patients rebooked to him are affected like anyone else, and the 45-minute rule measures from their original time with Dr. Meera. Check this is what we want.
 - **A second "doctor unavailable" window on the same day:** the empty-slot search should avoid it. Right now, if a doctor has two absences in one day, a "later today" patient can be given a slot inside the second absence.
@@ -128,8 +127,13 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Tour step 6: if the visitor presses anything other than 5 (1–4, "Didn't pick up", or a chat reply), the ring moves on to the next affected patient; after 2 (or 1 with no room today) it first points at the first other-day time, which books it and shows "Next patient".
 - Tour: the Buttons result panel now carries the same "outcome" marker as the chat result, so a Buttons answer during step 4 also counts (the tour still asks for Chat there).
 - Tour: the 320 px check used the Playwright installed for the video tool in ~/DocDelay-video (nothing added to the app).
+- Tour step 2 fix: the tour card itself doesn't change. During the tour, the "Mark doctor unavailable" pop-up is centred in the space above the card (the tour shares its height as `--tour-card-height`); if there's ever not enough room, the pop-up area scrolls.
+- Tour step 2 fix: on screens under 360 px wide (tour or not), the pop-up has slightly less padding and margin, so "09:00 AM" fits in the time boxes. Text stays 16 px so iPhones don't zoom in.
+- Browser checks use Playwright from ~/DocDelay-video; WebKit (Safari's engine) is installed in ~/DocDelay-video/.playwright-browsers (299 MB), outside the app repo. The check scripts aren't in the repo.
 
 ## Done
+
+- ✅ **Tour step 2 on small phones (1 Oct 2026):** the pop-up's "Mark unavailable" button is fully visible and tappable at 320 × 568, 320 × 640, 375 × 667 and 390 × 844, in Chrome's and Safari's engines; "09:00 AM" / "12:00 PM" no longer cut off at 320 px. Screenshots: ~/Desktop/DocDelay-tour-320px/step2-fix.
 
 - ✅ **Fixed demo clock (1 Oct 2026):** 9:00 AM on today's date in India, from `src/lib/clock.ts`; shown on the dashboard, used for "Mark doctor unavailable" and for every time stamp on screen.
 
