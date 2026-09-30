@@ -69,6 +69,8 @@ import {
 } from "@/lib/reschedulingRules";
 import {
   anotherDayReply,
+  anotherDoctorOffersScript,
+  anotherDoctorReply,
   callScript,
   dayLabelFor,
   laterTodayReply,
@@ -86,6 +88,7 @@ import {
   doctorBackNoneTodayPrefix,
   noFreeTodayPrefix,
   noMatchPrefix,
+  noOtherDoctorFreeReply,
   slotTakenPrefix,
   staffWillCallReply,
   unclearReply,
@@ -616,6 +619,18 @@ function anotherDoctorSlotsIn(state: HmsState, appt: Appointment): SlotOffer[] {
   );
 }
 
+// "Another doctor from the same department can see you today: A) Dr. …, 9:30 AM, …"
+// in the patient's language, for offers with another doctor.
+function anotherDoctorOffersText(language: Language, offers: SlotOffer[]): string {
+  return anotherDoctorOffersScript(
+    language,
+    offers.map((o) => ({
+      startTime: o.startTime,
+      doctorName: doctorNameFor(doctors.find((d) => d.id === o.doctorId)!, language),
+    })),
+  );
+}
+
 // Book a slot with another doctor: re-check it's STILL one of the allowed
 // empty slots (approved doctor, today, at or after the original time, ending
 // by 5 PM), then move the appointment there. Moving it frees the patient's
@@ -1019,7 +1034,6 @@ function offerText(language: Language, found: OfferResult, doctorName: string): 
 function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): boolean {
   const appt = state.appointments.find((a) => a.id === step.appointmentId);
   if (!appt || appt.status !== "Affected – needs contact") return false;
-  if (appt.offersBecause === "another doctor") return false; // Buttons only
   const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId);
   if (!unavailability) return false;
 
@@ -1043,7 +1057,7 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
   // The chat starts with what DocDelay said first.
   if (!appt.chat?.length) {
     appt.chat = [];
-    say(openingLine(appt, unavailability));
+    say(openingLine(state, appt, unavailability));
   }
   appt.chat.push({
     at: when,
@@ -1091,7 +1105,11 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
 
     case "talk_to_person":
       appt.status = "Needs staff call";
-      appt.note = appt.offers ? "Wants a different day" : "Asked to talk to a person";
+      appt.note = !appt.offers
+        ? "Asked to talk to a person"
+        : appt.offersBecause === "another doctor"
+          ? "Wanted another doctor today"
+          : "Wants a different day";
       dropOffers();
       say(staffWillCallReply(language));
       log("Needs staff call", appt.note);
@@ -1172,9 +1190,52 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
       return true;
     }
 
+    // See another doctor of the same specialty today: up to 3 EMPTY slots with
+    // an approved doctor (the same rules as "5 – Another doctor today").
+    case "another_doctor": {
+      const slots = anotherDoctorSlotsIn(state, appt);
+      if (slots.length === 0) {
+        dropOffers();
+        say(noOtherDoctorFreeReply(language));
+        log("Wants another doctor today", "no other doctor free today");
+        return true;
+      }
+      appt.offers = slots;
+      appt.offersBecause = "another doctor";
+      say(anotherDoctorOffersText(language, slots));
+      log("Wants another doctor today", `offered ${slots.map((o) => formatTime(o.startTime)).join(" / ")}`);
+      return true;
+    }
+
     case "choose_offer": {
       const offer = u.offerIndex !== undefined ? appt.offers?.[u.offerIndex] : undefined;
       if (!offer) return unclear();
+
+      // A slot with another doctor: book it (re-checked). If it was taken
+      // meanwhile: "Sorry, that time was just taken" and fresh options — or,
+      // with none left, the question about the other choices.
+      if (appt.offersBecause === "another doctor") {
+        if (bookWithAnotherDoctor(state, appt, offer, step.at)) {
+          const newDoctor = doctors.find((d) => d.id === offer.doctorId)!;
+          say(anotherDoctorReply(language, offer.startTime, doctorNameFor(newDoctor, language)));
+          log(
+            "Wants another doctor today",
+            `picked ${OFFER_LETTERS[u.offerIndex!]}: ${formatTime(offer.startTime)} with ${newDoctor.name}`,
+          );
+          return true;
+        }
+        const fresh = anotherDoctorSlotsIn(state, appt);
+        if (fresh.length > 0) {
+          appt.offers = fresh;
+          say(`${slotTakenPrefix(language)} ${anotherDoctorOffersText(language, fresh)}`);
+        } else {
+          dropOffers();
+          say(`${slotTakenPrefix(language)} ${noOtherDoctorFreeReply(language)}`);
+        }
+        log("Wants another doctor today", "picked slot was just taken");
+        return true;
+      }
+
       if (bookSlotIn(state, appt, offer, step.at).ok) {
         say(
           offer.dayOffset === 0
@@ -1188,7 +1249,7 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
         return true;
       }
       // Taken meanwhile — first one wins; this patient gets fresh options.
-      offerOtherDays(state, appt, appt.offersBecause ?? "asked");
+      offerOtherDays(state, appt, appt.offersBecause === "no room today" ? "no room today" : "asked");
       say(
         `${slotTakenPrefix(language)} ${
           appt.offers
@@ -1204,23 +1265,28 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
   }
 }
 
-// What DocDelay said first in a chat: the call script — or, if the patient was
-// already looking at offers (e.g. from Buttons mode), those offers.
-function openingLine(appt: Appointment, unavailability: Unavailability): string {
+// What DocDelay said first in a chat: the call script (with "Press 5 to see
+// another doctor…" only when an approved doctor has a free slot) — or, if the
+// patient was already looking at offers (e.g. from Buttons mode), those offers.
+function openingLine(state: HmsState, appt: Appointment, unavailability: Unavailability): string {
   const patient = patients.find((p) => p.id === appt.patientId)!;
   const doctor = doctors.find((d) => d.id === appt.doctorId)!;
   const language = patient.preferredLanguage;
-  return appt.offers
-    ? otherDayOffersScript(language, appt.offers, appt.offersBecause === "no room today")
-    : callScript({
-        language,
-        patientName: patient.name,
-        hospitalName: hospital.name,
-        doctorName: doctorNameFor(doctor, language),
-        reason: unavailability.reason,
-        appointmentTime: appt.startTime,
-        untilTime: unavailability.untilTime,
-      });
+  if (appt.offers) {
+    return appt.offersBecause === "another doctor"
+      ? anotherDoctorOffersText(language, appt.offers)
+      : otherDayOffersScript(language, appt.offers, appt.offersBecause === "no room today");
+  }
+  return callScript({
+    language,
+    patientName: patient.name,
+    hospitalName: hospital.name,
+    doctorName: doctorNameFor(doctor, language),
+    reason: unavailability.reason,
+    appointmentTime: appt.startTime,
+    untilTime: unavailability.untilTime,
+    anotherDoctorToday: anotherDoctorSlotsIn(state, appt).length > 0,
+  });
 }
 
 // ---------- AI chat (Claude) ----------
@@ -1241,6 +1307,8 @@ export const AI_TOOL_NAMES = [
   "hand_to_staff",
   "escalate_urgent",
   "cannot_understand",
+  "check_another_doctor_slots",
+  "book_with_another_doctor",
 ] as const;
 export type AiToolName = (typeof AI_TOOL_NAMES)[number];
 
@@ -1312,7 +1380,6 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
   const state = replay(steps);
   const appt = state.appointments.find((a) => a.id === appointmentId);
   if (!appt || appt.status !== "Affected – needs contact") return undefined;
-  if (appt.offersBecause === "another doctor") return undefined; // Buttons only
   const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId);
   if (!unavailability) return undefined;
 
@@ -1320,8 +1387,13 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
   const doctor = doctors.find((d) => d.id === appt.doctorId)!;
   const language = patient.preferredLanguage;
   const at = realTimestamp(); // this turn's time — used again when it's replayed
-  const say = (o: SlotOffer) =>
-    `${dayLabelFor(o.dayOffset, language)}, ${formatTimeFor(o.startTime, language)}`;
+  // How a slot is written to the patient; a slot with another doctor starts
+  // with that doctor's name ("Dr. Karthik Raman, today, 9:30 AM").
+  const say = (o: SlotOffer) => {
+    const when = `${dayLabelFor(o.dayOffset, language)}, ${formatTimeFor(o.startTime, language)}`;
+    const other = o.doctorId && doctors.find((d) => d.id === o.doctorId);
+    return other ? `${doctorNameFor(other, language)}, ${when}` : when;
+  };
   const toAiSlots = (offers: SlotOffer[]): AiSlot[] =>
     offers.map((o, i) => ({
       option: OFFER_LETTERS[i],
@@ -1377,7 +1449,9 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
               days.length > 1 ? days : undefined,
             );
       // Keep every slot offered in this turn (the AI may check more than once),
-      // up to 5 — the most that can be labelled A–E.
+      // up to 5 — the most that can be labelled A–E. Offers are never a mix of
+      // doctors: slots with another doctor offered earlier are dropped.
+      if (offered.some((o) => o.doctorId)) offered.length = 0;
       for (const o of found.offers) {
         const seen = offered.some(
           (x) => x.dayOffset === o.dayOffset && x.startTime === o.startTime,
@@ -1454,6 +1528,57 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
       outcome = { kind: "urgent" };
       return { ok: true, say_exactly: urgentReply(language) };
     },
+    // Another doctor of the same specialty today: ONLY approved doctors'
+    // EMPTY slots (anotherDoctorSlotsIn — the same rules as Buttons mode).
+    check_another_doctor_slots() {
+      const slots = anotherDoctorSlotsIn(state, appt);
+      // Offers are never a mix of doctors: this replaces anything offered before.
+      offered.length = 0;
+      offered.push(...slots);
+      for (const o of slots) times.add(o.startTime);
+      return slots.length
+        ? {
+            situation: "free",
+            explanation:
+              "Offer these as A, B, C. Say that another doctor from the same department can see them today, " +
+              "and copy each slot's say text exactly (it includes the doctor's name).",
+            slots: toAiSlots(offered),
+          }
+        : {
+            situation: "none",
+            explanation:
+              "No other doctor from the same department is free today. Say so, then ask whether they " +
+              "would like to wait for a later time today, move to another day, or cancel.",
+            slots: [],
+          };
+    },
+    book_with_another_doctor(input) {
+      if (outcome) return alreadyDone;
+      const startTime = String(input.start_time);
+      // Only a slot that is STILL one of the allowed ones (approved doctor, same
+      // specialty, empty, today, at or after the original time, ending by 5 PM)
+      // — whether it was offered in this message or an earlier one. Then
+      // re-checked by the hms rules when it's booked.
+      const offer = anotherDoctorSlotsIn(state, appt).find((o) => o.startTime === startTime);
+      if (!offer) {
+        return {
+          ok: false,
+          reason: "That isn't one of the slots with another doctor.",
+          hint: "Call check_another_doctor_slots and only offer what it returns.",
+        };
+      }
+      const ok = onCopy((copyState, copyAppt) => bookWithAnotherDoctor(copyState, copyAppt, offer, at));
+      if (!ok) {
+        return {
+          ok: false,
+          reason: "That time was just taken.",
+          hint: "Call check_another_doctor_slots again and offer the new options.",
+        };
+      }
+      outcome = { kind: "book", dayOffset: 0, startTime, doctorId: offer.doctorId };
+      times.add(startTime);
+      return { ok: true, booked: say(offer) };
+    },
   };
 
   return {
@@ -1500,7 +1625,6 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
 function applyAi(state: HmsState, step: Extract<DemoStep, { kind: "ai" }>): boolean {
   const appt = state.appointments.find((a) => a.id === step.appointmentId);
   if (!appt || appt.status !== "Affected – needs contact") return false;
-  if (appt.offersBecause === "another doctor") return false; // Buttons only
   const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId);
   if (!unavailability) return false;
   const language = patients.find((p) => p.id === appt.patientId)!.preferredLanguage;
@@ -1517,13 +1641,15 @@ function applyAi(state: HmsState, step: Extract<DemoStep, { kind: "ai" }>): bool
   };
 
   if (!appt.chat?.length)
-    appt.chat = [{ at: when, from: "docdelay", text: openingLine(appt, unavailability) }];
+    appt.chat = [{ at: when, from: "docdelay", text: openingLine(state, appt, unavailability) }];
   const understood = !action
     ? step.offers.length
       ? `AI · offered ${step.offers.map((o) => formatWhen(o.dayOffset, o.startTime)).join(" / ")}`
       : "AI · replied"
     : action.kind === "book"
-      ? `AI · booked ${formatWhen(action.dayOffset, action.startTime)}`
+      ? `AI · booked ${formatWhen(action.dayOffset, action.startTime)}${
+          action.doctorId ? ` with ${doctors.find((d) => d.id === action.doctorId)?.name}` : ""
+        }`
       : action.kind === "staff"
         ? `AI · staff call (${action.reason.replace(/_/g, " ")})`
         : `AI · ${{ wait: "waits for later today", cancel: "cancelled", urgent: "URGENT (health concern)" }[action.kind]}`;
@@ -1540,8 +1666,13 @@ function applyAi(state: HmsState, step: Extract<DemoStep, { kind: "ai" }>): bool
   if (!action) {
     if (step.offers.length) {
       appt.offers = step.offers;
-      appt.offersBecause = "asked";
+      appt.offersBecause = step.offers.some((o) => o.doctorId) ? "another doctor" : "asked";
     }
+  } else if (action.kind === "book" && action.doctorId) {
+    // Another doctor today — re-checked with the same rules as Buttons mode.
+    const offer = { dayOffset: 0, startTime: action.startTime, doctorId: action.doctorId };
+    if (action.dayOffset !== 0 || !bookWithAnotherDoctor(state, appt, offer, step.at)) return false;
+    log("Wants another doctor today", `booked ${formatTime(action.startTime)} with another doctor`);
   } else if (action.kind === "book") {
     const slot = { dayOffset: action.dayOffset, startTime: action.startTime };
     if (!bookSlotIn(state, appt, slot, step.at).ok) return false;
@@ -1582,7 +1713,13 @@ function applyAi(state: HmsState, step: Extract<DemoStep, { kind: "ai" }>): bool
         ? cancelledReply(language)
         : action.kind === "staff"
           ? staffWillCallReply(language)
-          : appt.dayOffset === 0
+          : action.kind === "book" && action.doctorId
+            ? anotherDoctorReply(
+                language,
+                appt.startTime,
+                doctorNameFor(doctors.find((d) => d.id === appt.doctorId)!, language),
+              )
+            : appt.dayOffset === 0
             ? laterTodayReply(language, appt.startTime)
             : anotherDayReply(language, appt.dayOffset, appt.startTime);
   appt.chat.push({ at: when, from: "docdelay", text: confirmation });

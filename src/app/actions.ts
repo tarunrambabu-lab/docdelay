@@ -128,7 +128,6 @@ export async function chatAction(
   if (!text) return;
   const appt = await getAppointment(appointmentId);
   if (!appt || appt.status !== "Affected – needs contact") return;
-  if (appt.offersBecause === "another doctor") return; // Buttons only — and no AI call
   const callsPage = `/calls/${appt.unavailabilityId}`;
 
   let handled = false;

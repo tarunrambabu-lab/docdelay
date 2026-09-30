@@ -71,7 +71,7 @@ export type DemoStep =
 // The one outcome an AI chat turn may record. The hms module applies it with
 // the same rules as everywhere else.
 export type AiAction =
-  | { kind: "book"; dayOffset: number; startTime: string } // via bookSlot
+  | { kind: "book"; dayOffset: number; startTime: string; doctorId?: string } // via bookSlot (doctorId: another doctor today)
   | { kind: "wait" } // plain "later today" (the push rules)
   | { kind: "cancel" }
   | { kind: "staff"; reason: StaffReason }
@@ -122,24 +122,39 @@ const unpackLong = (code: string, max: number) =>
     .toString("utf8")
     .slice(0, max);
 // Offers ↔ "3-1015~4-1400"
+// A slot with ANOTHER doctor ("another doctor today") gets the doctor's number
+// as a third part: "0-0930-3". Older saved demos (two parts) still read the same.
+const doctorPart = (doctorId?: string) => (doctorId ? `-${doctorIds.indexOf(doctorId)}` : "");
+const unpackDoctor = (code: string | undefined): string | undefined | null =>
+  code === undefined ? undefined : (doctorIds[Number(code)] ?? null);
 const packOffers = (offers: SlotOffer[]) =>
-  offers.length ? offers.map((o) => `${o.dayOffset}-${hhmm(o.startTime)}`).join("~") : "n";
+  offers.length
+    ? offers.map((o) => `${o.dayOffset}-${hhmm(o.startTime)}${doctorPart(o.doctorId)}`).join("~")
+    : "n";
 const unpackOffers = (code: string): SlotOffer[] | null => {
   if (code === "n") return [];
   const offers = code.split("~").map((o) => {
-    const [day, time] = o.split("-");
-    return { dayOffset: Number(day), startTime: unHhmm(time ?? "") };
+    const [day, time, doctor] = o.split("-");
+    const doctorId = unpackDoctor(doctor);
+    return {
+      dayOffset: Number(day),
+      startTime: unHhmm(time ?? ""),
+      ...(doctorId !== undefined ? { doctorId } : {}),
+    };
   });
-  return offers.every((o) => Number.isInteger(o.dayOffset) && isValidTime(o.startTime))
-    ? offers
+  return offers.every(
+    (o) => Number.isInteger(o.dayOffset) && isValidTime(o.startTime) && o.doctorId !== null,
+  )
+    ? (offers as SlotOffer[])
     : null;
 };
-// AI outcome ↔ "n" | "b3-1615" | "w" | "c" | "s0" | "u"   ("x" = no outcome, not understood)
+// AI outcome ↔ "n" | "b3-1615" | "b0-0930-3" (with another doctor) | "w" | "c" | "s0" | "u"
+// ("x" = no outcome, not understood)
 const packAction = (a?: AiAction) =>
   !a
     ? "n"
     : a.kind === "book"
-      ? `b${a.dayOffset}-${hhmm(a.startTime)}`
+      ? `b${a.dayOffset}-${hhmm(a.startTime)}${doctorPart(a.doctorId)}`
       : a.kind === "staff"
         ? `s${STAFF_REASONS.indexOf(a.reason)}`
         : { wait: "w", cancel: "c", urgent: "u" }[a.kind];
@@ -153,16 +168,22 @@ const unpackAction = (code: string): AiAction | undefined | null => {
     return reason ? { kind: "staff", reason } : null;
   }
   if (code.startsWith("b")) {
-    const [day, time] = code.slice(1).split("-");
+    const [day, time, doctor] = code.slice(1).split("-");
     const startTime = unHhmm(time ?? "");
-    return Number.isInteger(Number(day)) && isValidTime(startTime)
-      ? { kind: "book", dayOffset: Number(day), startTime }
-      : null;
+    const doctorId = unpackDoctor(doctor);
+    if (!Number.isInteger(Number(day)) || !isValidTime(startTime) || doctorId === null) return null;
+    return {
+      kind: "book",
+      dayOffset: Number(day),
+      startTime,
+      ...(doctorId !== undefined ? { doctorId } : {}),
+    };
   }
   return null;
 };
 
-function encodeStep(step: DemoStep): string {
+// (Exported for the tests only.)
+export function encodeStep(step: DemoStep): string {
   const at = step.at.toString(36);
   switch (step.kind) {
     case "unavailable":
@@ -217,7 +238,7 @@ function encodeStep(step: DemoStep): string {
 
 // Returns null for anything that doesn't look right (the cookie comes from
 // the visitor's browser, so we never trust it blindly).
-function decodeStep(code: string): DemoStep | null {
+export function decodeStep(code: string): DemoStep | null {
   const [kind, ...parts] = code.split(".");
   const at = parseInt(parts.at(-1) ?? "", 36);
   if (!Number.isFinite(at)) return null;

@@ -159,6 +159,23 @@ export function clinicHoursIntro(language: Language): string {
   }[language];
 }
 
+// The patient asked to see another doctor today, but no approved doctor of the
+// same department has a FREE time today. They stay in the conversation.
+// (Tamil and Hindi need native-speaker review.)
+export function noOtherDoctorFreeReply(language: Language): string {
+  return {
+    English:
+      "Sorry, no other doctor from the same department is free today. " +
+      "Would you like to wait for a later time today, move to another day, or cancel?",
+    Tamil:
+      "மன்னிக்கவும், இன்று அதே பிரிவைச் சேர்ந்த வேறு எந்த மருத்துவரிடமும் நேரம் காலியாக இல்லை. " +
+      "இன்று பின்னர் ஒரு நேரத்திற்குக் காத்திருக்க வேண்டுமா, வேறு நாளுக்கு மாற்ற வேண்டுமா, அல்லது ரத்து செய்ய வேண்டுமா?",
+    Hindi:
+      "माफ़ कीजिए, आज उसी विभाग के किसी दूसरे डॉक्टर के पास समय खाली नहीं है। " +
+      "क्या आप आज बाद के किसी समय का इंतज़ार करना चाहेंगे, किसी और दिन आना चाहेंगे, या अपॉइंटमेंट रद्द करना चाहेंगे?",
+  }[language];
+}
+
 // Put in front of fresh offers when the chosen slot was taken meanwhile.
 export function slotTakenPrefix(language: Language): string {
   return {

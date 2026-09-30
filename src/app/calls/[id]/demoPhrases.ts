@@ -23,7 +23,9 @@ export interface DemoPhrase {
 
 export const DEMO_PHRASES: Record<
   Language,
-  { replies: DemoPhrase[]; symptom: DemoPhrase } // symptom = the one health example
+  // symptom = the one health example; anotherDoctor = "see another doctor today"
+  // (shown only when an approved doctor has a free slot for the patient)
+  { replies: DemoPhrase[]; symptom: DemoPhrase; anotherDoctor: DemoPhrase }
 > = {
   English: {
     replies: [
@@ -33,6 +35,7 @@ export const DEMO_PHRASES: Record<
       { text: "I want to talk to a person", intent: "talk_to_person" },
     ],
     symptom: { text: "I feel dizzy", intent: "health_concern" },
+    anotherDoctor: { text: "I'd like to see another doctor today", intent: "another_doctor" },
   },
   Tamil: {
     // checked by native speaker
@@ -47,6 +50,12 @@ export const DEMO_PHRASES: Record<
       },
     ],
     symptom: { text: "thala suthudhu", meaning: "I feel dizzy", intent: "health_concern" },
+    // (added 1 Oct 2026 — not yet checked by a native speaker)
+    anotherDoctor: {
+      text: "innaikku vera doctor paakanum",
+      meaning: "I'd like to see another doctor today",
+      intent: "another_doctor",
+    },
   },
   Hindi: {
     // checked by native speaker
@@ -65,15 +74,26 @@ export const DEMO_PHRASES: Record<
       meaning: "I feel dizzy",
       intent: "health_concern",
     },
+    // (added 1 Oct 2026 — not yet checked by a native speaker)
+    anotherDoctor: {
+      text: "aaj doosre doctor se milna hai",
+      meaning: "I'd like to see another doctor today",
+      intent: "another_doctor",
+    },
   },
 };
 
 // One pick button per offer on screen. The button shows the offer's time
-// ("A · Thu 1 Oct, 4:00 PM"), but tapping it sends just the letter ("A"),
-// like a patient would say it.
-export function offerPicks(offers: SlotOffer[]): { send: string; label: string }[] {
+// ("A · Thu 1 Oct, 4:00 PM"; with another doctor, "A · Today 9:30 AM · Dr. …"),
+// but tapping it sends just the letter ("A"), like a patient would say it.
+export function offerPicks(
+  offers: SlotOffer[],
+  doctorNames: string[] = [], // one per offer; "" = the patient's own doctor
+): { send: string; label: string }[] {
   return offers.map((offer, i) => ({
     send: OFFER_LETTERS[i],
-    label: `${OFFER_LETTERS[i]} · ${formatWhen(offer.dayOffset, offer.startTime)}`,
+    label:
+      `${OFFER_LETTERS[i]} · ${formatWhen(offer.dayOffset, offer.startTime)}` +
+      (doctorNames[i] ? ` · ${doctorNames[i]}` : ""),
   }));
 }

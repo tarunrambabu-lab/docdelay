@@ -8,8 +8,12 @@
 //
 // Order of checks (first match wins):
 //   1. health concern  — ALWAYS first. Broad on purpose: when unsure, escalate.
+//      (Then "NO another doctor" phrases — "I don't want another doctor",
+//      "vera doctor venaam" — are removed, so they're never read as asking
+//      for one, or as cancelling; the rest of the message is read as usual.)
 //   2. talk to a person
 //   3. cancel
+//   3b. see another doctor today ("another doctor", "vera doctor", "5", …)
 //   4. choose one of the offers read out (A/B/C, or its day/time)
 //   5. another day (a day word, a date, "another day", …)
 //   6. later today ("wait", "later", "today", …)
@@ -461,6 +465,65 @@ const ANOTHER_DAY_WORDS = [
   "aur din",
 ];
 
+// "See another doctor today" (the same department — the hms module decides
+// who). Checked before the offers and "later today", so "doosra doctor" isn't
+// read as "option B" and "a different doctor today" isn't read as "wait".
+const ANOTHER_DOCTOR_WORDS = [
+  "another doctor*",
+  "different doctor*",
+  "other doctor*",
+  "another doc",
+  // Tamil
+  "vera doctor*",
+  "vere doctor*",
+  "veroru doctor*",
+  "innoru doctor*",
+  "vera daktar*",
+  "vera maruthuvar*",
+  "veroru maruthuvar*",
+  "வேறு டாக்டர்*",
+  "வேறு மருத்துவர்*",
+  "இன்னொரு டாக்டர்*",
+  // Hindi
+  "doosre doctor",
+  "dusre doctor",
+  "doosra doctor",
+  "dusra doctor",
+  "kisi aur doctor",
+  "koi aur doctor",
+  "दूसरे डॉक्टर",
+  "दूसरा डॉक्टर",
+  "किसी और डॉक्टर",
+  "कोई और डॉक्टर",
+];
+
+// "NO another doctor": removed before the other checks (after health), so
+// "I don't want another doctor, I'll wait" is read as "I'll wait", and
+// "doosra doctor nahi chahiye" isn't read as cancelling the appointment.
+// ⚠️ Tamil and Hindi to be reviewed by native speakers.
+const DOCTOR_EN = String.raw`(?:another|different|other|new)\s(?:doctor|doc)`;
+const DOCTOR_TA = String.raw`(?:vera|vere|veroru|innoru)\s(?:doctor|daktar|maruthuvar)[\p{L}]*`;
+const DOCTOR_HI = String.raw`(?:doosre|dusre|doosra|dusra|doosri|dusri|kisi aur|koi aur)\s(?:doctor|daktar)`;
+const NOT_ANOTHER_DOCTOR: RegExp[] = [
+  // English: "don't want / need another doctor", "not a different doctor". (A bare
+  // "no" isn't enough: "No, another doctor please" DOES ask for one.)
+  new RegExp(String.raw`\s(?:(?:i\s)?(?:do not|dont|did not|never)\s(?:want|need)(?:\sto\s(?:see|meet))?|not)\s(?:a\s|an\s|any\s)?${DOCTOR_EN}(?=\s)`, "gu"),
+  new RegExp(String.raw`\sno need (?:for|of)\s(?:a\s|an\s|any\s)?${DOCTOR_EN}(?=\s)`, "gu"),
+  new RegExp(String.raw`\s${DOCTOR_EN}\s(?:is\s)?(?:not needed|not required|not necessary)(?=\s)`, "gu"),
+  // Tamil: "vera doctor venaam", "vera doctor paaka vendaam"
+  new RegExp(String.raw`\s${DOCTOR_TA}(?:\s[\p{L}]+){0,2}\s(?:venaam|venam|vendam|vendaam|venda|vendaa|venaa)(?=\s)`, "gu"),
+  /\s(?:வேறு|இன்னொரு)\s(?:டாக்டர்|மருத்துவர்)[\p{L}\p{M}]*(?:\s[\p{L}\p{M}]+){0,2}\s(?:வேண்டாம்|வேணாம்)(?=\s)/gu,
+  // Hindi: "doosra doctor nahi chahiye", "kisi aur doctor ko nahi dikhana"
+  new RegExp(String.raw`\s${DOCTOR_HI}(?:\s[\p{L}]+){0,2}\s(?:nahi|nahin|nai|mat)(?:\s(?:chahiye|chaahiye|chahie|chahta|chahti|dikhana|milna))?(?=\s)`, "gu"),
+  new RegExp(String.raw`\s(?:nahi|nahin)\s(?:chahiye|chaahiye)\s${DOCTOR_HI}(?=\s)`, "gu"),
+  /\s(?:दूसरे|दूसरा|दूसरी|किसी और|कोई और)\s(?:डॉक्टर|डाक्टर)(?:\s[\p{L}\p{M}]+){0,2}\s(?:नहीं|मत)(?:\s(?:चाहिए|चाहिये))?(?=\s)/gu,
+];
+
+// The message without any "NO another doctor" phrase (spaces keep word edges).
+function withoutNotAnotherDoctor(text: string): string {
+  return NOT_ANOTHER_DOCTOR.reduce((t, phrase) => t.replace(phrase, " "), text);
+}
+
 // Words for "tomorrow" / "day after tomorrow".
 const TOMORROW_WORDS = ["tomorrow", "tmrw", "tmr", "naalai", "naalaikku", "nalaikku", "kal", "कल"];
 const DAY_AFTER_WORDS = ["day after tomorrow", "parso", "parson", "naalai marunaal"];
@@ -670,36 +733,50 @@ export const understandWithRules: Understander = async (message, context) => {
     ...extra,
   });
 
-  // 1. Health — always first.
+  // 1. Health — always first, on the WHOLE message.
   if (hasAny(t, HEALTH_WORDS)) {
     return result("health_concern", { preferences: {} });
   }
 
-  // Keypad-style replies: "1", "2", "3", "4"
-  const keypad = t.trim();
-  if (keypad === "1") return result("later_today");
-  if (keypad === "2") return result("another_day");
-  if (keypad === "3") return result("cancel");
-  if (keypad === "4") return result("talk_to_person");
+  // Everything else is read without "NO another doctor" phrases (see above).
+  // A message without one is unchanged.
+  const r = withoutNotAnotherDoctor(t);
+  const rPrefs = r === t ? prefs : readPreferences(r);
+  const rResult = (intent: Understanding["intent"], extra: Partial<Understanding> = {}) => ({
+    intent,
+    preferences: rPrefs,
+    ...extra,
+  });
+
+  // Keypad-style replies: "1", "2", "3", "4", "5"
+  const keypad = r.trim();
+  if (keypad === "1") return rResult("later_today");
+  if (keypad === "2") return rResult("another_day");
+  if (keypad === "3") return rResult("cancel");
+  if (keypad === "4") return rResult("talk_to_person");
+  if (keypad === "5") return rResult("another_doctor");
 
   // 2–3. Talk to a person, cancel
-  if (hasAny(t, TALK_WORDS)) return result("talk_to_person");
-  if (hasAny(t, CANCEL_WORDS)) return result("cancel");
+  if (hasAny(r, TALK_WORDS)) return rResult("talk_to_person");
+  if (hasAny(r, CANCEL_WORDS)) return rResult("cancel");
+
+  // 3b. Another doctor today
+  if (hasAny(r, ANOTHER_DOCTOR_WORDS)) return rResult("another_doctor");
 
   // 4. One of the offers
-  const offerIndex = pickedOffer(t, prefs, context);
-  if (offerIndex !== undefined) return result("choose_offer", { offerIndex });
+  const offerIndex = pickedOffer(r, rPrefs, context);
+  if (offerIndex !== undefined) return rResult("choose_offer", { offerIndex });
 
   // 5. Another day — a day other than today was named, or "another day"
-  const namedOtherDay = prefs.dayOffset !== undefined && prefs.dayOffset !== 0;
-  if (namedOtherDay || hasAny(t, ANOTHER_DAY_WORDS)) return result("another_day");
+  const namedOtherDay = rPrefs.dayOffset !== undefined && rPrefs.dayOffset !== 0;
+  if (namedOtherDay || hasAny(r, ANOTHER_DAY_WORDS)) return rResult("another_day");
 
   // 6. Later today
-  if (prefs.dayOffset === 0 || hasAny(t, LATER_TODAY_WORDS)) return result("later_today");
+  if (rPrefs.dayOffset === 0 || hasAny(r, LATER_TODAY_WORDS)) return rResult("later_today");
 
   // 7. Only a time preference ("after 4", "evening") — don't guess the day:
   //    DocDelay will ask "today, or another day?"
-  if (prefs.timeOfDay || prefs.after || prefs.before) return result("time_without_day");
+  if (rPrefs.timeOfDay || rPrefs.after || rPrefs.before) return rResult("time_without_day");
 
   // 8. Nothing matched
   return result("unclear", { preferences: {} });

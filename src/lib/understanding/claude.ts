@@ -111,6 +111,26 @@ const TOOLS: (Anthropic.Tool & { name: AiToolName })[] = [
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
+    name: "check_another_doctor_slots",
+    description:
+      "The patient wants to see a different doctor today. Returns ONLY empty slots today with doctors the " +
+      "hospital has approved to cover (same specialty), up to 3 (A/B/C), each with the exact text to say " +
+      "(including the doctor's name). If there are none, it says so.",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "book_with_another_doctor",
+    description:
+      "Book the slot with another doctor that the patient chose (it must come from check_another_doctor_slots). " +
+      "The hospital's rules are checked again; it may be refused.",
+    input_schema: {
+      type: "object",
+      properties: { start_time: HHMM },
+      required: ["start_time"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "escalate_urgent",
     description:
       "The patient mentioned ANY health concern. Call this FIRST. Staff will call them now. Then reply with exactly the returned say_exactly text.",

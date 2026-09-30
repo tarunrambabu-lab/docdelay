@@ -16,10 +16,14 @@ export default function ChatBox({
   appointmentId,
   language,
   offers,
+  doctorNames = [],
+  anotherDoctorToday = false,
 }: {
   appointmentId: string;
   language: Language; // the patient's language: which example phrases to show
   offers: SlotOffer[]; // offers on screen right now (none = empty): one pick button each
+  doctorNames?: string[]; // one per offer: the other doctor's name, or "" (own doctor)
+  anotherDoctorToday?: boolean; // show "I'd like to see another doctor today"?
 }) {
   const [text, setText] = useState("");
   const [error, setError] = useState("");
@@ -37,7 +41,7 @@ export default function ChatBox({
     });
   };
 
-  const { replies, symptom } = DEMO_PHRASES[language];
+  const { replies, symptom, anotherDoctor } = DEMO_PHRASES[language];
 
   // A button that sends `send`; it shows `label` (and a small English meaning).
   // `tour` = the marker the demo tour points at.
@@ -79,8 +83,10 @@ export default function ChatBox({
         <p className="mb-2 text-sm font-medium text-slate-500">Try a reply (demo)</p>
         <div className="flex flex-wrap gap-2">
           {/* "A · Thu 1 Oct, 4:00 PM" — sends just "A" */}
-          {offerPicks(offers).map((pick) => phraseButton({ ...pick, tour: "offer-pick" }))}
+          {offerPicks(offers, doctorNames).map((pick) => phraseButton({ ...pick, tour: "offer-pick" }))}
           {replies.map(phrase)}
+          {/* Only when an approved doctor has a free slot for this patient */}
+          {anotherDoctorToday && phrase(anotherDoctor)}
         </div>
         <p className="mb-2 mt-3 text-xs font-medium text-slate-500">
           Example: patient mentions a symptom

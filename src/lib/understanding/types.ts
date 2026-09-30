@@ -17,6 +17,10 @@ export const INTENTS = [
   // A time but no day ("after 4") → ask "today, or another day?".
   // (Kept last so demos saved in visitors' cookies keep their meaning.)
   "time_without_day",
+  // See a different doctor of the same specialty today ("another doctor",
+  // "vera doctor", "doosre doctor", or "5"). Added after the others, for the
+  // same reason.
+  "another_doctor",
 ] as const;
 export type Intent = (typeof INTENTS)[number];
 

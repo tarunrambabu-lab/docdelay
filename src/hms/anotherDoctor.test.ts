@@ -311,12 +311,14 @@ describe("patient wording", () => {
   });
 });
 
-describe("chat mode is unchanged", () => {
+// (Chat mode got "another doctor" too, on 1 Oct 2026 — these two tests used to
+// check the old "Buttons only" guard. More chat tests: anotherDoctorChat.test.ts.)
+describe("chat mode", () => {
   afterEach(() => {
     steps = [];
   });
 
-  it("the chat opening never mentions option 5", async () => {
+  it("the chat opening mentions option 5 when a slot is free", async () => {
     await away("09:00", "12:00");
     const appt = (await getAppointment("appt-001"))!;
     const understanding = await interpretWithRules("hmm", {
@@ -325,15 +327,20 @@ describe("chat mode is unchanged", () => {
     });
     await sendChatMessage("appt-001", "hmm", understanding);
     const opening = (await getAppointment("appt-001"))!.chat![0].text;
-    expect(opening).toContain("Press 4 to speak with our front desk.");
-    expect(opening).not.toContain("5");
+    expect(opening).toMatch(
+      /Press 4 to speak with our front desk\. Press 5 to see another doctor from the same department today\.$/,
+    );
   });
 
-  it("the chat won't take over a patient who is choosing another doctor", async () => {
+  it("a patient who pressed 5 in Buttons can pick a time in chat", async () => {
     await away("09:00", "12:00");
     await recordCallResult("appt-001", "Wants another doctor today");
-    const understanding = await interpretWithRules("A", { language: "English", offers: [] });
-    expect(await sendChatMessage("appt-001", "A", understanding)).toBe(false);
-    expect((await getAppointment("appt-001"))!.doctorId).toBe(MEERA);
+    const offers = (await getAppointment("appt-001"))!.offers!;
+    const understanding = await interpretWithRules("A", { language: "English", offers });
+    expect(await sendChatMessage("appt-001", "A", understanding)).toBe(true);
+    const appt = (await getAppointment("appt-001"))!;
+    expect(appt.status).toBe("Rebooked – another doctor");
+    expect(appt.doctorId).toBe(KARTHIK);
+    expect(appt.startTime).toBe("09:30");
   });
 });

@@ -83,9 +83,10 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
     const d = doctors.find((x) => x.id === doctorId);
     return d ? doctorNameFor(d, language) : "";
   };
-  // Buttons only: can the current patient be offered "5 – Another doctor today"?
-  const anotherDoctorToday =
-    mode === "buttons" && current ? (await getAnotherDoctorOptions(current.id)).length > 0 : false;
+  // Can the current patient be offered "5 – Another doctor today" (Buttons and Chat)?
+  const anotherDoctorToday = current
+    ? (await getAnotherDoctorOptions(current.id)).length > 0
+    : false;
 
   // Did a patient just get a new time? Then tell them.
   const justAnswered = typeof answered === "string" ? await getAppointment(answered) : undefined;
@@ -229,17 +230,6 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
             </div>
           </div>
         </>
-      ) : mode === "chat" && current?.offersBecause === "another doctor" ? (
-        // ----- Chat mode, but this patient is choosing another doctor (Buttons only) -----
-        <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-          <p className="mb-3">
-            {current.patient.name} pressed “5 – Another doctor today” and is choosing a time. That
-            choice is only available in Buttons mode.
-          </p>
-          <Link href={`/calls/${id}`} className={`font-medium text-teal-700 hover:underline ${TAP}`}>
-            Continue in Buttons →
-          </Link>
-        </div>
       ) : mode === "chat" && current ? (
         // ----- Chat mode: talking to the current patient -----
         <>
@@ -261,6 +251,8 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
                 appointmentId={current.id}
                 language={current.patient.preferredLanguage}
                 offers={current.offers ?? []}
+                doctorNames={(current.offers ?? []).map((o) => nameFor(o.doctorId, "English"))}
+                anotherDoctorToday={anotherDoctorToday}
               />
               <p className="mt-4 text-xs leading-relaxed text-slate-500">
                 The chat goes on until an outcome is recorded: later today, another day, cancel, or

@@ -15,6 +15,9 @@ Ideas and known gaps to pick up later.
 
 These affect the AI chat only (laptop with an API key). The live site uses basic mode and isn't affected.
 
+- **AI can claim a booking that didn't happen (found 1 Oct 2026):** in a real-AI check, after its booking tool was refused (a bug, now fixed), the AI still replied "You're confirmed for … 9:30 AM" although nothing was booked. The same could happen with any refused booking. Idea: if an AI reply sounds like a confirmation ("confirmed", "booked", and Tamil/Hindi equivalents) but no outcome was recorded, don't use it — fall back to basic mode for that message.
+- **Real-AI check of "another doctor" for a Tamil-speaking patient:** the checks on 1 Oct reached English-speaking patients (plus one Hindi-speaking patient who was offered one slot, correctly, in Hindi). A Tamil patient's AI reply hasn't been seen yet (~$0.02).
+
 - **"Talk to a person" code check:** if basic mode recognises a request for a person, it wins over the AI. (Found in the AI test run: Tamil "aal kitta pesanum" wasn't understood by the AI and got "please say that again".)
 - **Tamil/Hindi "I'll wait" phrases in the AI instructions** (no code override). (Found in the AI test run: Tamil "naan wait panren" got a choice of 3 empty times today instead of the automatic next fair slot, unlike English and Hindi.)
 - **"No problem" phrases don't count as avoiding a day** in the AI day check (`dayGuard.ts`): today "No problem, Thursday after 4" skips the check because of the word "no".
@@ -130,6 +133,17 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Tour step 2 fix: the tour card itself doesn't change. During the tour, the "Mark doctor unavailable" pop-up is centred in the space above the card (the tour shares its height as `--tour-card-height`); if there's ever not enough room, the pop-up area scrolls.
 - Tour step 2 fix: on screens under 360 px wide (tour or not), the pop-up has slightly less padding and margin, so "09:00 AM" fits in the time boxes. Text stays 16 px so iPhones don't zoom in.
 - Browser checks use Playwright from ~/DocDelay-video; WebKit (Safari's engine) is installed in ~/DocDelay-video/.playwright-browsers (299 MB), outside the app repo. The check scripts aren't in the repo.
+- Another doctor in chat: "another doctor" is checked after health, talk-to-a-person and cancel, but before offer-picking and "later today" (so "doosra doctor" isn't "option B", and "a different doctor today" isn't "wait").
+- Another doctor in chat: "no another doctor" phrases ("I don't want another doctor", "vera doctor venaam", "doosra doctor nahi chahiye", and the same in Tamil/Hindi script) are removed before reading the rest of the message (after the health check). So "…I'll wait" means wait, and "doosra doctor nahi chahiye" is "unclear" (DocDelay asks again) instead of cancelling as before. A bare "no" in front doesn't count ("No, another doctor please" does ask for one).
+- Another doctor in chat: typing "5" means another doctor, like "1"–"4" already work.
+- Another doctor in chat: after "no other doctor is free today", the patient stays in the conversation (not handed to staff).
+- Another doctor in chat: "talk to a person" or "none of these" while looking at Dr. Karthik's times → staff note "Wanted another doctor today".
+- Another doctor in chat: one AI turn's offers are never a mix of doctors — the last check wins.
+- Another doctor in chat: the AI can book any time that is still free with an approved doctor under the same rules, whether it was offered in the same message or an earlier one (fixed after the real-AI check).
+- Another doctor in chat: the suggested-phrase button ("I'd like to see another doctor today"; Tamil "innaikku vera doctor paakanum"; Hindi "aaj doosre doctor se milna hai") shows only when a slot is free. The Tamil and Hindi phrases are NOT yet checked by a native speaker, unlike the other phrases.
+- Another doctor in chat: the Chat tab's "only available in Buttons mode" note is gone; a patient who pressed 5 in Buttons can finish in Chat.
+- Another doctor in chat: an AI turn uses the demo as it was when the message arrived; like the existing book tool, it doesn't expect changes from another browser tab during that one message.
+- Native-speaker review list: add the new Tamil/Hindi "another doctor" words and "no" phrases (`src/lib/understanding/rules.ts`) and the new "no other doctor is free today" line (`src/lib/chatReplies.ts`).
 
 ## Done
 

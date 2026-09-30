@@ -26,7 +26,7 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | 6: chat mode | Done. Live site = basic word-list chat. Laptop = real AI (Claude Haiku 4.5) using my API key in `.env.local` |
 | Safety: wide health-keyword check runs first; "two unclear replies" counted in code | Done |
 | Alarm-fatigue fix ("tired of waiting", "heavy traffic", "work pressure", remove "doctor said") | Done |
-| Automated tests (npm test, 281 tests) | Done |
+| Automated tests (npm test, 319 tests) | Done |
 | Tamil/Hindi health-word fix (word beginnings, lookalike guards) | Done, live. Needs a second native-speaker and a clinician review before real patients |
 | 7: guided demo tour, suggested chat phrases, phone-width polish | Done, live (29 Sep) |
 | AI weekday fix + day check in code | Done. 4 AI items in BACKLOG under "Must do before real calls or laptop demos" |
@@ -44,7 +44,7 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | Retake README screenshots (4 doctors, demo clock badge, button 5) | Next |
 | Optional: rebuild the video without the send-time blanking (not needed any more: "Sent" times now show the demo time, 9:00 AM) | Next (optional) |
 | Add the video to the README and portfolio | Next |
-| Add Another doctor today to chat (basic and AI mode): the chat opening mentions it when a slot is free; a new AI tool returns only hospital-approved, same-specialty empty slots; English, Tamil and Hindi words for basic mode; health check still runs first. All other chat rules stay frozen, proven by the existing chat tests passing unchanged. | Next |
+| Another doctor today in chat (basic and AI mode), with a suggested-phrase button | Done (1 Oct) — real-AI check cost $0.0907 |
 | After Another doctor in chat is done: plan the WhatsApp channel (alongside calls and texts, not replacing them). Open decisions are in the FRD backlog. | Next |
 | Phase 2: clinic interviews | After README/portfolio |
 | Real calls to my own phone | After the 4 AI backlog items |
@@ -58,7 +58,7 @@ Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinic
 - Later today: empty slots first, then push, max 45 minutes for any unaffected patient, nothing after 7 PM.
 - A patient's chosen time never pushes anyone; chosen times only up to 5 PM.
 - Other days: empty slots only, one offer per day; bookings on other days are never moved.
-- Another doctor today (Buttons only; chat unchanged): only doctors of the same specialty that the hospital approved to cover; today, empty slots only, at or after the original time, ending by 5 PM; up to 3, earliest first; never pushes their patients; option hidden if none. Slot taken and none left → back to the 1–4 menu with "Sorry, that time was just taken". No fee mention.
+- Another doctor today (Buttons and chat, basic and AI mode; the rest of the chat rules unchanged): only doctors of the same specialty that the hospital approved to cover; today, empty slots only, at or after the original time, ending by 5 PM; up to 3, earliest first; never pushes their patients; option hidden if none. Slot taken and none left → back to the 1–4 menu with "Sorry, that time was just taken". No fee mention. In chat: the opening adds "Press 5…" only when a slot is free; "no" phrases ("I don't want another doctor", "vera doctor venaam") never ask for one; the AI only offers what its another-doctor tool returns, and the HMS re-checks every booking.
 - Any health mention → URGENT, straight to staff. The app never judges severity. Escalation gives no booking advantage.
 - One text per patient, sent only when staff approve.
 - Chat rules are frozen for the MVP; new edge cases go to BACKLOG.md.
