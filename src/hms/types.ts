@@ -167,6 +167,11 @@ export interface Appointment {
   // An update ("Reply 1 to confirm, 2 to change") was sent: until the patient
   // replies 2, a bare "1" means "confirmed" — NOT "1 – later today".
   awaitingUpdateReply?: boolean;
+  // Pushed patients only: the heads-up ("Reply 1 if that's fine, 2 to cancel,
+  // 3 to talk to a person") was sent, so their replies are read against it.
+  headsUpSent?: boolean;
+  // …and DocDelay has asked "Reply YES to cancel" and is waiting for the answer.
+  headsUpCancelAsked?: boolean;
   // The status before a WhatsApp health mention made it URGENT (when it wasn't
   // "Affected – needs contact"), so a false alarm puts it back.
   statusBeforeUrgent?: AppointmentStatus;
@@ -187,7 +192,8 @@ export interface PendingUpdate {
   reason: UnavailabilityReason; // why the doctor was unavailable (for the wording)
   updatedAt: string; // ISO date-time of the latest change
   // A patient who wasn't affected but was pushed back to make room: they get a
-  // short "no need to reply" heads-up instead of "Reply 1 to confirm, 2 to change".
+  // short heads-up ("Reply 1 if that's fine, 2 to cancel, 3 to talk to a person")
+  // instead of "Reply 1 to confirm, 2 to change".
   headsUp?: boolean;
 }
 
@@ -204,7 +210,7 @@ export interface SmsMessage {
   // WhatsApp was tried first and failed, so this went by SMS instead.
   // (A real system would wait 15 minutes; the demo falls back straight away.)
   whatsappFailed?: boolean;
-  headsUp?: boolean; // the "no need to reply" message for a pushed patient
+  headsUp?: boolean; // the heads-up for a pushed patient (replies: 1 fine, 2 cancel, 3 person)
   sentAt: string; // ISO date-time
   appointmentId: string;
   toName: string;

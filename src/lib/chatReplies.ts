@@ -190,13 +190,20 @@ export function slotTakenPrefix(language: Language): string {
 // The ONLY reply a patient gets on WhatsApp when they mention a health concern
 // but have sent STOP, or never agreed to WhatsApp. Nobody is flagged URGENT in
 // that case, so the line must stand on its own.
-// English only for now — Tamil and Hindi versions are in BACKLOG.md.
-// ⚠️ Not checked by a clinician yet (BACKLOG.md).
-export function emergencyOnlyReply(): string {
-  return (
-    "If this is an emergency or you're worried, please call 108 or go to the nearest " +
-    "emergency department now. Don't wait for this appointment."
-  );
+// ⚠️ Not checked by a clinician yet; Tamil and Hindi need native-speaker
+// review (BACKLOG.md).
+export function emergencyOnlyReply(language: Language): string {
+  return {
+    English:
+      "If this is an emergency or you're worried, please call 108 or go to the nearest " +
+      "emergency department now. Don't wait for this appointment.",
+    Tamil:
+      "இது அவசரநிலை என்றால் அல்லது உங்களுக்குக் கவலையாக இருந்தால், தயவுசெய்து இப்போதே 108 ஐ அழைக்கவும் " +
+      "அல்லது அருகிலுள்ள அவசர சிகிச்சைப் பிரிவுக்குச் செல்லவும். இந்தச் சந்திப்புக்காகக் காத்திருக்க வேண்டாம்.",
+    Hindi:
+      "अगर यह इमरजेंसी है या आप चिंतित हैं, तो कृपया अभी 108 पर कॉल करें या नज़दीकी इमरजेंसी विभाग में जाएँ। " +
+      "इस अपॉइंटमेंट का इंतज़ार न करें।",
+  }[language];
 }
 
 // Sent when a patient replies "2" (change) to an update message: the same
@@ -213,5 +220,37 @@ export function changeMenuReply(language: Language): string {
     Hindi:
       "क्या आप: 1) आज बाद के किसी समय का इंतज़ार करना चाहेंगे, 2) किसी और दिन आना चाहेंगे, या 3) अपॉइंटमेंट रद्द करना चाहेंगे? " +
       "हमारे फ्रंट डेस्क से बात करने के लिए 4 भेजें।",
+  }[language];
+}
+
+// ---------- Replies to the heads-up (pushed patients) ----------
+// (Tamil and Hindi need native-speaker review.)
+
+// After "1" / "ok": nothing changed — repeat their time. `time` is "HH:MM".
+export function headsUpFineReply(language: Language, time: string): string {
+  const t = formatTimeFor(time, language);
+  return {
+    English: `Thank you. Your appointment is around ${t} today.`,
+    Tamil: `நன்றி. உங்கள் சந்திப்பு இன்று சுமார் ${t} மணிக்கு.`,
+    Hindi: `धन्यवाद। आपकी अपॉइंटमेंट आज लगभग ${t} पर है।`,
+  }[language];
+}
+
+// After "2" or cancel wording: nothing is cancelled until the patient says YES.
+export function headsUpCancelQuestion(language: Language, time: string): string {
+  const t = formatTimeFor(time, language);
+  return {
+    English: `Do you want to cancel your ${t} appointment? Reply YES to cancel.`,
+    Tamil: `உங்கள் ${t} சந்திப்பை ரத்து செய்ய விரும்புகிறீர்களா? ரத்து செய்ய YES என பதிலளிக்கவும்.`,
+    Hindi: `क्या आप अपनी ${t} की अपॉइंटमेंट रद्द करना चाहते हैं? रद्द करने के लिए YES भेजें।`,
+  }[language];
+}
+
+// After "3", asking for another day, or anything DocDelay can't read.
+export function headsUpStaffReply(language: Language): string {
+  return {
+    English: "Thanks, our front desk will call you shortly.",
+    Tamil: `நன்றி. ${staffWillCallReply("Tamil")}`,
+    Hindi: `धन्यवाद। ${staffWillCallReply("Hindi")}`,
   }[language];
 }

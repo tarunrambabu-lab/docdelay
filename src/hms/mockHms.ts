@@ -91,6 +91,9 @@ import {
   doctorBackIntro,
   doctorBackNoneTodayPrefix,
   emergencyOnlyReply,
+  headsUpCancelQuestion,
+  headsUpFineReply,
+  headsUpStaffReply,
   noFreeTodayPrefix,
   noMatchPrefix,
   noOtherDoctorFreeReply,
@@ -103,6 +106,7 @@ import { realTimestamp } from "@/lib/clock";
 import { describeUnderstanding } from "@/lib/understanding/describe";
 import { doctorNameFor } from "@/lib/names";
 import { interpretWithRules, mentionsHealth } from "@/lib/understanding";
+import { readHeadsUpReply } from "@/lib/understanding/headsUpReply";
 import type { Preferences, Understanding } from "@/lib/understanding/types";
 import { headsUpSms, timeChangedSms } from "@/lib/smsText";
 import {
@@ -542,8 +546,8 @@ function rescheduleLaterToday(state: HmsState, appt: Appointment, at: number): s
       // Only plain bookings become "Time moved". Someone already
       // "Rescheduled – later today" keeps that status (their new time still shows).
       if (other.status === "Scheduled") other.status = "Time moved";
-      // A patient who wasn't affected gets a "no need to reply" heads-up
-      // instead of the "Reply 1 to confirm, 2 to change" update.
+      // A patient who wasn't affected gets the short heads-up ("Reply 1 if
+      // that's fine, 2 to cancel, 3 to talk to a person") instead of the "Reply 1 to confirm, 2 to change" update.
       if (!other.unavailabilityId) {
         state.pendingUpdates.find((u) => u.appointmentId === other.id)!.headsUp = true;
       }
@@ -768,7 +772,8 @@ function applySend(state: HmsState, step: Extract<DemoStep, { kind: "send" }>): 
     });
     if (onWhatsApp) appt.whatsapp = [...(appt.whatsapp ?? []), { at: now, from: "docdelay", text }];
     // From now on a bare "1" on WhatsApp means "confirmed" (see applyWhatsApp).
-    if (!update.headsUp) appt.awaitingUpdateReply = true;
+    if (update.headsUp) appt.headsUpSent = true;
+    else appt.awaitingUpdateReply = true;
   }
 
   const sent = state.pendingUpdates.length;
@@ -1379,6 +1384,9 @@ function openingLine(state: HmsState, appt: Appointment, unavailability: Unavail
 //     where they are. At most MAX_ANSWER_CHANGES changes; one more attempt →
 //     "Needs staff call – Keeps changing", and nothing changes.
 //   - After an update was sent, "1" = confirmed and "2" = show the choices.
+//   - PUSHED patients (time moved, not affected) answer their heads-up:
+//     1 / "ok" = fine; 2 / cancel wording = "Reply YES to cancel" (cancelled
+//     only on YES); 3, another day or anything else = front desk, booking kept.
 // WhatsApp uses the rule-based understanding only (never the AI).
 
 export const MAX_ANSWER_CHANGES = 2;
@@ -1403,7 +1411,10 @@ export type WhatsAppResult =
   | "answered" // the patient's first answer is finished (or handed to staff)
   | "changed" // a finished answer was changed
   | "same slot" // they picked what they already have — not counted as a change
-  | "staff" // handed to staff (asked for a person, or no free slot)
+  | "staff" // handed to staff (asked for a person, no free slot, or a heads-up reply)
+  | "fine" // heads-up: "1" / "ok" — nothing changed
+  | "cancel asked" // heads-up: asked "Reply YES to cancel" — nothing cancelled yet
+  | "cancelled" // heads-up: cancelled after YES
   | "keeps changing"; // one change too many → staff call, nothing changed
 
 // A WhatsApp message from a patient about one appointment. Works out what it
@@ -1487,7 +1498,7 @@ function applyWhatsApp(
     if (!whatsAppOn) {
       // The exception: only the fixed emergency line. No URGENT, no staff note.
       hear("health concern → emergency line only (WhatsApp is off for this patient)");
-      say(emergencyOnlyReply());
+      say(emergencyOnlyReply(language));
       return "emergency line";
     }
     hear(describeUnderstanding({ intent: "health_concern", preferences: {} }));
@@ -1501,6 +1512,7 @@ function applyWhatsApp(
     delete appt.offersBecause;
     delete appt.change;
     delete appt.whatsappStarted;
+    delete appt.headsUpCancelAsked;
     say(urgentReply(language));
     log(undefined, "health concern mentioned → URGENT staff call");
     return "urgent";
@@ -1520,8 +1532,56 @@ function applyWhatsApp(
     return "stopped";
   }
 
-  // A pushed patient (not affected) has nothing to answer.
-  if (!appt.unavailabilityId) return "ignored";
+  // A PUSHED patient (time moved, not affected): their replies are read
+  // against the heads-up they were sent — never against the main menu.
+  if (!appt.unavailabilityId) {
+    if (!appt.headsUpSent) return "ignored"; // nothing was sent to reply to
+    if (appt.status === "Cancelled") {
+      hear("already cancelled");
+      say(cancelledReply(language));
+      return "replied";
+    }
+    if (appt.status !== "Time moved") {
+      // Already with staff.
+      hear(describeUnderstanding(u));
+      say(staffWillCallReply(language));
+      return "replied";
+    }
+    const reading = readHeadsUpReply(step.text, u.intent === "cancel");
+    const wasAsked = appt.headsUpCancelAsked === true;
+    delete appt.headsUpCancelAsked; // the question is only open for ONE reply
+
+    // Cancelled ONLY by "YES" straight after the question. The slot is freed
+    // (cancelled appointments don't hold one) and nobody else moves.
+    if (wasAsked && reading === "yes") {
+      hear("YES → cancel");
+      appt.status = "Cancelled";
+      state.pendingUpdates = state.pendingUpdates.filter((x) => x.appointmentId !== appt.id);
+      say(cancelledReply(language));
+      log("Cancelled", "cancelled after the heads-up (confirmed with YES)");
+      return "cancelled";
+    }
+    if (reading === "cancel") {
+      hear("wants to cancel — asked to confirm with YES");
+      appt.headsUpCancelAsked = true;
+      say(headsUpCancelQuestion(language, appt.startTime));
+      return "cancel asked";
+    }
+    // "1" / "ok" — or "no" to the cancel question: the booking stays.
+    if (reading === "fine" || reading === "yes" || (wasAsked && reading === "no")) {
+      hear(wasAsked ? "not cancelled — booking kept" : "fine with the new time");
+      say(headsUpFineReply(language, appt.startTime));
+      return "fine";
+    }
+    // "3", another day, "don't cancel", or anything else: the front desk
+    // calls. The booking stays exactly as it is.
+    hear(describeUnderstanding(u));
+    appt.status = "Needs staff call";
+    appt.note = "Replied to heads-up";
+    say(headsUpStaffReply(language));
+    log("Needs staff call", "replied to the heads-up — booking kept");
+    return "staff";
+  }
 
   // 4. Not answered yet: the same conversation as a chat on a call.
   if (!ANSWERED.includes(appt.status)) {

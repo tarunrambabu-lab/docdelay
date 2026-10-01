@@ -18,10 +18,15 @@ Part 1 (data and booking rules, 2 Oct 2026) is done. Still open:
 - **After answering, unclear WhatsApp messages never reach staff.** "ok thanks" and anything else DocDelay can't read only gets the patient's booking repeated: it isn't counted, and the "two unclear replies → staff call" rule doesn't apply. Revisit: a patient could be asking for help in words DocDelay doesn't know.
 - **Voice notes and photos** come in Part 2. Part 1 only handles typed text.
 - **The STOP / not-opted-in health exception is not clinician-checked.** A health mention from a patient who sent STOP, or isn't "WhatsApp OK", gets only the fixed line ("If this is an emergency or you're worried, please call 108…") — no URGENT, no staff note. Revisit in Phase 2 with a clinician.
-- **That emergency line is in English only.** No Tamil or Hindi version of this exact line existed, so Tamil and Hindi patients get it in English. Add Tamil and Hindi versions (native-speaker and clinician checked) in `emergencyOnlyReply` (`src/lib/chatReplies.ts`).
-- **Native-speaker review list:** the new Tamil/Hindi heads-up for pushed patients (`headsUpSms` in `src/lib/smsText.ts`) and the choices shown after "2" (`changeMenuReply` in `src/lib/chatReplies.ts`).
+- **Native-speaker review list (all new Tamil/Hindi wording, written for the demo, not checked):** the emergency line (`emergencyOnlyReply`), the choices shown after "2" (`changeMenuReply`), and the heads-up replies (`headsUpFineReply`, `headsUpCancelQuestion`, `headsUpStaffReply`) in `src/lib/chatReplies.ts`; the heads-up itself (`headsUpSms` in `src/lib/smsText.ts`); and the yes / no / fine / cancel / "don't cancel" word lists in `src/lib/understanding/headsUpReply.ts`.
+- **Replies by SMS aren't read.** DocDelay has no way to receive a text-message reply yet. A patient who gets the heads-up ("Reply 1 … 2 to cancel, 3 …") or an update ("Reply 1 to confirm, 2 to change") by SMS — not opted in, STOP, or "WhatsApp fails" — can't answer it. Decide before real use: read SMS replies, or change the SMS wording to "call the front desk".
 - **Screens (Part 2):** the call screen should use `getCallQueue`; the Messages page should show each message's channel ("WhatsApp", "SMS", "WhatsApp failed → SMS") — today it lists them all the same way.
 - **No "START"** to turn WhatsApp back on after STOP.
+
+## Next feature after WhatsApp: waiting check
+
+- **Pushed patients asking for another day** go to staff for now ("Needs staff call – Replied to heads-up", booking kept). Decide self-service rebooking for them then.
+- **The dashboard must show both statuses** when a patient needs a staff call but still holds a slot, e.g. "Needs staff call · holding 2:15 PM" (do this in Part 2).
 
 ## Must do before real calls or laptop demos
 
@@ -178,7 +183,14 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - WhatsApp updates: "1" keeps meaning "confirmed" until the patient replies "2" or starts a change; the reply to "1" repeats their booking ("Thank you. Your new time is …").
 - WhatsApp updates: a WhatsApp update is also added to the patient's WhatsApp conversation.
 - Heads-up for pushed patients: "up to N minutes later" is the total delay since their first booked time; a pushed patient who WAS affected (already rebooked, then pushed) still gets the normal "Reply 1 / 2" update.
-- Heads-up: a pushed patient's WhatsApp replies are ignored (the message says no reply is needed), except a health mention.
+- Heads-up: the message starts with the hospital and doctor name ("Sunrise …: your appointment with Dr. … may start up to …"), like the other updates.
+- Heads-up replies: the app had no Tamil/Hindi "yes" words, so a short list was added (`src/lib/understanding/headsUpReply.ts`): yes / aam / aama / aamam / haan / han / haa / ji haan (and Tamil/Hindi script). The question itself says "Reply YES" in every language.
+- Heads-up replies: "fine" = 1, ok, okay, fine, no problem, sari, seri, paravailla, theek hai (whole message only). A "yes" with no question open also counts as "fine".
+- Heads-up replies: the "YES to cancel" question is open for ONE reply only; "no" (or "don't cancel") to it gets the "your appointment is around …" reply; anything else is read as a normal heads-up reply.
+- Heads-up replies: "cancel" next to any "no" word (not, don't, never, no, venaam, vendam, mat, nahi …) is never read as cancelling — even "I will not come, cancel it" goes to the front desk instead (on the safe side).
+- Heads-up replies: a reply only counts once the heads-up was sent; before that it's ignored. After cancelling, later messages get the cancellation line again; once with staff, "Our front desk will call you shortly".
+- Heads-up replies: cancelling removes an unsent update for that patient; no extra cancellation message is sent besides the WhatsApp reply.
+- Heads-up reply reader lives in its own new file, so the frozen chat keyword file (`rules.ts`) is untouched.
 
 ## Done
 

@@ -43,9 +43,18 @@ import {
   sendWhatsAppMessage,
   sendPendingUpdates,
 } from "@/hms/mockHms";
-import type { Patient } from "@/hms/types";
+import type { Language, Patient } from "@/hms/types";
 import { decodeStep, encodeStep } from "@/hms/visitorState";
-import { changeMenuReply, emergencyOnlyReply, urgentReply } from "@/lib/chatReplies";
+import {
+  cancelledReply,
+  changeMenuReply,
+  emergencyOnlyReply,
+  headsUpCancelQuestion,
+  headsUpFineReply,
+  headsUpStaffReply,
+  urgentReply,
+} from "@/lib/chatReplies";
+import { readHeadsUpReply } from "@/lib/understanding/headsUpReply";
 import { laterTodayReply } from "@/lib/callScript";
 
 const MEERA = "doc-cardio";
@@ -472,8 +481,8 @@ describe("health check on WhatsApp", () => {
     const nikhil = await appt(NIKHIL);
     expect(nikhil.status).toBe("Affected – needs contact");
     expect(nikhil.note).toBeUndefined();
-    expect(nikhil.whatsapp!.at(-1)!.text).toBe(emergencyOnlyReply());
-    expect(emergencyOnlyReply()).toBe(
+    expect(nikhil.whatsapp!.at(-1)!.text).toBe(emergencyOnlyReply("English"));
+    expect(emergencyOnlyReply("English")).toBe(
       "If this is an emergency or you're worried, please call 108 or go to the nearest " +
         "emergency department now. Don't wait for this appointment.",
     );
@@ -488,7 +497,11 @@ describe("health check on WhatsApp", () => {
     const ganesh = await appt(GANESH);
     expect(ganesh.status).toBe("Affected – needs contact");
     expect(ganesh.note).toBeUndefined();
-    expect(ganesh.whatsapp!.at(-1)!.text).toBe(emergencyOnlyReply());
+    // In the patient's own language (Ganesh: Tamil), and not the English line.
+    expect(ganesh.whatsapp!.at(-1)!.text).toBe(emergencyOnlyReply("Tamil"));
+    expect(emergencyOnlyReply("Tamil")).toContain("108");
+    expect(emergencyOnlyReply("Hindi")).toContain("108");
+    expect(new Set(["English", "Tamil", "Hindi"].map((l) => emergencyOnlyReply(l as Language))).size).toBe(3);
     expect((await getStaffCallList()).map((a) => a.id)).not.toContain(GANESH);
     expect(await whatsapp(GANESH, "cancel")).toBe("ignored");
     expect((await appt(GANESH)).status).toBe("Affected – needs contact");
@@ -568,7 +581,7 @@ describe("updates: WhatsApp or SMS, never both", () => {
     expect(await sendPendingUpdates()).toBe(0);
   });
 
-  it("pushed patients get a short 'no need to reply' heads-up, not 'Reply 1/2'", async () => {
+  it("pushed patients get the short heads-up, not the 'Reply 1 to confirm, 2 to change' update", async () => {
     await fillTodayThenPushRevathiIn();
     await sendPendingUpdates();
     const messages = await getMessages();
@@ -579,7 +592,7 @@ describe("updates: WhatsApp or SMS, never both", () => {
     expect(to("appt-011")[0].headsUp).toBe(true);
     expect(to("appt-011")[0].channel).toBe("WhatsApp");
     expect(to("appt-011")[0].text).toContain("15 ");
-    expect(to("appt-011")[0].text).toContain("जवाब देने की ज़रूरत नहीं है"); // "no need to reply"
+    expect(to("appt-011")[0].text).toContain("रद्द करने के लिए 2"); // "2 to cancel"
     expect(to("appt-011")[0].text).not.toContain("पुष्टि"); // no "reply 1 to confirm…"
 
     // appt-012 (English, not on WhatsApp): by SMS.
@@ -587,7 +600,8 @@ describe("updates: WhatsApp or SMS, never both", () => {
     expect(to("appt-012")[0].channel).toBe("SMS");
     expect(to("appt-012")[0].text).toBe(
       "Sunrise Multispeciality Hospital: your appointment with Dr. Meera Krishnan may start " +
-        "up to 15 minutes later, around 12:30 PM. No need to reply.",
+        "up to 15 minutes later, around 12:30 PM. Reply 1 if that's fine, 2 to cancel, " +
+        "3 to talk to a person.",
     );
 
     // appt-013 (WhatsApp fails): SMS fallback.
@@ -598,10 +612,6 @@ describe("updates: WhatsApp or SMS, never both", () => {
     expect(to(REVATHI)[0].headsUp).toBeUndefined();
     expect(to(NIKHIL)[0].text).toContain("Reply 1 to confirm, 2 to change");
 
-    // A pushed patient's reply changes nothing (unless it's a health concern).
-    expect(await whatsapp("appt-011", "1")).toBe("ignored");
-    expect((await appt("appt-011")).startTime).toBe("12:15");
-    expect(await whatsapp("appt-011", "seene mein dard hai")).toBe("urgent");
   });
 });
 
@@ -674,5 +684,187 @@ describe("saving a WhatsApp message", () => {
     const first = [await appt(NIKHIL), await appt(KIRAN)];
     steps = steps.map((s) => decodeStep(encodeStep(s))!); // as if read back from the cookie
     expect([await appt(NIKHIL), await appt(KIRAN)]).toEqual(first);
+  });
+});
+
+// ---------- Pushed patients answering their heads-up ----------
+// "… Reply 1 if that's fine, 2 to cancel, 3 to talk to a person."
+
+describe("pushed patients: replies to the heads-up", () => {
+  const SNEHA = "appt-011"; // Hindi, WhatsApp OK — not affected, pushed 12:00 → 12:15
+  const PRAKASH = "appt-013"; // Tamil, WhatsApp OK (fails) — pushed 12:45 → 1:00
+  const IMRAN = "appt-012"; // English, NOT on WhatsApp — pushed 12:15 → 12:30
+
+  // Today is full, Revathi is pushed in, and staff press "Send updates".
+  async function pushedAndToldSo() {
+    await fillTodayThenPushRevathiIn();
+    await sendPendingUpdates();
+    expect((await appt(SNEHA)).status).toBe("Time moved");
+  }
+  const everyone = async () => (await meeraToday()).map((a) => [a.id, a.startTime]);
+
+  it("'1' (or 'ok') changes nothing and repeats their time", async () => {
+    await pushedAndToldSo();
+    const before = await everyone();
+    for (const text of ["1", "ok", "OK.", "theek hai"]) {
+      expect(await whatsapp(SNEHA, text)).toBe("fine");
+    }
+    const sneha = await appt(SNEHA);
+    expect(sneha.status).toBe("Time moved");
+    expect(sneha.startTime).toBe("12:15");
+    expect(sneha.whatsapp!.at(-1)!.text).toBe(headsUpFineReply("Hindi", "12:15"));
+    expect(await everyone()).toEqual(before);
+    expect(await getPendingUpdates()).toHaveLength(0);
+  });
+
+  it("cancel needs YES: '2' only asks the question", async () => {
+    await pushedAndToldSo();
+    expect(await whatsapp(SNEHA, "2")).toBe("cancel asked");
+    let sneha = await appt(SNEHA);
+    expect(sneha.status).toBe("Time moved"); // NOT cancelled yet
+    expect(sneha.whatsapp!.at(-1)!.text).toBe(headsUpCancelQuestion("Hindi", "12:15"));
+    expect(headsUpCancelQuestion("English", "12:15")).toBe(
+      "Do you want to cancel your 12:15 PM appointment? Reply YES to cancel.",
+    );
+
+    expect(await whatsapp(SNEHA, "yes")).toBe("cancelled"); // any letter case
+    sneha = await appt(SNEHA);
+    expect(sneha.status).toBe("Cancelled");
+    expect(sneha.whatsapp!.at(-1)!.text).toBe(cancelledReply("Hindi")); // the fixed wording
+    expect(sneha.callLog!.at(-1)!.channel).toBe("WhatsApp");
+  });
+
+  it("cancel wording in each language asks the question; YES words cancel", async () => {
+    for (const [text, yes] of [
+      ["please cancel", "YES"],
+      ["I can't come", "Yes"],
+      ["cancel kar do", "haan"],
+      ["varamudiyadhu", "aama"],
+    ]) {
+      steps = [];
+      await pushedAndToldSo();
+      expect(await whatsapp(SNEHA, text), text).toBe("cancel asked");
+      expect((await appt(SNEHA)).status, text).toBe("Time moved");
+      expect(await whatsapp(SNEHA, yes), yes).toBe("cancelled");
+      expect((await appt(SNEHA)).status, yes).toBe("Cancelled");
+    }
+  });
+
+  it("anything other than YES after the question keeps the booking", async () => {
+    for (const reply of ["no", "nahi", "1", "ok", "maybe later", "don't cancel", "2 2"]) {
+      steps = [];
+      await pushedAndToldSo();
+      await whatsapp(SNEHA, "2");
+      await whatsapp(SNEHA, reply);
+      const sneha = await appt(SNEHA);
+      expect(sneha.status, reply).not.toBe("Cancelled");
+      expect(sneha.startTime, reply).toBe("12:15");
+      expect((await timesToday()).includes("12:15"), reply).toBe(true);
+    }
+    // And YES only counts straight after the question — not later, not before.
+    steps = [];
+    await pushedAndToldSo();
+    expect(await whatsapp(SNEHA, "yes")).toBe("fine"); // no question was asked
+    await whatsapp(SNEHA, "2");
+    await whatsapp(SNEHA, "no");
+    expect(await whatsapp(SNEHA, "yes")).toBe("fine"); // the question is closed
+    expect((await appt(SNEHA)).status).toBe("Time moved");
+  });
+
+  it("\"don't cancel\" and \"cancel venaam\" never lead to a cancellation", async () => {
+    for (const text of [
+      "don't cancel",
+      "Do not cancel my appointment",
+      "please dont cancel",
+      "cancel venaam",
+      "cancel panna vendam",
+      "cancel mat karo",
+      "cancel nahi karna",
+    ]) {
+      expect(readHeadsUpReply(text, true), text).toBe("no"); // never "cancel"
+      steps = [];
+      await pushedAndToldSo();
+      expect(await whatsapp(SNEHA, text), text).not.toBe("cancel asked");
+      await whatsapp(SNEHA, "yes"); // even a stray "yes" afterwards cancels nothing
+      const sneha = await appt(SNEHA);
+      expect(sneha.status, text).not.toBe("Cancelled");
+      expect(sneha.startTime, text).toBe("12:15");
+    }
+  });
+
+  it("cancelling frees the slot and moves nobody", async () => {
+    await pushedAndToldSo();
+    const before = (await everyone()).filter(([id]) => id !== SNEHA);
+    await whatsapp(SNEHA, "2");
+    expect(await whatsapp(SNEHA, "YES")).toBe("cancelled");
+
+    expect(await everyone()).toEqual(before); // nobody moved back (or anywhere)
+    expect(await timesToday()).not.toContain("12:15"); // the slot is empty…
+    expect(await getPendingUpdates()).toHaveLength(0);
+    await recordCallResult(DIVYA, "Wants later today"); // …so the next patient gets it,
+    expect((await appt(DIVYA)).startTime).toBe("12:15"); // without anyone being pushed
+    expect((await everyone()).filter(([id]) => id !== DIVYA)).toEqual(
+      before.filter(([id]) => id !== DIVYA),
+    );
+  });
+
+  it("'3' and 'another day' go to staff, with the booking kept", async () => {
+    for (const text of ["3", "another day please", "kal aa sakti hoon?", "what?"]) {
+      steps = [];
+      await pushedAndToldSo();
+      const before = await everyone();
+      expect(await whatsapp(SNEHA, text), text).toBe("staff");
+      const sneha = await appt(SNEHA);
+      expect(sneha.status, text).toBe("Needs staff call");
+      expect(sneha.note, text).toBe("Replied to heads-up");
+      expect(sneha.startTime, text).toBe("12:15");
+      expect(sneha.offers, text).toBeUndefined(); // no self-service offers
+      expect(sneha.whatsapp!.at(-1)!.text, text).toBe(headsUpStaffReply("Hindi"));
+      expect(await everyone(), text).toEqual(before); // still holds the slot
+      expect((await getStaffCallList()).map((a) => a.id)).toContain(SNEHA);
+    }
+    expect(headsUpStaffReply("English")).toBe("Thanks, our front desk will call you shortly.");
+  });
+
+  it("the heads-up's 1 / 2 / 3 are never read as the main menu", async () => {
+    await pushedAndToldSo();
+    const before = await everyone();
+    // Main menu: 1 = later today (would rebook), 2 = another day (offers), 3 = cancel.
+    expect(await whatsapp(SNEHA, "1")).toBe("fine");
+    expect(await whatsapp(SNEHA, "2")).toBe("cancel asked");
+    let sneha = await appt(SNEHA);
+    expect(sneha.offers).toBeUndefined();
+    expect(sneha.change).toBeUndefined();
+    expect(sneha.startTime).toBe("12:15");
+    expect(await whatsapp(SNEHA, "3")).toBe("staff"); // NOT the menu's "cancel"
+    sneha = await appt(SNEHA);
+    expect(sneha.status).toBe("Needs staff call");
+    expect(sneha.startTime).toBe("12:15");
+    expect(sneha.answerChanges ?? 0).toBe(0);
+    expect(await everyone()).toEqual(before);
+  });
+
+  it("health mentions follow the usual rules", async () => {
+    await pushedAndToldSo();
+    // Opted in → URGENT (and a false alarm puts "Time moved" back).
+    expect(await whatsapp(SNEHA, "seene mein dard hai")).toBe("urgent");
+    expect((await appt(SNEHA)).status).toBe("URGENT – staff call now");
+    await markFalseAlarm(SNEHA);
+    expect((await appt(SNEHA)).status).toBe("Time moved");
+    // Not opted in → only the emergency line.
+    expect(await whatsapp(IMRAN, "I have chest pain")).toBe("emergency line");
+    expect((await appt(IMRAN)).status).toBe("Time moved");
+    expect(await whatsapp(IMRAN, "2")).toBe("ignored");
+    // After STOP → only the emergency line, and no cancelling by WhatsApp.
+    expect(await whatsapp(PRAKASH, "STOP")).toBe("stopped");
+    expect(await whatsapp(PRAKASH, "2")).toBe("ignored");
+    expect(await whatsapp(PRAKASH, "nenju vali")).toBe("emergency line");
+    expect((await appt(PRAKASH)).status).toBe("Time moved");
+  });
+
+  it("before the heads-up is sent, there is nothing to reply to", async () => {
+    await fillTodayThenPushRevathiIn(); // pushed, but staff haven't pressed "Send updates"
+    expect(await whatsapp(SNEHA, "2")).toBe("ignored");
+    expect((await appt(SNEHA)).status).toBe("Time moved");
   });
 });

@@ -99,7 +99,8 @@ function anotherDoctorSms(
 }
 
 // The short heads-up for a patient who was NOT affected but whose appointment
-// was pushed back to make room. Nothing to answer, so it says "No need to reply".
+// was pushed back to make room. Its replies (1 / 2 / 3) are read against THIS
+// message, not the main menu (see lib/understanding/headsUpReply.ts).
 // (Tamil and Hindi need native-speaker review — see note at the top.)
 export function headsUpSms(d: {
   language: Language;
@@ -112,12 +113,15 @@ export function headsUpSms(d: {
   return {
     English:
       `${d.hospitalName}: your appointment with ${d.doctorName} may start up to ` +
-      `${d.minutesLater} minutes later, around ${newTime}. No need to reply.`,
+      `${d.minutesLater} minutes later, around ${newTime}. ` +
+      `Reply 1 if that's fine, 2 to cancel, 3 to talk to a person.`,
     Tamil:
       `${d.hospitalName}: ${d.doctorName} உடனான உங்கள் சந்திப்பு ${d.minutesLater} நிமிடங்கள் வரை ` +
-      `தாமதமாக, சுமார் ${newTime} மணிக்கு தொடங்கலாம். பதிலளிக்க வேண்டியதில்லை.`,
+      `தாமதமாக, சுமார் ${newTime} மணிக்கு தொடங்கலாம். ` +
+      `சரி என்றால் 1, ரத்து செய்ய 2, எங்கள் ஊழியருடன் பேச 3 என பதிலளிக்கவும்.`,
     Hindi:
       `${d.hospitalName}: ${d.doctorName} के साथ आपकी अपॉइंटमेंट ${d.minutesLater} मिनट तक देर से, ` +
-      `लगभग ${newTime} पर शुरू हो सकती है। जवाब देने की ज़रूरत नहीं है।`,
+      `लगभग ${newTime} पर शुरू हो सकती है। ` +
+      `ठीक है तो 1, रद्द करने के लिए 2, किसी से बात करने के लिए 3 भेजें।`,
   }[d.language];
 }
