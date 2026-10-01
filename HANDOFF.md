@@ -42,11 +42,11 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | Tour step 6 of 9: "Another doctor, same day" (Buttons, press 5, pick a time with Dr. Karthik) | Done, live (1 Oct) |
 | Tour step 2 on small phones: pop-up now sits above the tour card; checked at 4 phone sizes in Chrome and Safari engines | Done, live (1 Oct) |
 | README screenshots retaken (4 doctors, demo clock badge, button 5) | Done (2 Oct) |
-| Add the video to the README and portfolio | Next |
 | Another doctor in chat: suggested-phrase button; basic mode's "another doctor" reading wins over the AI | Done, live (2 Oct) — real-AI checks cost $0.1122 in total |
 | Confirmation guard: an AI reply that sounds like a confirmation with nothing booked is never shown | Done, live (2 Oct) |
-| Demo video v2 (4 doctors, demo clock, another doctor; no send-time blanking needed) | Next |
-| Then: plan the WhatsApp channel (alongside calls and texts, not replacing them). Open decisions are in the FRD backlog. | Next |
+| WhatsApp channel: plan, then build (alongside calls and texts, not replacing them). Open decisions are in the FRD backlog. | Next (1st) |
+| Demo video v2 (4 doctors, demo clock, another doctor; no send-time blanking needed) | Next (2nd) |
+| Add the video to the README and portfolio | Next (3rd) |
 | Phase 2: clinic interviews | After README/portfolio |
 | Real calls to my own phone | After the 4 AI backlog items |
 | Add the real-call clip to the video | After real calls |
