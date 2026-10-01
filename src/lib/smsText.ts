@@ -97,3 +97,27 @@ function anotherDoctorSms(
       );
   }
 }
+
+// The short heads-up for a patient who was NOT affected but whose appointment
+// was pushed back to make room. Nothing to answer, so it says "No need to reply".
+// (Tamil and Hindi need native-speaker review — see note at the top.)
+export function headsUpSms(d: {
+  language: Language;
+  hospitalName: string;
+  doctorName: string;
+  minutesLater: number; // how much later than first booked, in total
+  newStartTime: string; // "HH:MM"
+}): string {
+  const newTime = formatTimeFor(d.newStartTime, d.language);
+  return {
+    English:
+      `${d.hospitalName}: your appointment with ${d.doctorName} may start up to ` +
+      `${d.minutesLater} minutes later, around ${newTime}. No need to reply.`,
+    Tamil:
+      `${d.hospitalName}: ${d.doctorName} உடனான உங்கள் சந்திப்பு ${d.minutesLater} நிமிடங்கள் வரை ` +
+      `தாமதமாக, சுமார் ${newTime} மணிக்கு தொடங்கலாம். பதிலளிக்க வேண்டியதில்லை.`,
+    Hindi:
+      `${d.hospitalName}: ${d.doctorName} के साथ आपकी अपॉइंटमेंट ${d.minutesLater} मिनट तक देर से, ` +
+      `लगभग ${newTime} पर शुरू हो सकती है। जवाब देने की ज़रूरत नहीं है।`,
+  }[d.language];
+}

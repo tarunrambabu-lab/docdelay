@@ -26,7 +26,7 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | 6: chat mode | Done. Live site = basic word-list chat. Laptop = real AI (Claude Haiku 4.5) using my API key in `.env.local` |
 | Safety: wide health-keyword check runs first; "two unclear replies" counted in code | Done |
 | Alarm-fatigue fix ("tired of waiting", "heavy traffic", "work pressure", remove "doctor said") | Done |
-| Automated tests (npm test, 358 tests) | Done |
+| Automated tests (npm test, 393 tests) | Done |
 | Tamil/Hindi health-word fix (word beginnings, lookalike guards) | Done, live. Needs a second native-speaker and a clinician review before real patients |
 | 7: guided demo tour, suggested chat phrases, phone-width polish | Done, live (29 Sep) |
 | AI weekday fix + day check in code | Done. 4 AI items in BACKLOG under "Must do before real calls or laptop demos" |
@@ -44,7 +44,8 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | README screenshots retaken (4 doctors, demo clock badge, button 5) | Done (2 Oct) |
 | Another doctor in chat: suggested-phrase button; basic mode's "another doctor" reading wins over the AI | Done, live (2 Oct) — real-AI checks cost $0.1122 in total |
 | Confirmation guard: an AI reply that sounds like a confirmation with nothing booked is never shown | Done, live (2 Oct) |
-| WhatsApp channel: plan, then build (alongside calls and texts, not replacing them). Open decisions are in the FRD backlog. | Next (1st) |
+| WhatsApp Part 1 of 3: data and booking rules in the HMS module + 35 tests (opt-in, STOP, channel, change of answer, call queue, health check first, WhatsApp/SMS updates, heads-up for pushed patients). No screens yet | Done (2 Oct), committed, NOT pushed |
+| WhatsApp Part 2 (screens; voice notes and photos) and Part 3 | Next (1st) |
 | Demo video v2 (4 doctors, demo clock, another doctor; no send-time blanking needed) | Next (2nd) |
 | Add the video to the README and portfolio | Next (3rd) |
 | Phase 2: clinic interviews | After README/portfolio |
@@ -70,6 +71,14 @@ Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinic
 - Switch the AI off for laptop demos until the 4 backlog AI items are done.
 - In chat, basic mode's reading wins over the AI for any health concern (always first) and for "another doctor"; the AI never handles those messages.
 - Confirmations only ever use DocDelay's fixed wording: an AI reply that sounds like a confirmation, with no booking saved in that message, is never shown; basic mode answers that message instead. The AI is also told never to say an appointment is booked, moved or confirmed.
+- WhatsApp (simulated, alongside calls and texts; rules in `src/hms/mockHms.ts`, "WhatsApp" section):
+  - Only "WhatsApp OK" patients. "STOP" (whole message, any case) closes WhatsApp for that appointment; calls continue; the one update then goes by SMS.
+  - Health check first on every message → URGENT as in chat. Exception (my decision, not clinician-checked): after STOP or if not opted in, a health mention gets only the fixed 108 line — no URGENT, no staff note; everything else from them is ignored.
+  - Last finished answer wins: an answered patient can change on WhatsApp; it's a fresh answer under every existing rule; the old booking stays until the new answer is finished, then it's freed; pushed patients stay put. At most 2 changes; a 3rd attempt → "Needs staff call – Keeps changing", nothing changes. Picking the same slot isn't a change. "Needs staff call" and URGENT can't be changed by WhatsApp.
+  - Calls skip anyone who answered; a patient part-way through a WhatsApp reply goes to the end of the call queue.
+  - Updates: still one per patient, only when staff press "Send updates": WhatsApp if opted in, SMS if "WhatsApp fails" (labelled) or not opted in — never both. After an update, "1" = confirmed (no change), "2" = show the choices (not counted until they pick). Changing to "cancel" drops an unsent update.
+  - Pushed (not affected) patients get a "no need to reply" heads-up instead of "Reply 1 / 2".
+  - WhatsApp uses basic mode only, never the AI.
 - Any browser test or local test server Claude runs must have the API key hidden, so it can never spend credit. Start the server with the key set to empty: `ANTHROPIC_API_KEY= npx next start …`. (Just removing the variable isn't enough: Next.js then reads the key from `.env.local` by itself.) Before testing, check the Chat tab says "basic mode", not "AI". (`npm test` never reaches the AI, and the test-after-edit hook hides the key too.)
 
 ## How I like to work

@@ -21,6 +21,8 @@
 import startingData from "./mockData.json";
 import type {
   Appointment,
+  AppointmentStatus,
+  Channel,
   Language,
   AppointmentWithPatient,
   CallLogEntry,
@@ -38,6 +40,7 @@ import type {
 import {
   clearSteps,
   isNearlyFull,
+  MAX_CHAT_TEXT,
   readSteps,
   writeSteps,
   type AiAction,
@@ -80,12 +83,14 @@ import {
 import {
   askTodayOrAnotherDay,
   cancelledReply,
+  changeMenuReply,
   clinicHoursIntro,
   dayClosedPrefix,
   dayFullPrefix,
   doctorBackNothingBeforePrefix,
   doctorBackIntro,
   doctorBackNoneTodayPrefix,
+  emergencyOnlyReply,
   noFreeTodayPrefix,
   noMatchPrefix,
   noOtherDoctorFreeReply,
@@ -97,8 +102,9 @@ import {
 import { realTimestamp } from "@/lib/clock";
 import { describeUnderstanding } from "@/lib/understanding/describe";
 import { doctorNameFor } from "@/lib/names";
+import { interpretWithRules, mentionsHealth } from "@/lib/understanding";
 import type { Preferences, Understanding } from "@/lib/understanding/types";
-import { timeChangedSms } from "@/lib/smsText";
+import { headsUpSms, timeChangedSms } from "@/lib/smsText";
 import {
   formatDate,
   formatTime,
@@ -122,7 +128,7 @@ interface HmsState {
   appointments: Appointment[];
   unavailabilities: Unavailability[];
   pendingUpdates: PendingUpdate[]; // texts waiting to be sent (one per appointment)
-  messages: SmsMessage[]; // simulated text messages that were "sent" ("SMS outbox")
+  messages: SmsMessage[]; // simulated update messages that were "sent" (SMS or WhatsApp)
 }
 
 function startingState(): HmsState {
@@ -154,6 +160,9 @@ function replay(steps: DemoStep[]): HmsState {
         break;
       case "chat":
         applyChat(state, step);
+        break;
+      case "whatsapp":
+        applyWhatsApp(state, step);
         break;
       case "falseAlarm":
         applyFalseAlarm(state, step);
@@ -265,6 +274,23 @@ export async function getAffectedAppointments(
     .filter((a) => a.unavailabilityId === unavailabilityId)
     .sort(byDayAndTime)
     .map(withPatient);
+}
+
+// The CALL QUEUE for one "doctor unavailable" event: who still needs a call,
+// in the order to call them.
+//   - Anyone who has already answered (on a call or on WhatsApp) is skipped.
+//   - A patient who started replying on WhatsApp but hasn't finished goes to
+//     the END of the queue, to give them time to finish there.
+export async function getCallQueue(unavailabilityId: string): Promise<AppointmentWithPatient[]> {
+  const toCall = (await loadState()).appointments
+    .filter(
+      (a) => a.unavailabilityId === unavailabilityId && a.status === "Affected – needs contact",
+    )
+    .sort(byDayAndTime);
+  return [
+    ...toCall.filter((a) => !a.whatsappStarted),
+    ...toCall.filter((a) => a.whatsappStarted),
+  ].map(withPatient);
 }
 
 export async function getAppointment(id: string): Promise<AppointmentWithPatient | undefined> {
@@ -516,6 +542,11 @@ function rescheduleLaterToday(state: HmsState, appt: Appointment, at: number): s
       // Only plain bookings become "Time moved". Someone already
       // "Rescheduled – later today" keeps that status (their new time still shows).
       if (other.status === "Scheduled") other.status = "Time moved";
+      // A patient who wasn't affected gets a "no need to reply" heads-up
+      // instead of the "Reply 1 to confirm, 2 to change" update.
+      if (!other.unavailabilityId) {
+        state.pendingUpdates.find((u) => u.appointmentId === other.id)!.headsUp = true;
+      }
     }
   }
   return null;
@@ -671,9 +702,14 @@ function bookWithAnotherDoctor(
   return true;
 }
 
-// "Send" every pending update: turn each into a text message in the outbox
-// (in the patient's language) and clear the pending list. Nothing is really
-// sent. If a patient is moved again later, they get a new pending update.
+// "Send" every pending update: turn each into ONE message in the outbox (in
+// the patient's language) and clear the pending list. Nothing is really sent.
+// If a patient is moved again later, they get a new pending update.
+// Which channel — never both:
+//   - "WhatsApp OK" patients (who haven't sent STOP) get it on WhatsApp;
+//   - if their WhatsApp fails, it falls back to a text message (SMS). A real
+//     system would wait 15 minutes first; the demo falls back straight away;
+//   - everyone else gets a text message (SMS).
 // Returns how many messages were "sent".
 export async function sendPendingUpdates(): Promise<number> {
   const steps = await readSteps();
@@ -696,24 +732,43 @@ function applySend(state: HmsState, step: Extract<DemoStep, { kind: "send" }>): 
       firstDoctorId && firstDoctorId !== appt.doctorId
         ? doctors.find((d) => d.id === firstDoctorId)
         : undefined;
+    const language = patient.preferredLanguage;
+    // A pushed (not affected) patient gets the short heads-up; everyone else
+    // gets the update they can answer with 1 or 2.
+    const text = update.headsUp
+      ? headsUpSms({
+          language,
+          hospitalName: hospital.name,
+          doctorName: doctorNameFor(doctor, language),
+          minutesLater: toMinutes(update.newStartTime) - toMinutes(originalTimeOf(appt)),
+          newStartTime: update.newStartTime,
+        })
+      : timeChangedSms({
+          language,
+          hospitalName: hospital.name,
+          doctorName: doctorNameFor(doctor, language),
+          previousDoctorName: previousDoctor && doctorNameFor(previousDoctor, language),
+          reason: update.reason,
+          newDayOffset: update.newDayOffset,
+          newStartTime: update.newStartTime,
+        });
+    const wantsWhatsApp = patient.whatsappOptIn === true && !appt.whatsappStopped;
+    const onWhatsApp = wantsWhatsApp && !patient.whatsappFails;
     state.messages.push({
       id: `sms-${state.messages.length + 1}`,
+      channel: onWhatsApp ? "WhatsApp" : "SMS",
+      ...(wantsWhatsApp && !onWhatsApp ? { whatsappFailed: true } : {}),
+      ...(update.headsUp ? { headsUp: true } : {}),
       sentAt: now,
       appointmentId: appt.id,
       toName: patient.name,
       toPhone: patient.phone,
-      language: patient.preferredLanguage,
-      text: timeChangedSms({
-        language: patient.preferredLanguage,
-        hospitalName: hospital.name,
-        doctorName: doctorNameFor(doctor, patient.preferredLanguage),
-        previousDoctorName:
-          previousDoctor && doctorNameFor(previousDoctor, patient.preferredLanguage),
-        reason: update.reason,
-        newDayOffset: update.newDayOffset,
-        newStartTime: update.newStartTime,
-      }),
+      language,
+      text,
     });
+    if (onWhatsApp) appt.whatsapp = [...(appt.whatsapp ?? []), { at: now, from: "docdelay", text }];
+    // From now on a bare "1" on WhatsApp means "confirmed" (see applyWhatsApp).
+    if (!update.headsUp) appt.awaitingUpdateReply = true;
   }
 
   const sent = state.pendingUpdates.length;
@@ -1032,6 +1087,21 @@ function offerText(language: Language, found: OfferResult, doctorName: string): 
 // One chat turn. Replies use the existing wording in the patient's language
 // and only ever mention slots from checkFreeSlots. Changes `state`.
 function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): boolean {
+  return chatTurn(state, step, "call");
+}
+
+// The conversation itself — the SAME rules for a chat on a call and for
+// WhatsApp. Only two things differ on WhatsApp: the lines are kept in the
+// appointment's WhatsApp conversation, and the log says "WhatsApp".
+// `withOpening` = false leaves out DocDelay's opening message (used when a
+// patient changes an answer they already gave).
+function chatTurn(
+  state: HmsState,
+  step: { at: number; appointmentId: string; text: string; understanding: Understanding },
+  channel: Channel,
+  withOpening = true,
+): boolean {
+  const lines = channel === "WhatsApp" ? "whatsapp" : "chat"; // which conversation
   const appt = state.appointments.find((a) => a.id === step.appointmentId);
   if (!appt || appt.status !== "Affected – needs contact") return false;
   const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId);
@@ -1043,11 +1113,13 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
   const doctorName = doctorNameFor(doctor, language); // e.g. "டாக்டர் மீரா கிருஷ்ணன் (Dr. Meera Krishnan)"
   const when = new Date(step.at).toISOString();
   const u = step.understanding;
-  const say = (text: string) => appt.chat!.push({ at: when, from: "docdelay", text });
+  const say = (text: string) => appt[lines]!.push({ at: when, from: "docdelay", text });
   const log = (result: CallResult | undefined, detail: string) =>
     (appt.callLog = [
       ...(appt.callLog ?? []),
-      { calledAt: when, result, detail: `Chat: ${detail}` },
+      channel === "WhatsApp"
+        ? { calledAt: when, channel, result, detail: `WhatsApp: ${detail}` }
+        : { calledAt: when, result, detail: `Chat: ${detail}` },
     ]);
   const dropOffers = () => {
     delete appt.offers;
@@ -1055,11 +1127,11 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
   };
 
   // The chat starts with what DocDelay said first.
-  if (!appt.chat?.length) {
-    appt.chat = [];
-    say(openingLine(state, appt, unavailability));
+  if (!appt[lines]?.length) {
+    appt[lines] = [];
+    if (withOpening) say(openingLine(state, appt, unavailability));
   }
-  appt.chat.push({
+  appt[lines].push({
     at: when,
     from: "patient",
     text: step.text,
@@ -1287,6 +1359,360 @@ function openingLine(state: HmsState, appt: Appointment, unavailability: Unavail
     untilTime: unavailability.untilTime,
     anotherDoctorToday: anotherDoctorSlotsIn(state, appt).length > 0,
   });
+}
+
+// ---------- WhatsApp (simulated) ----------
+// A second way to reach DocDelay, alongside calls and texts. Nothing is really
+// sent or received. The rules:
+//   - Only "WhatsApp OK" patients use it. "STOP" (the whole message, any
+//     letter case) closes the WhatsApp chat for that appointment; calls go on.
+//   - The HEALTH CHECK runs first on EVERY message, whatever the patient's
+//     status: any health mention → URGENT, exactly as in chat.
+//     EXCEPTION: a patient who sent STOP, or isn't "WhatsApp OK", only gets
+//     the fixed emergency line (no URGENT, no staff note); anything else they
+//     send is ignored.
+//   - A patient who hasn't answered yet answers exactly as in chat (chatTurn).
+//   - LAST FINISHED ANSWER WINS: a patient who already answered can change
+//     their answer. It's a fresh answer, re-checked against every rule in
+//     reschedulingRules.ts. Their old booking stays until the new answer is
+//     finished, then it's freed. Patients pushed for the earlier answer stay
+//     where they are. At most MAX_ANSWER_CHANGES changes; one more attempt →
+//     "Needs staff call – Keeps changing", and nothing changes.
+//   - After an update was sent, "1" = confirmed and "2" = show the choices.
+// WhatsApp uses the rule-based understanding only (never the AI).
+
+export const MAX_ANSWER_CHANGES = 2;
+
+// A finished answer that WhatsApp can change.
+const ANSWERED: AppointmentStatus[] = [
+  "Rescheduled – later today",
+  "Rescheduled – another day",
+  "Rebooked – another doctor",
+  "Cancelled",
+];
+
+// What happened to a WhatsApp message.
+export type WhatsAppResult =
+  | "ignored" // nothing happened (and nothing was saved)
+  | "emergency line" // health mention, WhatsApp off → only the fixed emergency line
+  | "urgent" // health mention → URGENT staff call
+  | "stopped" // "STOP" → WhatsApp off for this appointment
+  | "confirmed" // "1" after an update
+  | "menu" // "2" after an update → the choices were shown
+  | "replied" // DocDelay answered; nothing was decided
+  | "answered" // the patient's first answer is finished (or handed to staff)
+  | "changed" // a finished answer was changed
+  | "same slot" // they picked what they already have — not counted as a change
+  | "staff" // handed to staff (asked for a person, or no free slot)
+  | "keeps changing"; // one change too many → staff call, nothing changed
+
+// A WhatsApp message from a patient about one appointment. Works out what it
+// means (rule-based), runs the conversation one step and saves it.
+export async function sendWhatsAppMessage(
+  appointmentId: string,
+  message: string,
+): Promise<WhatsAppResult> {
+  const steps = await readSteps();
+  const state = replay(steps);
+  const appt = state.appointments.find((a) => a.id === appointmentId);
+  if (!appt || !message.trim()) return "ignored";
+  const patient = patients.find((p) => p.id === appt.patientId)!;
+  // Understood from the WHOLE message (health words first), then saved with
+  // the step — so rebuilding the demo never has to work it out again.
+  const understanding = await interpretWithRules(message, {
+    language: patient.preferredLanguage,
+    offers: appt.change?.offers ?? appt.offers ?? [],
+  });
+  const step: Extract<DemoStep, { kind: "whatsapp" }> = {
+    kind: "whatsapp",
+    at: realTimestamp(),
+    appointmentId,
+    text: message.slice(0, MAX_CHAT_TEXT),
+    understanding,
+  };
+  const result = applyWhatsApp(state, step);
+  if (result === "ignored") return result;
+  return (await writeSteps([...steps, step])) ? result : "ignored";
+}
+
+// What DocDelay says about the booking a patient has right now.
+function bookingLine(appt: Appointment, language: Language): string {
+  if (appt.status === "Cancelled") return cancelledReply(language);
+  if (appt.status === "Rebooked – another doctor") {
+    const doctor = doctors.find((d) => d.id === appt.doctorId)!;
+    return anotherDoctorReply(language, appt.startTime, doctorNameFor(doctor, language));
+  }
+  return appt.dayOffset === 0
+    ? laterTodayReply(language, appt.startTime)
+    : anotherDayReply(language, appt.dayOffset, appt.startTime);
+}
+
+function applyWhatsApp(
+  state: HmsState,
+  step: Extract<DemoStep, { kind: "whatsapp" }>,
+): WhatsAppResult {
+  const appt = state.appointments.find((a) => a.id === step.appointmentId);
+  // Only appointments DocDelay has contacted: affected ones, and pushed ones.
+  if (!appt || !(appt.unavailabilityId || appt.timeHistory?.length)) return "ignored";
+  const patient = patients.find((p) => p.id === appt.patientId)!;
+  const language = patient.preferredLanguage;
+  const when = new Date(step.at).toISOString();
+  const u = step.understanding;
+  const typed = step.text.trim().toLowerCase();
+  // Is WhatsApp on for this patient and this appointment?
+  const whatsAppOn = patient.whatsappOptIn === true && !appt.whatsappStopped;
+
+  // Add the patient's message / DocDelay's reply to the WhatsApp conversation.
+  const hear = (understood: string) =>
+    (appt.whatsapp = [
+      ...(appt.whatsapp ?? []),
+      { at: when, from: "patient", text: step.text, understood },
+    ]);
+  const say = (text: string) => appt.whatsapp!.push({ at: when, from: "docdelay", text });
+  const log = (result: CallResult | undefined, detail: string) =>
+    (appt.callLog = [
+      ...(appt.callLog ?? []),
+      { calledAt: when, channel: "WhatsApp", result, detail: `WhatsApp: ${detail}` },
+    ]);
+  const toStaff = (note: string, detail: string): void => {
+    appt.status = "Needs staff call";
+    appt.note = note;
+    delete appt.change;
+    say(staffWillCallReply(language));
+    log("Needs staff call", detail);
+  };
+
+  // 1. SAFETY — the health check, before anything else, on every message.
+  if (mentionsHealth(step.text) || u.intent === "health_concern") {
+    if (!whatsAppOn) {
+      // The exception: only the fixed emergency line. No URGENT, no staff note.
+      hear("health concern → emergency line only (WhatsApp is off for this patient)");
+      say(emergencyOnlyReply());
+      return "emergency line";
+    }
+    hear(describeUnderstanding({ intent: "health_concern", preferences: {} }));
+    if (appt.status !== "URGENT – staff call now") {
+      // Remember a finished answer's status, so a false alarm puts it back.
+      if (appt.status !== "Affected – needs contact") appt.statusBeforeUrgent = appt.status;
+      appt.status = "URGENT – staff call now";
+    }
+    // Nothing is booked, reserved, moved or cancelled.
+    delete appt.offers;
+    delete appt.offersBecause;
+    delete appt.change;
+    delete appt.whatsappStarted;
+    say(urgentReply(language));
+    log(undefined, "health concern mentioned → URGENT staff call");
+    return "urgent";
+  }
+
+  // 2. WhatsApp is off for this patient: everything else is ignored.
+  if (!whatsAppOn) return "ignored";
+
+  // 3. STOP (must be the whole message): no more WhatsApp for this
+  //    appointment — no replies, and any update goes by SMS. Calls continue.
+  if (typed === "stop") {
+    hear("STOP → WhatsApp off for this appointment");
+    appt.whatsappStopped = true;
+    delete appt.change;
+    delete appt.whatsappStarted;
+    log(undefined, "STOP — WhatsApp turned off for this appointment; calls continue");
+    return "stopped";
+  }
+
+  // A pushed patient (not affected) has nothing to answer.
+  if (!appt.unavailabilityId) return "ignored";
+
+  // 4. Not answered yet: the same conversation as a chat on a call.
+  if (!ANSWERED.includes(appt.status)) {
+    // Already with staff: WhatsApp can't undo that.
+    if (appt.status === "Needs staff call" || appt.status === "URGENT – staff call now") {
+      hear(describeUnderstanding(u));
+      say(staffWillCallReply(language));
+      return "replied";
+    }
+    // Didn't pick up the call: they can still answer here (a first answer).
+    if (appt.status === "No answer") {
+      if (u.intent === "unclear") {
+        hear(describeUnderstanding(u));
+        say(unclearReply(language, false));
+        return "replied";
+      }
+      appt.status = "Affected – needs contact";
+    }
+    if (!chatTurn(state, step, "WhatsApp")) return "ignored";
+    if (appt.status === "Affected – needs contact") {
+      appt.whatsappStarted = true; // not finished → end of the call queue
+      return "replied";
+    }
+    delete appt.whatsappStarted;
+    if (ANSWERED.includes(appt.status)) appt.answeredVia = "WhatsApp";
+    return "answered";
+  }
+
+  // 5. Already answered.
+  // After an update ("Reply 1 to confirm, 2 to change"), 1 and 2 are answers
+  // to THAT message — never the menu, where 1 means "later today".
+  if (appt.awaitingUpdateReply && !appt.change) {
+    if (typed === "1") {
+      hear("confirmed the update");
+      say(bookingLine(appt, language));
+      log(undefined, "confirmed the update");
+      return "confirmed";
+    }
+    if (typed === "2") {
+      // Only shows the choices. Not a change until they pick one.
+      hear("wants to change — choices shown");
+      delete appt.awaitingUpdateReply;
+      appt.change = {};
+      say(changeMenuReply(language));
+      return "menu";
+    }
+  }
+
+  if (u.intent === "talk_to_person") {
+    hear(describeUnderstanding(u));
+    toStaff("Asked to talk to a person", "Asked to talk to a person");
+    return "staff";
+  }
+
+  // Is this message a request to change the answer? (Picking a letter only
+  // counts if those offers were really made.)
+  const picksAnOffer =
+    u.intent === "choose_offer" &&
+    u.offerIndex !== undefined &&
+    Boolean(appt.change?.offers?.[u.offerIndex]);
+  const asksForChange =
+    picksAnOffer ||
+    ["later_today", "another_day", "another_doctor", "cancel", "time_without_day"].includes(
+      u.intent,
+    );
+  if (!asksForChange) {
+    // "ok thanks" and the like: repeat their booking. Not counted as a change,
+    // and never handed to staff.
+    hear(describeUnderstanding(u));
+    say(bookingLine(appt, language));
+    return "replied";
+  }
+
+  // Try the new answer on a throw-away copy, as a FRESH answer: the patient is
+  // "waiting for a new time" again, with their first doctor, so every existing
+  // rule (and its checks) runs as usual. Their current slot counts as empty
+  // for them, because they would be leaving it.
+  const unavailability = state.unavailabilities.find((x) => x.id === appt.unavailabilityId);
+  if (!unavailability) return "ignored";
+  const before = {
+    status: appt.status,
+    doctorId: appt.doctorId,
+    dayOffset: appt.dayOffset,
+    startTime: appt.startTime,
+  };
+  const copy = structuredClone(state);
+  const trial = copy.appointments.find((a) => a.id === appt.id)!;
+  trial.status = "Affected – needs contact";
+  trial.doctorId = unavailability.doctorId;
+  if (trial.change?.offers) {
+    trial.offers = trial.change.offers;
+    trial.offersBecause = trial.change.offersBecause;
+  }
+  if (trial.change?.timeWish) trial.timeWish = trial.change.timeWish;
+  delete trial.change;
+  if (!chatTurn(copy, step, "WhatsApp", false)) return "ignored";
+
+  const outcome = trial.status as AppointmentStatus; // what the new answer led to
+  const finished = outcome !== "Affected – needs contact";
+  const cancelled = outcome === "Cancelled";
+  const sameAsBefore = cancelled
+    ? before.status === "Cancelled"
+    : ANSWERED.includes(outcome) &&
+      before.status !== "Cancelled" &&
+      trial.doctorId === before.doctorId &&
+      trial.dayOffset === before.dayOffset &&
+      trial.startTime === before.startTime;
+
+  // The slot (or cancellation) they already have: nothing changes, not counted.
+  if (sameAsBefore) {
+    hear(describeUnderstanding(u));
+    delete appt.change;
+    say(bookingLine(appt, language));
+    return "same slot";
+  }
+
+  // One change too many: staff take over, and nothing is changed.
+  if ((appt.answerChanges ?? 0) >= MAX_ANSWER_CHANGES && outcome !== "Needs staff call") {
+    hear(describeUnderstanding(u));
+    toStaff(
+      "Keeps changing",
+      `keeps changing — change attempt ${MAX_ANSWER_CHANGES + 1}, nothing was changed`,
+    );
+    return "keeps changing";
+  }
+
+  // Keep what happened on the copy.
+  state.appointments = copy.appointments;
+  state.pendingUpdates = copy.pendingUpdates;
+
+  if (!finished) {
+    // Offers were made (or a question asked): remember them, and keep the
+    // booking exactly as it was until the new answer is finished.
+    trial.change = {
+      ...(trial.offers ? { offers: trial.offers, offersBecause: trial.offersBecause } : {}),
+      ...(trial.timeWish ? { timeWish: trial.timeWish } : {}),
+    };
+    delete trial.offers;
+    delete trial.offersBecause;
+    delete trial.timeWish;
+    trial.status = before.status;
+    trial.doctorId = before.doctorId;
+    return "replied";
+  }
+
+  if (outcome === "Needs staff call") {
+    // E.g. no free slot anywhere: staff will call; the booking is untouched.
+    trial.doctorId = before.doctorId;
+    return "staff";
+  }
+
+  // A finished, different answer: it replaces the old one.
+  trial.answerChanges = (trial.answerChanges ?? 0) + 1;
+  trial.answeredVia = "WhatsApp";
+  delete trial.awaitingUpdateReply; // a new update will be made for the new time
+  if (cancelled) {
+    // The old slot is free again (cancelled appointments don't hold a slot),
+    // and an update that hasn't been sent yet must not go out with the old time.
+    trial.doctorId = before.doctorId;
+    state.pendingUpdates = state.pendingUpdates.filter((x) => x.appointmentId !== trial.id);
+  } else if (before.doctorId !== unavailability.doctorId) {
+    // They were with a covering doctor: say so in the time history, so the
+    // "was → now" line and the update message name the right doctors.
+    const history = trial.timeHistory!;
+    const last = history.at(-1)!;
+    if (trial.doctorId !== before.doctorId) {
+      last.oldDoctorId = before.doctorId;
+      last.newDoctorId = trial.doctorId;
+    } else {
+      delete last.oldDoctorId;
+      delete last.newDoctorId;
+    }
+  }
+  // The very first booking was with the unavailable doctor — keep that on the
+  // first line of the history (the screens read it from there).
+  const first = trial.timeHistory?.[0];
+  if (first && !first.oldDoctorId) {
+    first.oldDoctorId = unavailability.doctorId;
+    first.newDoctorId ??= unavailability.doctorId;
+  }
+  trial.callLog = [
+    ...(trial.callLog ?? []),
+    {
+      calledAt: when,
+      channel: "WhatsApp",
+      detail:
+        `WhatsApp: changed answer (${trial.answerChanges} of ${MAX_ANSWER_CHANGES}) — was ` +
+        `${before.status === "Cancelled" ? "cancelled" : formatWhen(before.dayOffset, before.startTime)}`,
+    },
+  ];
+  return "changed";
 }
 
 // ---------- AI chat (Claude) ----------
@@ -1748,14 +2174,18 @@ function applyFalseAlarm(
   const appt = state.appointments.find((a) => a.id === step.appointmentId);
   if (!appt || appt.status !== "URGENT – staff call now") return false;
   const when = new Date(step.at).toISOString();
-  appt.status = "Affected – needs contact";
+  // A patient who had already answered (URGENT came from a later WhatsApp
+  // message) goes back to the status they had, with their booking as it was.
+  const back = appt.statusBeforeUrgent ?? "Affected – needs contact";
+  appt.status = back;
+  delete appt.statusBeforeUrgent;
   appt.unclearInARow = 0;
   appt.falseAlarms = [...(appt.falseAlarms ?? []), { at: when, by: STAFF_NAME }];
   appt.callLog = [
     ...(appt.callLog ?? []),
     {
       calledAt: when,
-      detail: `Marked as a false alarm by ${STAFF_NAME} — back to "Affected – needs contact"`,
+      detail: `Marked as a false alarm by ${STAFF_NAME} — back to "${back}"`,
     },
   ];
   return true;

@@ -11,6 +11,18 @@ Ideas and known gaps to pick up later.
 - **After Phase 2 (planned, don't build yet): a lighter safety net.** Red-flag phrases set by a clinician → straight to staff. Any other health mention → the 108 line, normal rebooking, and a note. Detecting EVERY health mention still matters under this plan, so the health-check tests stay required.
 - **Native-speaker review:** the Tamil and Hindi call wording, text messages, chat replies and the chat keyword lists (`src/lib/understanding/rules.ts`) must be checked by native speakers before real use.
 
+## WhatsApp channel (simulated) — to revisit
+
+Part 1 (data and booking rules, 2 Oct 2026) is done. Still open:
+
+- **After answering, unclear WhatsApp messages never reach staff.** "ok thanks" and anything else DocDelay can't read only gets the patient's booking repeated: it isn't counted, and the "two unclear replies → staff call" rule doesn't apply. Revisit: a patient could be asking for help in words DocDelay doesn't know.
+- **Voice notes and photos** come in Part 2. Part 1 only handles typed text.
+- **The STOP / not-opted-in health exception is not clinician-checked.** A health mention from a patient who sent STOP, or isn't "WhatsApp OK", gets only the fixed line ("If this is an emergency or you're worried, please call 108…") — no URGENT, no staff note. Revisit in Phase 2 with a clinician.
+- **That emergency line is in English only.** No Tamil or Hindi version of this exact line existed, so Tamil and Hindi patients get it in English. Add Tamil and Hindi versions (native-speaker and clinician checked) in `emergencyOnlyReply` (`src/lib/chatReplies.ts`).
+- **Native-speaker review list:** the new Tamil/Hindi heads-up for pushed patients (`headsUpSms` in `src/lib/smsText.ts`) and the choices shown after "2" (`changeMenuReply` in `src/lib/chatReplies.ts`).
+- **Screens (Part 2):** the call screen should use `getCallQueue`; the Messages page should show each message's channel ("WhatsApp", "SMS", "WhatsApp failed → SMS") — today it lists them all the same way.
+- **No "START"** to turn WhatsApp back on after STOP.
+
 ## Must do before real calls or laptop demos
 
 These affect the AI chat only (laptop with an API key). The live site uses basic mode and isn't affected.
@@ -149,6 +161,24 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Confirmation check: if the AI truthfully says "that time was just booked" (by someone else), that message also falls back to basic mode — harmless.
 - Confirmation check: each fallback still costs that AI call (the reply was already made).
 - Another doctor, AI mode: when basic mode reads a message as "another doctor", basic mode handles THAT message (no AI call, not counted towards the AI limits). The next message (e.g. picking "A") goes to the AI as usual. "No another doctor" phrases still go to the AI.
+- WhatsApp data: patients with an odd number (pat-001, pat-003, …) are "WhatsApp OK" (333 of 666); "WhatsApp fails" are pat-007 (Divya Ramasamy, 10:30), pat-009 (Lakshmi Subramanian, 11:30) and pat-013 (Prakash Palanisamy, 12:45), all with Dr. Meera today.
+- WhatsApp: the conversation is kept apart from the call chat (`whatsapp` on the appointment), but both share the same offers, so a call can carry on where WhatsApp stopped.
+- WhatsApp: DocDelay's first message reuses the call's opening wording (it still says "Press 4…"); WhatsApp-specific wording comes with the screens in Part 2.
+- WhatsApp: only appointments DocDelay has contacted (affected or pushed) have a WhatsApp chat; a message about any other appointment is ignored.
+- WhatsApp: ignored messages aren't saved at all (nothing in the conversation or the cookie).
+- WhatsApp: the channel is written on WhatsApp log lines only; a log line without a channel means "call".
+- WhatsApp: a "WhatsApp fails" patient's own incoming messages are still accepted.
+- WhatsApp change: while changing, a patient may be offered their own current slot again; picking it isn't counted.
+- WhatsApp change: a new answer that isn't finished (offers shown, no pick) is already refused at the 3rd attempt — the staff call is set at the first message of that attempt.
+- WhatsApp change: if the new answer finds no free slot at all, or the patient asks for a person, the status becomes "Needs staff call" with the booking left as it is; not counted as a change.
+- WhatsApp change: a patient pushed past 5:00 PM who asks to "wait" again is told there's no room today and offered other days (their slot is kept until they pick).
+- WhatsApp change: a patient who moved to Dr. Karthik and changes again is treated as Dr. Meera's patient for the new answer (later today / other days are with Dr. Meera; "another doctor" offers Dr. Karthik again).
+- WhatsApp: "Needs staff call" and URGENT patients who message get "Our front desk will call you shortly"; nothing changes.
+- WhatsApp: a "No answer" patient who sends something unclear gets the "I didn't understand" line and stays "No answer" (not counted towards the staff call).
+- WhatsApp updates: "1" keeps meaning "confirmed" until the patient replies "2" or starts a change; the reply to "1" repeats their booking ("Thank you. Your new time is …").
+- WhatsApp updates: a WhatsApp update is also added to the patient's WhatsApp conversation.
+- Heads-up for pushed patients: "up to N minutes later" is the total delay since their first booked time; a pushed patient who WAS affected (already rebooked, then pushed) still gets the normal "Reply 1 / 2" update.
+- Heads-up: a pushed patient's WhatsApp replies are ignored (the message says no reply is needed), except a health mention.
 
 ## Done
 

@@ -14,6 +14,7 @@
 //   h.12.1.n.4.n.1600.n.<text>.mg3k2g22   chat: appt-012, what the patient typed
 //                              (<text>, base64) and what it was understood to mean
 //                              (intent #1, no offer, day 4, any time, after 16:00)
+//   w.12.1.n.4.n.1600.n.<text>.mg3k2g22   WhatsApp message for appt-012 (same parts as "h")
 //   f.12.mg3k2h33              staff marked appt-012's URGENT flag a false alarm
 //   b.12.3.1015.mg3k2i44       bookSlot tool: book appt-012 on day 3 at 10:15
 //   a.12.b3-1615.<text>.<reply>.3-1600~4-1615.mg3k2j55
@@ -54,6 +55,13 @@ export type DemoStep =
       appointmentId: string;
       text: string; // what the patient typed (at most MAX_CHAT_TEXT characters)
       understanding: Understanding; // what it was understood to mean
+    }
+  | {
+      kind: "whatsapp"; // a WhatsApp message from the patient (saved like a chat message)
+      at: number;
+      appointmentId: string;
+      text: string;
+      understanding: Understanding;
     }
   | { kind: "falseAlarm"; at: number; appointmentId: string }
   | { kind: "book"; at: number; appointmentId: string; dayOffset: number; startTime: string }
@@ -201,11 +209,12 @@ export function encodeStep(step: DemoStep): string {
       return ["o", apptNumber(step.appointmentId), step.choice ?? "n", at].join(".");
     case "send":
       return ["s", at].join(".");
-    case "chat": {
+    case "chat":
+    case "whatsapp": {
       const u = step.understanding;
       const p = u.preferences;
       return [
-        "h",
+        step.kind === "chat" ? "h" : "w",
         apptNumber(step.appointmentId),
         INTENTS.indexOf(u.intent),
         orN(u.offerIndex),
@@ -264,7 +273,7 @@ export function decodeStep(code: string): DemoStep | null {
     return { kind: "offer", at, appointmentId: apptId(Number(parts[0])), choice };
   }
   if (kind === "s" && parts.length === 1) return { kind: "send", at };
-  if (kind === "h" && parts.length === 9) {
+  if ((kind === "h" || kind === "w") && parts.length === 9) {
     const [appt, intentIndex, offer, day, tod, after, before, text] = parts;
     const intent = INTENTS[Number(intentIndex)];
     const num = (v: string) => (v === "n" ? undefined : Number(v));
@@ -286,7 +295,7 @@ export function decodeStep(code: string): DemoStep | null {
     const badTime = [p.after, p.before].some((t) => t !== undefined && !isValidTime(t));
     if (!intent || badNumber || badTime || (tod !== "n" && !p.timeOfDay)) return null;
     return {
-      kind: "chat",
+      kind: kind === "h" ? "chat" : "whatsapp",
       at,
       appointmentId: apptId(Number(appt)),
       text: unpackText(text),

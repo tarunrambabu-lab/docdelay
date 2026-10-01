@@ -29,9 +29,13 @@ export type AppointmentStatus =
   | "Rebooked – another doctor" // pressed 5: now with an approved doctor of the same specialty, today
   | "URGENT – staff call now"; // patient mentioned a health concern — a person must call NOW
 
+// How a patient's answer reached DocDelay.
+export type Channel = "call" | "WhatsApp";
+
 // One line in an appointment's call log.
 export interface CallLogEntry {
   calledAt: string; // when the call happened (ISO date-time)
+  channel?: Channel; // where it came from; left out = "call"
   result?: CallResult; // what the patient answered (empty for staff notes)
   detail?: string; // extra info, e.g. "Picked B: Tue 29 Sep, 9:45 AM"
 }
@@ -107,6 +111,12 @@ export interface Patient {
   name: string;
   phone: string;
   preferredLanguage: Language;
+  // "WhatsApp OK": the patient agreed to get WhatsApp messages from the
+  // hospital. Only these patients are ever contacted on WhatsApp.
+  whatsappOptIn?: boolean;
+  // Demo only: WhatsApp messages to this patient don't arrive, so their update
+  // falls back to a text message (SMS).
+  whatsappFails?: boolean;
 }
 
 export interface Appointment {
@@ -135,6 +145,31 @@ export interface Appointment {
   // asks "today, or another day?".
   timeWish?: { timeOfDay?: "morning" | "afternoon" | "evening"; after?: string; before?: string };
   falseAlarms?: FalseAlarm[]; // URGENT flags that staff marked as false alarms
+
+  // ----- WhatsApp (simulated) -----
+  whatsapp?: ChatTurn[]; // the WhatsApp conversation for this appointment
+  // The patient started answering on WhatsApp but hasn't finished: a call
+  // reaches them last (see getCallQueue).
+  whatsappStarted?: boolean;
+  // The patient sent "STOP": the WhatsApp chat is closed for this appointment.
+  whatsappStopped?: boolean;
+  // Set when the patient's latest finished answer came on WhatsApp
+  // (left out = it came on a call).
+  answeredVia?: Channel;
+  answerChanges?: number; // how many times the patient changed a finished answer (at most 2)
+  // A change of answer the patient has started on WhatsApp but not finished.
+  // Their booking stays as it is until the new answer is finished.
+  change?: {
+    offers?: SlotOffer[];
+    offersBecause?: "asked" | "no room today" | "another doctor";
+    timeWish?: Appointment["timeWish"];
+  };
+  // An update ("Reply 1 to confirm, 2 to change") was sent: until the patient
+  // replies 2, a bare "1" means "confirmed" — NOT "1 – later today".
+  awaitingUpdateReply?: boolean;
+  // The status before a WhatsApp health mention made it URGENT (when it wasn't
+  // "Affected – needs contact"), so a false alarm puts it back.
+  statusBeforeUrgent?: AppointmentStatus;
 }
 
 // An appointment with its patient's details attached — handy for screens.
@@ -151,6 +186,9 @@ export interface PendingUpdate {
   newStartTime: string; // "HH:MM" — the latest time
   reason: UnavailabilityReason; // why the doctor was unavailable (for the wording)
   updatedAt: string; // ISO date-time of the latest change
+  // A patient who wasn't affected but was pushed back to make room: they get a
+  // short "no need to reply" heads-up instead of "Reply 1 to confirm, 2 to change".
+  headsUp?: boolean;
 }
 
 // A pending update with the appointment and patient details attached.
@@ -158,9 +196,15 @@ export interface PendingUpdateWithDetails extends PendingUpdate {
   appointment: AppointmentWithPatient;
 }
 
-// A simulated text message (nothing is really sent).
+// A simulated update message — a text (SMS) or a WhatsApp message. Nothing is
+// really sent. A patient gets ONE per update, on one channel, never both.
 export interface SmsMessage {
   id: string;
+  channel: "SMS" | "WhatsApp";
+  // WhatsApp was tried first and failed, so this went by SMS instead.
+  // (A real system would wait 15 minutes; the demo falls back straight away.)
+  whatsappFailed?: boolean;
+  headsUp?: boolean; // the "no need to reply" message for a pushed patient
   sentAt: string; // ISO date-time
   appointmentId: string;
   toName: string;

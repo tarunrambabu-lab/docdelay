@@ -50,7 +50,8 @@
       "id": "pat-001",
       "name": "Nikhil Khan",
       "phone": "+91 90000 00001",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-002",
@@ -62,7 +63,8 @@
       "id": "pat-003",
       "name": "Kiran D'Souza",
       "phone": "+91 90000 00003",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-004",
@@ -74,7 +76,8 @@
       "id": "pat-005",
       "name": "Revathi Krishnan",
       "phone": "+91 90000 00005",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-006",
@@ -86,7 +89,9 @@
       "id": "pat-007",
       "name": "Divya Ramasamy",
       "phone": "+91 90000 00007",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true,
+      "whatsappFails": true
     },
     {
       "id": "pat-008",
@@ -98,7 +103,9 @@
       "id": "pat-009",
       "name": "Lakshmi Subramanian",
       "phone": "+91 90000 00009",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true,
+      "whatsappFails": true
     },
     {
       "id": "pat-010",
@@ -110,7 +117,8 @@
       "id": "pat-011",
       "name": "Sneha Menon",
       "phone": "+91 90000 00011",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-012",
@@ -122,7 +130,9 @@
       "id": "pat-013",
       "name": "Prakash Palanisamy",
       "phone": "+91 90000 00013",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true,
+      "whatsappFails": true
     },
     {
       "id": "pat-014",
@@ -134,7 +144,8 @@
       "id": "pat-015",
       "name": "Revathi Iyer",
       "phone": "+91 90000 00015",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-016",
@@ -146,7 +157,8 @@
       "id": "pat-017",
       "name": "Ajay Joshi",
       "phone": "+91 90000 00017",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-018",
@@ -158,7 +170,8 @@
       "id": "pat-019",
       "name": "Janani Palanisamy",
       "phone": "+91 90000 00019",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-020",
@@ -170,7 +183,8 @@
       "id": "pat-021",
       "name": "Vignesh Ramasamy",
       "phone": "+91 90000 00021",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-022",
@@ -182,7 +196,8 @@
       "id": "pat-023",
       "name": "Nitin Chauhan",
       "phone": "+91 90000 00023",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-024",
@@ -194,7 +209,8 @@
       "id": "pat-025",
       "name": "Imran Menon",
       "phone": "+91 90000 00025",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-026",
@@ -206,7 +222,8 @@
       "id": "pat-027",
       "name": "Deepa Natarajan",
       "phone": "+91 90000 00027",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-028",
@@ -218,7 +235,8 @@
       "id": "pat-029",
       "name": "Harish Venkatesan",
       "phone": "+91 90000 00029",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-030",
@@ -230,7 +248,8 @@
       "id": "pat-031",
       "name": "Kiran Patel",
       "phone": "+91 90000 00031",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-032",
@@ -242,7 +261,8 @@
       "id": "pat-033",
       "name": "Janani Chandrasekaran",
       "phone": "+91 90000 00033",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-034",
@@ -254,7 +274,8 @@
       "id": "pat-035",
       "name": "Pooja Tiwari",
       "phone": "+91 90000 00035",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-036",
@@ -266,7 +287,8 @@
       "id": "pat-037",
       "name": "Suresh Iyer",
       "phone": "+91 90000 00037",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-038",
@@ -278,7 +300,8 @@
       "id": "pat-039",
       "name": "Suresh Rajendran",
       "phone": "+91 90000 00039",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-040",
@@ -290,7 +313,8 @@
       "id": "pat-041",
       "name": "Suresh Venkatesan",
       "phone": "+91 90000 00041",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-042",
@@ -302,7 +326,8 @@
       "id": "pat-043",
       "name": "Vignesh Chandrasekaran",
       "phone": "+91 90000 00043",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-044",
@@ -314,7 +339,8 @@
       "id": "pat-045",
       "name": "Ganesh Ramasamy",
       "phone": "+91 90000 00045",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-046",
@@ -326,7 +352,8 @@
       "id": "pat-047",
       "name": "Tanvi Das",
       "phone": "+91 90000 00047",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-048",
@@ -338,7 +365,8 @@
       "id": "pat-049",
       "name": "Ramesh Ramasamy",
       "phone": "+91 90000 00049",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-050",
@@ -350,7 +378,8 @@
       "id": "pat-051",
       "name": "Prakash Rajendran",
       "phone": "+91 90000 00051",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-052",
@@ -362,7 +391,8 @@
       "id": "pat-053",
       "name": "Senthil Sundaram",
       "phone": "+91 90000 00053",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-054",
@@ -374,7 +404,8 @@
       "id": "pat-055",
       "name": "Vignesh Subramanian",
       "phone": "+91 90000 00055",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-056",
@@ -386,7 +417,8 @@
       "id": "pat-057",
       "name": "Ishita Reddy",
       "phone": "+91 90000 00057",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-058",
@@ -398,7 +430,8 @@
       "id": "pat-059",
       "name": "Priya Venkatesan",
       "phone": "+91 90000 00059",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-060",
@@ -410,7 +443,8 @@
       "id": "pat-061",
       "name": "Anitha Sundaram",
       "phone": "+91 90000 00061",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-062",
@@ -422,7 +456,8 @@
       "id": "pat-063",
       "name": "Divya Chandrasekaran",
       "phone": "+91 90000 00063",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-064",
@@ -434,7 +469,8 @@
       "id": "pat-065",
       "name": "Sanjay Pandey",
       "phone": "+91 90000 00065",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-066",
@@ -446,7 +482,8 @@
       "id": "pat-067",
       "name": "Balaji Ramasamy",
       "phone": "+91 90000 00067",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-068",
@@ -458,7 +495,8 @@
       "id": "pat-069",
       "name": "Ritu Srivastava",
       "phone": "+91 90000 00069",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-070",
@@ -470,7 +508,8 @@
       "id": "pat-071",
       "name": "Revathi Shanmugam",
       "phone": "+91 90000 00071",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-072",
@@ -482,7 +521,8 @@
       "id": "pat-073",
       "name": "Keerthana Kannan",
       "phone": "+91 90000 00073",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-074",
@@ -494,7 +534,8 @@
       "id": "pat-075",
       "name": "Sneha Fernandes",
       "phone": "+91 90000 00075",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-076",
@@ -506,7 +547,8 @@
       "id": "pat-077",
       "name": "Nitin Pandey",
       "phone": "+91 90000 00077",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-078",
@@ -518,7 +560,8 @@
       "id": "pat-079",
       "name": "Anitha Krishnan",
       "phone": "+91 90000 00079",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-080",
@@ -530,7 +573,8 @@
       "id": "pat-081",
       "name": "Asha Pandey",
       "phone": "+91 90000 00081",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-082",
@@ -542,7 +586,8 @@
       "id": "pat-083",
       "name": "Vignesh Kannan",
       "phone": "+91 90000 00083",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-084",
@@ -554,7 +599,8 @@
       "id": "pat-085",
       "name": "Murugan Ramasamy",
       "phone": "+91 90000 00085",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-086",
@@ -566,7 +612,8 @@
       "id": "pat-087",
       "name": "Manikandan Ramasamy",
       "phone": "+91 90000 00087",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-088",
@@ -578,7 +625,8 @@
       "id": "pat-089",
       "name": "Ajay Pandey",
       "phone": "+91 90000 00089",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-090",
@@ -590,7 +638,8 @@
       "id": "pat-091",
       "name": "Revathi Chandrasekaran",
       "phone": "+91 90000 00091",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-092",
@@ -602,7 +651,8 @@
       "id": "pat-093",
       "name": "Manikandan Sundaram",
       "phone": "+91 90000 00093",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-094",
@@ -614,7 +664,8 @@
       "id": "pat-095",
       "name": "Ayesha Hegde",
       "phone": "+91 90000 00095",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-096",
@@ -626,7 +677,8 @@
       "id": "pat-097",
       "name": "Kavita Gupta",
       "phone": "+91 90000 00097",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-098",
@@ -638,7 +690,8 @@
       "id": "pat-099",
       "name": "Sangeetha Natarajan",
       "phone": "+91 90000 00099",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-100",
@@ -650,7 +703,8 @@
       "id": "pat-101",
       "name": "Ayesha Fernandes",
       "phone": "+91 90000 00101",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-102",
@@ -662,7 +716,8 @@
       "id": "pat-103",
       "name": "Pankaj Srivastava",
       "phone": "+91 90000 00103",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-104",
@@ -674,7 +729,8 @@
       "id": "pat-105",
       "name": "Anitha Kannan",
       "phone": "+91 90000 00105",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-106",
@@ -686,7 +742,8 @@
       "id": "pat-107",
       "name": "Nandhini Iyer",
       "phone": "+91 90000 00107",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-108",
@@ -698,7 +755,8 @@
       "id": "pat-109",
       "name": "Rahul Verma",
       "phone": "+91 90000 00109",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-110",
@@ -710,7 +768,8 @@
       "id": "pat-111",
       "name": "Murugan Subramanian",
       "phone": "+91 90000 00111",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-112",
@@ -722,7 +781,8 @@
       "id": "pat-113",
       "name": "Balaji Sundaram",
       "phone": "+91 90000 00113",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-114",
@@ -734,7 +794,8 @@
       "id": "pat-115",
       "name": "Gayathri Shanmugam",
       "phone": "+91 90000 00115",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-116",
@@ -746,7 +807,8 @@
       "id": "pat-117",
       "name": "Pankaj Agarwal",
       "phone": "+91 90000 00117",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-118",
@@ -758,7 +820,8 @@
       "id": "pat-119",
       "name": "Priya Muthu",
       "phone": "+91 90000 00119",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-120",
@@ -770,7 +833,8 @@
       "id": "pat-121",
       "name": "Karthik Muthu",
       "phone": "+91 90000 00121",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-122",
@@ -782,7 +846,8 @@
       "id": "pat-123",
       "name": "Lakshmi Kannan",
       "phone": "+91 90000 00123",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-124",
@@ -794,7 +859,8 @@
       "id": "pat-125",
       "name": "Aravind Kannan",
       "phone": "+91 90000 00125",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-126",
@@ -806,7 +872,8 @@
       "id": "pat-127",
       "name": "Ishita Desai",
       "phone": "+91 90000 00127",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-128",
@@ -818,7 +885,8 @@
       "id": "pat-129",
       "name": "Saravanan Shanmugam",
       "phone": "+91 90000 00129",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-130",
@@ -830,7 +898,8 @@
       "id": "pat-131",
       "name": "Nikhil Menon",
       "phone": "+91 90000 00131",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-132",
@@ -842,7 +911,8 @@
       "id": "pat-133",
       "name": "Pavithra Palanisamy",
       "phone": "+91 90000 00133",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-134",
@@ -854,7 +924,8 @@
       "id": "pat-135",
       "name": "Pavithra Muthu",
       "phone": "+91 90000 00135",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-136",
@@ -866,7 +937,8 @@
       "id": "pat-137",
       "name": "Neil Rao",
       "phone": "+91 90000 00137",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-138",
@@ -878,7 +950,8 @@
       "id": "pat-139",
       "name": "Preeti Agarwal",
       "phone": "+91 90000 00139",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-140",
@@ -890,7 +963,8 @@
       "id": "pat-141",
       "name": "Divya Palanisamy",
       "phone": "+91 90000 00141",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-142",
@@ -902,7 +976,8 @@
       "id": "pat-143",
       "name": "Gayathri Ramasamy",
       "phone": "+91 90000 00143",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-144",
@@ -914,7 +989,8 @@
       "id": "pat-145",
       "name": "Divya Pillai",
       "phone": "+91 90000 00145",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-146",
@@ -926,7 +1002,8 @@
       "id": "pat-147",
       "name": "Selvam Iyer",
       "phone": "+91 90000 00147",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-148",
@@ -938,7 +1015,8 @@
       "id": "pat-149",
       "name": "Kavitha Arumugam",
       "phone": "+91 90000 00149",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-150",
@@ -950,7 +1028,8 @@
       "id": "pat-151",
       "name": "Ritu Singh",
       "phone": "+91 90000 00151",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-152",
@@ -962,7 +1041,8 @@
       "id": "pat-153",
       "name": "Prakash Kannan",
       "phone": "+91 90000 00153",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-154",
@@ -974,7 +1054,8 @@
       "id": "pat-155",
       "name": "Rahul Sharma",
       "phone": "+91 90000 00155",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-156",
@@ -986,7 +1067,8 @@
       "id": "pat-157",
       "name": "Imran Nair",
       "phone": "+91 90000 00157",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-158",
@@ -998,7 +1080,8 @@
       "id": "pat-159",
       "name": "Amit Mishra",
       "phone": "+91 90000 00159",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-160",
@@ -1010,7 +1093,8 @@
       "id": "pat-161",
       "name": "Manoj Pandey",
       "phone": "+91 90000 00161",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-162",
@@ -1022,7 +1106,8 @@
       "id": "pat-163",
       "name": "Ayesha D'Souza",
       "phone": "+91 90000 00163",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-164",
@@ -1034,7 +1119,8 @@
       "id": "pat-165",
       "name": "Balaji Krishnan",
       "phone": "+91 90000 00165",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-166",
@@ -1046,7 +1132,8 @@
       "id": "pat-167",
       "name": "Murugan Rajendran",
       "phone": "+91 90000 00167",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-168",
@@ -1058,7 +1145,8 @@
       "id": "pat-169",
       "name": "Kavitha Kannan",
       "phone": "+91 90000 00169",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-170",
@@ -1070,7 +1158,8 @@
       "id": "pat-171",
       "name": "Balaji Kannan",
       "phone": "+91 90000 00171",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-172",
@@ -1082,7 +1171,8 @@
       "id": "pat-173",
       "name": "Joseph Fernandes",
       "phone": "+91 90000 00173",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-174",
@@ -1094,7 +1184,8 @@
       "id": "pat-175",
       "name": "Sara Fernandes",
       "phone": "+91 90000 00175",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-176",
@@ -1106,7 +1197,8 @@
       "id": "pat-177",
       "name": "Bhuvana Chandrasekaran",
       "phone": "+91 90000 00177",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-178",
@@ -1118,7 +1210,8 @@
       "id": "pat-179",
       "name": "Imran Reddy",
       "phone": "+91 90000 00179",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-180",
@@ -1130,7 +1223,8 @@
       "id": "pat-181",
       "name": "Vignesh Raghavan",
       "phone": "+91 90000 00181",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-182",
@@ -1142,7 +1236,8 @@
       "id": "pat-183",
       "name": "Rahul Gupta",
       "phone": "+91 90000 00183",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-184",
@@ -1154,7 +1249,8 @@
       "id": "pat-185",
       "name": "Amit Saxena",
       "phone": "+91 90000 00185",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-186",
@@ -1166,7 +1262,8 @@
       "id": "pat-187",
       "name": "Maria D'Souza",
       "phone": "+91 90000 00187",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-188",
@@ -1178,7 +1275,8 @@
       "id": "pat-189",
       "name": "Anitha Pillai",
       "phone": "+91 90000 00189",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-190",
@@ -1190,7 +1288,8 @@
       "id": "pat-191",
       "name": "Balaji Muthu",
       "phone": "+91 90000 00191",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-192",
@@ -1202,7 +1301,8 @@
       "id": "pat-193",
       "name": "Karthik Iyer",
       "phone": "+91 90000 00193",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-194",
@@ -1214,7 +1314,8 @@
       "id": "pat-195",
       "name": "Pooja Sharma",
       "phone": "+91 90000 00195",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-196",
@@ -1226,7 +1327,8 @@
       "id": "pat-197",
       "name": "Sanjay Singh",
       "phone": "+91 90000 00197",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-198",
@@ -1238,7 +1340,8 @@
       "id": "pat-199",
       "name": "Revathi Kannan",
       "phone": "+91 90000 00199",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-200",
@@ -1250,7 +1353,8 @@
       "id": "pat-201",
       "name": "Meenakshi Krishnan",
       "phone": "+91 90000 00201",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-202",
@@ -1262,7 +1366,8 @@
       "id": "pat-203",
       "name": "Manikandan Natarajan",
       "phone": "+91 90000 00203",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-204",
@@ -1274,7 +1379,8 @@
       "id": "pat-205",
       "name": "Anjali Agarwal",
       "phone": "+91 90000 00205",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-206",
@@ -1286,7 +1392,8 @@
       "id": "pat-207",
       "name": "Bhuvana Venkatesan",
       "phone": "+91 90000 00207",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-208",
@@ -1298,7 +1405,8 @@
       "id": "pat-209",
       "name": "Neil Desai",
       "phone": "+91 90000 00209",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-210",
@@ -1310,7 +1418,8 @@
       "id": "pat-211",
       "name": "Murugan Kannan",
       "phone": "+91 90000 00211",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-212",
@@ -1322,7 +1431,8 @@
       "id": "pat-213",
       "name": "Kavitha Natarajan",
       "phone": "+91 90000 00213",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-214",
@@ -1334,7 +1444,8 @@
       "id": "pat-215",
       "name": "Neil D'Souza",
       "phone": "+91 90000 00215",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-216",
@@ -1346,7 +1457,8 @@
       "id": "pat-217",
       "name": "Megha Mishra",
       "phone": "+91 90000 00217",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-218",
@@ -1358,7 +1470,8 @@
       "id": "pat-219",
       "name": "Sunita Verma",
       "phone": "+91 90000 00219",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-220",
@@ -1370,7 +1483,8 @@
       "id": "pat-221",
       "name": "Pankaj Dubey",
       "phone": "+91 90000 00221",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-222",
@@ -1382,7 +1496,8 @@
       "id": "pat-223",
       "name": "Alok Gupta",
       "phone": "+91 90000 00223",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-224",
@@ -1394,7 +1509,8 @@
       "id": "pat-225",
       "name": "Anjali Srivastava",
       "phone": "+91 90000 00225",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-226",
@@ -1406,7 +1522,8 @@
       "id": "pat-227",
       "name": "Rahul Mishra",
       "phone": "+91 90000 00227",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-228",
@@ -1418,7 +1535,8 @@
       "id": "pat-229",
       "name": "Pooja Saxena",
       "phone": "+91 90000 00229",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-230",
@@ -1430,7 +1548,8 @@
       "id": "pat-231",
       "name": "Gaurav Agarwal",
       "phone": "+91 90000 00231",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-232",
@@ -1442,7 +1561,8 @@
       "id": "pat-233",
       "name": "Zoya Khan",
       "phone": "+91 90000 00233",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-234",
@@ -1454,7 +1574,8 @@
       "id": "pat-235",
       "name": "Kavita Srivastava",
       "phone": "+91 90000 00235",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-236",
@@ -1466,7 +1587,8 @@
       "id": "pat-237",
       "name": "Keerthana Ramasamy",
       "phone": "+91 90000 00237",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-238",
@@ -1478,7 +1600,8 @@
       "id": "pat-239",
       "name": "Rohit Joshi",
       "phone": "+91 90000 00239",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-240",
@@ -1490,7 +1613,8 @@
       "id": "pat-241",
       "name": "Sara Rao",
       "phone": "+91 90000 00241",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-242",
@@ -1502,7 +1626,8 @@
       "id": "pat-243",
       "name": "Imran Thomas",
       "phone": "+91 90000 00243",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-244",
@@ -1514,7 +1639,8 @@
       "id": "pat-245",
       "name": "Karthik Pillai",
       "phone": "+91 90000 00245",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-246",
@@ -1526,7 +1652,8 @@
       "id": "pat-247",
       "name": "Nikhil Rao",
       "phone": "+91 90000 00247",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-248",
@@ -1538,7 +1665,8 @@
       "id": "pat-249",
       "name": "Ishita Menon",
       "phone": "+91 90000 00249",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-250",
@@ -1550,7 +1678,8 @@
       "id": "pat-251",
       "name": "Varun Das",
       "phone": "+91 90000 00251",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-252",
@@ -1562,7 +1691,8 @@
       "id": "pat-253",
       "name": "Meenakshi Shanmugam",
       "phone": "+91 90000 00253",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-254",
@@ -1574,7 +1704,8 @@
       "id": "pat-255",
       "name": "Deepa Sundaram",
       "phone": "+91 90000 00255",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-256",
@@ -1586,7 +1717,8 @@
       "id": "pat-257",
       "name": "Pankaj Chauhan",
       "phone": "+91 90000 00257",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-258",
@@ -1598,7 +1730,8 @@
       "id": "pat-259",
       "name": "Selvam Arumugam",
       "phone": "+91 90000 00259",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-260",
@@ -1610,7 +1743,8 @@
       "id": "pat-261",
       "name": "Anjali Singh",
       "phone": "+91 90000 00261",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-262",
@@ -1622,7 +1756,8 @@
       "id": "pat-263",
       "name": "Pavithra Ramasamy",
       "phone": "+91 90000 00263",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-264",
@@ -1634,7 +1769,8 @@
       "id": "pat-265",
       "name": "Malathi Pillai",
       "phone": "+91 90000 00265",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-266",
@@ -1646,7 +1782,8 @@
       "id": "pat-267",
       "name": "Aravind Krishnan",
       "phone": "+91 90000 00267",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-268",
@@ -1658,7 +1795,8 @@
       "id": "pat-269",
       "name": "Pavithra Shanmugam",
       "phone": "+91 90000 00269",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-270",
@@ -1670,7 +1808,8 @@
       "id": "pat-271",
       "name": "Maria Rao",
       "phone": "+91 90000 00271",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-272",
@@ -1682,7 +1821,8 @@
       "id": "pat-273",
       "name": "Prakash Shanmugam",
       "phone": "+91 90000 00273",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-274",
@@ -1694,7 +1834,8 @@
       "id": "pat-275",
       "name": "Suresh Sundaram",
       "phone": "+91 90000 00275",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-276",
@@ -1706,7 +1847,8 @@
       "id": "pat-277",
       "name": "Kavitha Rajendran",
       "phone": "+91 90000 00277",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-278",
@@ -1718,7 +1860,8 @@
       "id": "pat-279",
       "name": "Ishita D'Souza",
       "phone": "+91 90000 00279",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-280",
@@ -1730,7 +1873,8 @@
       "id": "pat-281",
       "name": "Nandhini Krishnan",
       "phone": "+91 90000 00281",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-282",
@@ -1742,7 +1886,8 @@
       "id": "pat-283",
       "name": "Vignesh Natarajan",
       "phone": "+91 90000 00283",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-284",
@@ -1754,7 +1899,8 @@
       "id": "pat-285",
       "name": "Bhuvana Kannan",
       "phone": "+91 90000 00285",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-286",
@@ -1766,7 +1912,8 @@
       "id": "pat-287",
       "name": "Keerthana Subramanian",
       "phone": "+91 90000 00287",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-288",
@@ -1778,7 +1925,8 @@
       "id": "pat-289",
       "name": "Varun Hegde",
       "phone": "+91 90000 00289",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-290",
@@ -1790,7 +1938,8 @@
       "id": "pat-291",
       "name": "Prakash Raghavan",
       "phone": "+91 90000 00291",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-292",
@@ -1802,7 +1951,8 @@
       "id": "pat-293",
       "name": "Lakshmi Iyer",
       "phone": "+91 90000 00293",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-294",
@@ -1814,7 +1964,8 @@
       "id": "pat-295",
       "name": "Pankaj Pandey",
       "phone": "+91 90000 00295",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-296",
@@ -1826,7 +1977,8 @@
       "id": "pat-297",
       "name": "Varun Reddy",
       "phone": "+91 90000 00297",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-298",
@@ -1838,7 +1990,8 @@
       "id": "pat-299",
       "name": "Meenakshi Iyer",
       "phone": "+91 90000 00299",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-300",
@@ -1850,7 +2003,8 @@
       "id": "pat-301",
       "name": "Rekha Tiwari",
       "phone": "+91 90000 00301",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-302",
@@ -1862,7 +2016,8 @@
       "id": "pat-303",
       "name": "Ishita Patel",
       "phone": "+91 90000 00303",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-304",
@@ -1874,7 +2029,8 @@
       "id": "pat-305",
       "name": "Rekha Verma",
       "phone": "+91 90000 00305",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-306",
@@ -1886,7 +2042,8 @@
       "id": "pat-307",
       "name": "Preeti Chauhan",
       "phone": "+91 90000 00307",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-308",
@@ -1898,7 +2055,8 @@
       "id": "pat-309",
       "name": "Aravind Rajendran",
       "phone": "+91 90000 00309",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-310",
@@ -1910,7 +2068,8 @@
       "id": "pat-311",
       "name": "Gayathri Arumugam",
       "phone": "+91 90000 00311",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-312",
@@ -1922,7 +2081,8 @@
       "id": "pat-313",
       "name": "Ganesh Shanmugam",
       "phone": "+91 90000 00313",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-314",
@@ -1934,7 +2094,8 @@
       "id": "pat-315",
       "name": "Meenakshi Pillai",
       "phone": "+91 90000 00315",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-316",
@@ -1946,7 +2107,8 @@
       "id": "pat-317",
       "name": "Janani Subramanian",
       "phone": "+91 90000 00317",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-318",
@@ -1958,7 +2120,8 @@
       "id": "pat-319",
       "name": "Manikandan Venkatesan",
       "phone": "+91 90000 00319",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-320",
@@ -1970,7 +2133,8 @@
       "id": "pat-321",
       "name": "Keerthana Iyer",
       "phone": "+91 90000 00321",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-322",
@@ -1982,7 +2146,8 @@
       "id": "pat-323",
       "name": "Saravanan Subramanian",
       "phone": "+91 90000 00323",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-324",
@@ -1994,7 +2159,8 @@
       "id": "pat-325",
       "name": "Farhan Kulkarni",
       "phone": "+91 90000 00325",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-326",
@@ -2006,7 +2172,8 @@
       "id": "pat-327",
       "name": "Neha Srivastava",
       "phone": "+91 90000 00327",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-328",
@@ -2018,7 +2185,8 @@
       "id": "pat-329",
       "name": "Dinesh Kannan",
       "phone": "+91 90000 00329",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-330",
@@ -2030,7 +2198,8 @@
       "id": "pat-331",
       "name": "Sneha Hegde",
       "phone": "+91 90000 00331",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-332",
@@ -2042,7 +2211,8 @@
       "id": "pat-333",
       "name": "Ramesh Arumugam",
       "phone": "+91 90000 00333",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-334",
@@ -2054,7 +2224,8 @@
       "id": "pat-335",
       "name": "Tanvi Thomas",
       "phone": "+91 90000 00335",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-336",
@@ -2066,7 +2237,8 @@
       "id": "pat-337",
       "name": "Sara Hegde",
       "phone": "+91 90000 00337",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-338",
@@ -2078,7 +2250,8 @@
       "id": "pat-339",
       "name": "Ramesh Subramanian",
       "phone": "+91 90000 00339",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-340",
@@ -2090,7 +2263,8 @@
       "id": "pat-341",
       "name": "Divya Sundaram",
       "phone": "+91 90000 00341",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-342",
@@ -2102,7 +2276,8 @@
       "id": "pat-343",
       "name": "Ishita Das",
       "phone": "+91 90000 00343",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-344",
@@ -2114,7 +2289,8 @@
       "id": "pat-345",
       "name": "Sara Nair",
       "phone": "+91 90000 00345",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-346",
@@ -2126,7 +2302,8 @@
       "id": "pat-347",
       "name": "Sneha Rao",
       "phone": "+91 90000 00347",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-348",
@@ -2138,7 +2315,8 @@
       "id": "pat-349",
       "name": "Shalini Srivastava",
       "phone": "+91 90000 00349",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-350",
@@ -2150,7 +2328,8 @@
       "id": "pat-351",
       "name": "Ishita Khan",
       "phone": "+91 90000 00351",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-352",
@@ -2162,7 +2341,8 @@
       "id": "pat-353",
       "name": "Suresh Ramasamy",
       "phone": "+91 90000 00353",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-354",
@@ -2174,7 +2354,8 @@
       "id": "pat-355",
       "name": "Saravanan Ramasamy",
       "phone": "+91 90000 00355",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-356",
@@ -2186,7 +2367,8 @@
       "id": "pat-357",
       "name": "Neha Mishra",
       "phone": "+91 90000 00357",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-358",
@@ -2198,7 +2380,8 @@
       "id": "pat-359",
       "name": "Selvam Rajendran",
       "phone": "+91 90000 00359",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-360",
@@ -2210,7 +2393,8 @@
       "id": "pat-361",
       "name": "Alok Agarwal",
       "phone": "+91 90000 00361",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-362",
@@ -2222,7 +2406,8 @@
       "id": "pat-363",
       "name": "Vignesh Arumugam",
       "phone": "+91 90000 00363",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-364",
@@ -2234,7 +2419,8 @@
       "id": "pat-365",
       "name": "Gayathri Rajendran",
       "phone": "+91 90000 00365",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-366",
@@ -2246,7 +2432,8 @@
       "id": "pat-367",
       "name": "Sanjay Chauhan",
       "phone": "+91 90000 00367",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-368",
@@ -2258,7 +2445,8 @@
       "id": "pat-369",
       "name": "Bhuvana Ramasamy",
       "phone": "+91 90000 00369",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-370",
@@ -2270,7 +2458,8 @@
       "id": "pat-371",
       "name": "Nandhini Raghavan",
       "phone": "+91 90000 00371",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-372",
@@ -2282,7 +2471,8 @@
       "id": "pat-373",
       "name": "Karthik Kannan",
       "phone": "+91 90000 00373",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-374",
@@ -2294,7 +2484,8 @@
       "id": "pat-375",
       "name": "Balaji Rajendran",
       "phone": "+91 90000 00375",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-376",
@@ -2306,7 +2497,8 @@
       "id": "pat-377",
       "name": "Ganesh Palanisamy",
       "phone": "+91 90000 00377",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-378",
@@ -2318,7 +2510,8 @@
       "id": "pat-379",
       "name": "Priya Kannan",
       "phone": "+91 90000 00379",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-380",
@@ -2330,7 +2523,8 @@
       "id": "pat-381",
       "name": "Kavita Pandey",
       "phone": "+91 90000 00381",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-382",
@@ -2342,7 +2536,8 @@
       "id": "pat-383",
       "name": "Murugan Muthu",
       "phone": "+91 90000 00383",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-384",
@@ -2354,7 +2549,8 @@
       "id": "pat-385",
       "name": "Ishita Hegde",
       "phone": "+91 90000 00385",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-386",
@@ -2366,7 +2562,8 @@
       "id": "pat-387",
       "name": "Manoj Gupta",
       "phone": "+91 90000 00387",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-388",
@@ -2378,7 +2575,8 @@
       "id": "pat-389",
       "name": "Ajay Saxena",
       "phone": "+91 90000 00389",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-390",
@@ -2390,7 +2588,8 @@
       "id": "pat-391",
       "name": "Keerthana Muthu",
       "phone": "+91 90000 00391",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-392",
@@ -2402,7 +2601,8 @@
       "id": "pat-393",
       "name": "Murugan Raghavan",
       "phone": "+91 90000 00393",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-394",
@@ -2414,7 +2614,8 @@
       "id": "pat-395",
       "name": "Kavitha Raghavan",
       "phone": "+91 90000 00395",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-396",
@@ -2426,7 +2627,8 @@
       "id": "pat-397",
       "name": "Pankaj Gupta",
       "phone": "+91 90000 00397",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-398",
@@ -2438,7 +2640,8 @@
       "id": "pat-399",
       "name": "Kavitha Iyer",
       "phone": "+91 90000 00399",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-400",
@@ -2450,7 +2653,8 @@
       "id": "pat-401",
       "name": "Arun Pillai",
       "phone": "+91 90000 00401",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-402",
@@ -2462,7 +2666,8 @@
       "id": "pat-403",
       "name": "Pavithra Rajendran",
       "phone": "+91 90000 00403",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-404",
@@ -2474,7 +2679,8 @@
       "id": "pat-405",
       "name": "Selvam Pillai",
       "phone": "+91 90000 00405",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-406",
@@ -2486,7 +2692,8 @@
       "id": "pat-407",
       "name": "Murugan Krishnan",
       "phone": "+91 90000 00407",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-408",
@@ -2498,7 +2705,8 @@
       "id": "pat-409",
       "name": "Neha Pandey",
       "phone": "+91 90000 00409",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-410",
@@ -2510,7 +2718,8 @@
       "id": "pat-411",
       "name": "Varun Nair",
       "phone": "+91 90000 00411",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-412",
@@ -2522,7 +2731,8 @@
       "id": "pat-413",
       "name": "Shalini Sharma",
       "phone": "+91 90000 00413",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-414",
@@ -2534,7 +2744,8 @@
       "id": "pat-415",
       "name": "Ishita Nair",
       "phone": "+91 90000 00415",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-416",
@@ -2546,7 +2757,8 @@
       "id": "pat-417",
       "name": "Aravind Iyer",
       "phone": "+91 90000 00417",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-418",
@@ -2558,7 +2770,8 @@
       "id": "pat-419",
       "name": "Alok Joshi",
       "phone": "+91 90000 00419",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-420",
@@ -2570,7 +2783,8 @@
       "id": "pat-421",
       "name": "Ganesh Krishnan",
       "phone": "+91 90000 00421",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-422",
@@ -2582,7 +2796,8 @@
       "id": "pat-423",
       "name": "Ramesh Pillai",
       "phone": "+91 90000 00423",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-424",
@@ -2594,7 +2809,8 @@
       "id": "pat-425",
       "name": "Prakash Iyer",
       "phone": "+91 90000 00425",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-426",
@@ -2606,7 +2822,8 @@
       "id": "pat-427",
       "name": "Ayesha Das",
       "phone": "+91 90000 00427",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-428",
@@ -2618,7 +2835,8 @@
       "id": "pat-429",
       "name": "Malathi Subramanian",
       "phone": "+91 90000 00429",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-430",
@@ -2630,7 +2848,8 @@
       "id": "pat-431",
       "name": "Dinesh Chandrasekaran",
       "phone": "+91 90000 00431",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-432",
@@ -2642,7 +2861,8 @@
       "id": "pat-433",
       "name": "Sunita Dubey",
       "phone": "+91 90000 00433",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-434",
@@ -2654,7 +2874,8 @@
       "id": "pat-435",
       "name": "Meenakshi Rajendran",
       "phone": "+91 90000 00435",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-436",
@@ -2666,7 +2887,8 @@
       "id": "pat-437",
       "name": "Arun Raghavan",
       "phone": "+91 90000 00437",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-438",
@@ -2678,7 +2900,8 @@
       "id": "pat-439",
       "name": "Sneha Kulkarni",
       "phone": "+91 90000 00439",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-440",
@@ -2690,7 +2913,8 @@
       "id": "pat-441",
       "name": "Kavitha Sundaram",
       "phone": "+91 90000 00441",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-442",
@@ -2702,7 +2926,8 @@
       "id": "pat-443",
       "name": "Preeti Saxena",
       "phone": "+91 90000 00443",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-444",
@@ -2714,7 +2939,8 @@
       "id": "pat-445",
       "name": "Keerthana Krishnan",
       "phone": "+91 90000 00445",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-446",
@@ -2726,7 +2952,8 @@
       "id": "pat-447",
       "name": "Manoj Verma",
       "phone": "+91 90000 00447",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-448",
@@ -2738,7 +2965,8 @@
       "id": "pat-449",
       "name": "Nikhil Thomas",
       "phone": "+91 90000 00449",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-450",
@@ -2750,7 +2978,8 @@
       "id": "pat-451",
       "name": "Deepak Verma",
       "phone": "+91 90000 00451",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-452",
@@ -2762,7 +2991,8 @@
       "id": "pat-453",
       "name": "Prakash Ramasamy",
       "phone": "+91 90000 00453",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-454",
@@ -2774,7 +3004,8 @@
       "id": "pat-455",
       "name": "Harish Iyer",
       "phone": "+91 90000 00455",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-456",
@@ -2786,7 +3017,8 @@
       "id": "pat-457",
       "name": "Varun Thomas",
       "phone": "+91 90000 00457",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-458",
@@ -2798,7 +3030,8 @@
       "id": "pat-459",
       "name": "Saravanan Chandrasekaran",
       "phone": "+91 90000 00459",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-460",
@@ -2810,7 +3043,8 @@
       "id": "pat-461",
       "name": "Balaji Natarajan",
       "phone": "+91 90000 00461",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-462",
@@ -2822,7 +3056,8 @@
       "id": "pat-463",
       "name": "Aravind Arumugam",
       "phone": "+91 90000 00463",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-464",
@@ -2834,7 +3069,8 @@
       "id": "pat-465",
       "name": "Manoj Joshi",
       "phone": "+91 90000 00465",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-466",
@@ -2846,7 +3082,8 @@
       "id": "pat-467",
       "name": "Varun Patel",
       "phone": "+91 90000 00467",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-468",
@@ -2858,7 +3095,8 @@
       "id": "pat-469",
       "name": "Deepa Palanisamy",
       "phone": "+91 90000 00469",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-470",
@@ -2870,7 +3108,8 @@
       "id": "pat-471",
       "name": "Revathi Ramasamy",
       "phone": "+91 90000 00471",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-472",
@@ -2882,7 +3121,8 @@
       "id": "pat-473",
       "name": "Sneha Reddy",
       "phone": "+91 90000 00473",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-474",
@@ -2894,7 +3134,8 @@
       "id": "pat-475",
       "name": "Kavitha Subramanian",
       "phone": "+91 90000 00475",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-476",
@@ -2906,7 +3147,8 @@
       "id": "pat-477",
       "name": "Ganesh Rajendran",
       "phone": "+91 90000 00477",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-478",
@@ -2918,7 +3160,8 @@
       "id": "pat-479",
       "name": "Harish Sundaram",
       "phone": "+91 90000 00479",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-480",
@@ -2930,7 +3173,8 @@
       "id": "pat-481",
       "name": "Tanvi Reddy",
       "phone": "+91 90000 00481",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-482",
@@ -2942,7 +3186,8 @@
       "id": "pat-483",
       "name": "Sara Kulkarni",
       "phone": "+91 90000 00483",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-484",
@@ -2954,7 +3199,8 @@
       "id": "pat-485",
       "name": "Pavithra Venkatesan",
       "phone": "+91 90000 00485",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-486",
@@ -2966,7 +3212,8 @@
       "id": "pat-487",
       "name": "Saravanan Muthu",
       "phone": "+91 90000 00487",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-488",
@@ -2978,7 +3225,8 @@
       "id": "pat-489",
       "name": "Harish Pillai",
       "phone": "+91 90000 00489",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-490",
@@ -2990,7 +3238,8 @@
       "id": "pat-491",
       "name": "Preeti Das",
       "phone": "+91 90000 00491",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-492",
@@ -3002,7 +3251,8 @@
       "id": "pat-493",
       "name": "Suresh Fernandes",
       "phone": "+91 90000 00493",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-494",
@@ -3014,7 +3264,8 @@
       "id": "pat-495",
       "name": "Anitha Bose",
       "phone": "+91 90000 00495",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-496",
@@ -3026,7 +3277,8 @@
       "id": "pat-497",
       "name": "Pavithra Pillai",
       "phone": "+91 90000 00497",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-498",
@@ -3038,7 +3290,8 @@
       "id": "pat-499",
       "name": "Malathi Saxena",
       "phone": "+91 90000 00499",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-500",
@@ -3050,7 +3303,8 @@
       "id": "pat-501",
       "name": "Rohan Agarwal",
       "phone": "+91 90000 00501",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-502",
@@ -3062,7 +3316,8 @@
       "id": "pat-503",
       "name": "Pankaj Joshi",
       "phone": "+91 90000 00503",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-504",
@@ -3074,7 +3329,8 @@
       "id": "pat-505",
       "name": "Karthik Thomas",
       "phone": "+91 90000 00505",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-506",
@@ -3086,7 +3342,8 @@
       "id": "pat-507",
       "name": "Farhan Chandrasekaran",
       "phone": "+91 90000 00507",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-508",
@@ -3098,7 +3355,8 @@
       "id": "pat-509",
       "name": "Rahul Venkatesan",
       "phone": "+91 90000 00509",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-510",
@@ -3110,7 +3368,8 @@
       "id": "pat-511",
       "name": "Gaurav Sundaram",
       "phone": "+91 90000 00511",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-512",
@@ -3122,7 +3381,8 @@
       "id": "pat-513",
       "name": "Rekha Ramasamy",
       "phone": "+91 90000 00513",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-514",
@@ -3134,7 +3394,8 @@
       "id": "pat-515",
       "name": "Ganesh Pillai",
       "phone": "+91 90000 00515",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-516",
@@ -3146,7 +3407,8 @@
       "id": "pat-517",
       "name": "Aravind D'Souza",
       "phone": "+91 90000 00517",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-518",
@@ -3158,7 +3420,8 @@
       "id": "pat-519",
       "name": "Vikram Krishnan",
       "phone": "+91 90000 00519",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-520",
@@ -3170,7 +3433,8 @@
       "id": "pat-521",
       "name": "Kavita Raghavan",
       "phone": "+91 90000 00521",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-522",
@@ -3182,7 +3446,8 @@
       "id": "pat-523",
       "name": "Varun Shanmugam",
       "phone": "+91 90000 00523",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-524",
@@ -3194,7 +3459,8 @@
       "id": "pat-525",
       "name": "Zoya Menon",
       "phone": "+91 90000 00525",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-526",
@@ -3206,7 +3472,8 @@
       "id": "pat-527",
       "name": "Ritu Shanmugam",
       "phone": "+91 90000 00527",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-528",
@@ -3218,7 +3485,8 @@
       "id": "pat-529",
       "name": "Lakshmi Tiwari",
       "phone": "+91 90000 00529",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-530",
@@ -3230,7 +3498,8 @@
       "id": "pat-531",
       "name": "Prakash Das",
       "phone": "+91 90000 00531",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-532",
@@ -3242,7 +3511,8 @@
       "id": "pat-533",
       "name": "Nandhini Joshi",
       "phone": "+91 90000 00533",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-534",
@@ -3254,7 +3524,8 @@
       "id": "pat-535",
       "name": "Ritu Verma",
       "phone": "+91 90000 00535",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-536",
@@ -3266,7 +3537,8 @@
       "id": "pat-537",
       "name": "Amit Rao",
       "phone": "+91 90000 00537",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-538",
@@ -3278,7 +3550,8 @@
       "id": "pat-539",
       "name": "Keerthana Srivastava",
       "phone": "+91 90000 00539",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-540",
@@ -3290,7 +3563,8 @@
       "id": "pat-541",
       "name": "Nikhil Dubey",
       "phone": "+91 90000 00541",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-542",
@@ -3302,7 +3576,8 @@
       "id": "pat-543",
       "name": "Vikram Muthu",
       "phone": "+91 90000 00543",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-544",
@@ -3314,7 +3589,8 @@
       "id": "pat-545",
       "name": "Manikandan Raghavan",
       "phone": "+91 90000 00545",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-546",
@@ -3326,7 +3602,8 @@
       "id": "pat-547",
       "name": "Malathi Arumugam",
       "phone": "+91 90000 00547",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-548",
@@ -3338,7 +3615,8 @@
       "id": "pat-549",
       "name": "Asha Rajendran",
       "phone": "+91 90000 00549",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-550",
@@ -3350,7 +3628,8 @@
       "id": "pat-551",
       "name": "Priya Nair",
       "phone": "+91 90000 00551",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-552",
@@ -3362,7 +3641,8 @@
       "id": "pat-553",
       "name": "Nitin Singh",
       "phone": "+91 90000 00553",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-554",
@@ -3374,7 +3654,8 @@
       "id": "pat-555",
       "name": "Zoya Bose",
       "phone": "+91 90000 00555",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-556",
@@ -3386,7 +3667,8 @@
       "id": "pat-557",
       "name": "Selvam Saxena",
       "phone": "+91 90000 00557",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-558",
@@ -3398,7 +3680,8 @@
       "id": "pat-559",
       "name": "Rohan Verma",
       "phone": "+91 90000 00559",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-560",
@@ -3410,7 +3693,8 @@
       "id": "pat-561",
       "name": "Nitin Gupta",
       "phone": "+91 90000 00561",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-562",
@@ -3422,7 +3706,8 @@
       "id": "pat-563",
       "name": "Keerthana Gupta",
       "phone": "+91 90000 00563",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-564",
@@ -3434,7 +3719,8 @@
       "id": "pat-565",
       "name": "Preeti Srivastava",
       "phone": "+91 90000 00565",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-566",
@@ -3446,7 +3732,8 @@
       "id": "pat-567",
       "name": "Arun Singh",
       "phone": "+91 90000 00567",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-568",
@@ -3458,7 +3745,8 @@
       "id": "pat-569",
       "name": "Gaurav Gupta",
       "phone": "+91 90000 00569",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-570",
@@ -3470,7 +3758,8 @@
       "id": "pat-571",
       "name": "Manikandan Kulkarni",
       "phone": "+91 90000 00571",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-572",
@@ -3482,7 +3771,8 @@
       "id": "pat-573",
       "name": "Ayesha Pillai",
       "phone": "+91 90000 00573",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-574",
@@ -3494,7 +3784,8 @@
       "id": "pat-575",
       "name": "Divya Muthu",
       "phone": "+91 90000 00575",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-576",
@@ -3506,7 +3797,8 @@
       "id": "pat-577",
       "name": "Joseph Desai",
       "phone": "+91 90000 00577",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-578",
@@ -3518,7 +3810,8 @@
       "id": "pat-579",
       "name": "Dinesh Srivastava",
       "phone": "+91 90000 00579",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-580",
@@ -3530,7 +3823,8 @@
       "id": "pat-581",
       "name": "Maria Arumugam",
       "phone": "+91 90000 00581",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-582",
@@ -3542,7 +3836,8 @@
       "id": "pat-583",
       "name": "Shalini Pillai",
       "phone": "+91 90000 00583",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-584",
@@ -3554,7 +3849,8 @@
       "id": "pat-585",
       "name": "Manikandan Agarwal",
       "phone": "+91 90000 00585",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-586",
@@ -3566,7 +3862,8 @@
       "id": "pat-587",
       "name": "Manikandan Saxena",
       "phone": "+91 90000 00587",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-588",
@@ -3578,7 +3875,8 @@
       "id": "pat-589",
       "name": "Farhan Shanmugam",
       "phone": "+91 90000 00589",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-590",
@@ -3590,7 +3888,8 @@
       "id": "pat-591",
       "name": "Manoj Arumugam",
       "phone": "+91 90000 00591",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-592",
@@ -3602,7 +3901,8 @@
       "id": "pat-593",
       "name": "Rohan D'Souza",
       "phone": "+91 90000 00593",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-594",
@@ -3614,7 +3914,8 @@
       "id": "pat-595",
       "name": "Deepak Raghavan",
       "phone": "+91 90000 00595",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-596",
@@ -3626,7 +3927,8 @@
       "id": "pat-597",
       "name": "Tanvi Menon",
       "phone": "+91 90000 00597",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-598",
@@ -3638,7 +3940,8 @@
       "id": "pat-599",
       "name": "Neil Dubey",
       "phone": "+91 90000 00599",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-600",
@@ -3650,7 +3953,8 @@
       "id": "pat-601",
       "name": "Maria Gupta",
       "phone": "+91 90000 00601",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-602",
@@ -3662,7 +3966,8 @@
       "id": "pat-603",
       "name": "Pavithra Joshi",
       "phone": "+91 90000 00603",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-604",
@@ -3674,7 +3979,8 @@
       "id": "pat-605",
       "name": "Rahul Fernandes",
       "phone": "+91 90000 00605",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-606",
@@ -3686,7 +3992,8 @@
       "id": "pat-607",
       "name": "Farhan Gupta",
       "phone": "+91 90000 00607",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-608",
@@ -3698,7 +4005,8 @@
       "id": "pat-609",
       "name": "Aditya Nair",
       "phone": "+91 90000 00609",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-610",
@@ -3710,7 +4018,8 @@
       "id": "pat-611",
       "name": "Aravind Reddy",
       "phone": "+91 90000 00611",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-612",
@@ -3722,7 +4031,8 @@
       "id": "pat-613",
       "name": "Dinesh Singh",
       "phone": "+91 90000 00613",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-614",
@@ -3734,7 +4044,8 @@
       "id": "pat-615",
       "name": "Zoya Shanmugam",
       "phone": "+91 90000 00615",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-616",
@@ -3746,7 +4057,8 @@
       "id": "pat-617",
       "name": "Ganesh Chandrasekaran",
       "phone": "+91 90000 00617",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-618",
@@ -3758,7 +4070,8 @@
       "id": "pat-619",
       "name": "Alok Dubey",
       "phone": "+91 90000 00619",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-620",
@@ -3770,7 +4083,8 @@
       "id": "pat-621",
       "name": "Nitin Thomas",
       "phone": "+91 90000 00621",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-622",
@@ -3782,7 +4096,8 @@
       "id": "pat-623",
       "name": "Lakshmi Joshi",
       "phone": "+91 90000 00623",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-624",
@@ -3794,7 +4109,8 @@
       "id": "pat-625",
       "name": "Aditya Saxena",
       "phone": "+91 90000 00625",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-626",
@@ -3806,7 +4122,8 @@
       "id": "pat-627",
       "name": "Nikhil Fernandes",
       "phone": "+91 90000 00627",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-628",
@@ -3818,7 +4135,8 @@
       "id": "pat-629",
       "name": "Maria Krishnan",
       "phone": "+91 90000 00629",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-630",
@@ -3830,7 +4148,8 @@
       "id": "pat-631",
       "name": "Janani Arumugam",
       "phone": "+91 90000 00631",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-632",
@@ -3842,7 +4161,8 @@
       "id": "pat-633",
       "name": "Murugan Yadav",
       "phone": "+91 90000 00633",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-634",
@@ -3854,7 +4174,8 @@
       "id": "pat-635",
       "name": "Deepak Chandrasekaran",
       "phone": "+91 90000 00635",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-636",
@@ -3866,7 +4187,8 @@
       "id": "pat-637",
       "name": "Swati Chandrasekaran",
       "phone": "+91 90000 00637",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-638",
@@ -3878,7 +4200,8 @@
       "id": "pat-639",
       "name": "Neil Pillai",
       "phone": "+91 90000 00639",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-640",
@@ -3890,7 +4213,8 @@
       "id": "pat-641",
       "name": "Nikhil Hegde",
       "phone": "+91 90000 00641",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-642",
@@ -3902,7 +4226,8 @@
       "id": "pat-643",
       "name": "Anjali Sundaram",
       "phone": "+91 90000 00643",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-644",
@@ -3914,7 +4239,8 @@
       "id": "pat-645",
       "name": "Neha D'Souza",
       "phone": "+91 90000 00645",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-646",
@@ -3926,7 +4252,8 @@
       "id": "pat-647",
       "name": "Rekha Muthu",
       "phone": "+91 90000 00647",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-648",
@@ -3938,7 +4265,8 @@
       "id": "pat-649",
       "name": "Joseph Hegde",
       "phone": "+91 90000 00649",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-650",
@@ -3950,7 +4278,8 @@
       "id": "pat-651",
       "name": "Gaurav D'Souza",
       "phone": "+91 90000 00651",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-652",
@@ -3962,7 +4291,8 @@
       "id": "pat-653",
       "name": "Nandhini Verma",
       "phone": "+91 90000 00653",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-654",
@@ -3974,7 +4304,8 @@
       "id": "pat-655",
       "name": "Meenakshi Pandey",
       "phone": "+91 90000 00655",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-656",
@@ -3986,7 +4317,8 @@
       "id": "pat-657",
       "name": "Anitha Natarajan",
       "phone": "+91 90000 00657",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-658",
@@ -3998,7 +4330,8 @@
       "id": "pat-659",
       "name": "Gaurav Kannan",
       "phone": "+91 90000 00659",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-660",
@@ -4010,7 +4343,8 @@
       "id": "pat-661",
       "name": "Pavithra Srivastava",
       "phone": "+91 90000 00661",
-      "preferredLanguage": "English"
+      "preferredLanguage": "English",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-662",
@@ -4022,7 +4356,8 @@
       "id": "pat-663",
       "name": "Sara Subramanian",
       "phone": "+91 90000 00663",
-      "preferredLanguage": "Tamil"
+      "preferredLanguage": "Tamil",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-664",
@@ -4034,7 +4369,8 @@
       "id": "pat-665",
       "name": "Saravanan Khan",
       "phone": "+91 90000 00665",
-      "preferredLanguage": "Hindi"
+      "preferredLanguage": "Hindi",
+      "whatsappOptIn": true
     },
     {
       "id": "pat-666",

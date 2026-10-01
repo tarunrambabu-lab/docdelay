@@ -184,3 +184,34 @@ export function slotTakenPrefix(language: Language): string {
     Hindi: "माफ़ कीजिए, वह समय अभी-अभी बुक हो गया।",
   }[language];
 }
+
+// ---------- WhatsApp only ----------
+
+// The ONLY reply a patient gets on WhatsApp when they mention a health concern
+// but have sent STOP, or never agreed to WhatsApp. Nobody is flagged URGENT in
+// that case, so the line must stand on its own.
+// English only for now — Tamil and Hindi versions are in BACKLOG.md.
+// ⚠️ Not checked by a clinician yet (BACKLOG.md).
+export function emergencyOnlyReply(): string {
+  return (
+    "If this is an emergency or you're worried, please call 108 or go to the nearest " +
+    "emergency department now. Don't wait for this appointment."
+  );
+}
+
+// Sent when a patient replies "2" (change) to an update message: the same
+// choices as on the call. (Tamil and Hindi reuse the call wording; they need
+// native-speaker review.)
+export function changeMenuReply(language: Language): string {
+  return {
+    English:
+      "Would you like to: 1) wait for a later slot today, 2) move to another day, or 3) cancel? " +
+      "Reply 4 to speak with our front desk.",
+    Tamil:
+      "நீங்கள் விரும்புவது: 1) இன்று பின்னர் வேறு நேரத்திற்கு காத்திருக்க, 2) வேறு நாளுக்கு மாற்ற, அல்லது 3) ரத்து செய்ய? " +
+      "எங்கள் வரவேற்பு மேசையுடன் பேச 4 என பதிலளிக்கவும்.",
+    Hindi:
+      "क्या आप: 1) आज बाद के किसी समय का इंतज़ार करना चाहेंगे, 2) किसी और दिन आना चाहेंगे, या 3) अपॉइंटमेंट रद्द करना चाहेंगे? " +
+      "हमारे फ्रंट डेस्क से बात करने के लिए 4 भेजें।",
+  }[language];
+}
