@@ -89,6 +89,7 @@ Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinic
   - Anything DocDelay couldn't understand (typed, voice note or photo) never moves a patient to the end of the call queue; only a reply DocDelay understood does.
   - The tap-list on the WhatsApp screen depends on where the patient is (menu, A/B/C, "1 Keep it / 2 Change", heads-up "1 / 2 / 3", "YES / No"), because "1" means different things at different moments.
   - WhatsApp uses basic mode only, never the AI.
+- Decisions we're unsure about go in REVIEW.md; new ideas go in BACKLOG.md.
 - WhatsApp rules (FRD 6.1) are frozen for the MVP (1 Oct 2026). Parts 2 and 3 only build screens; new ideas go to BACKLOG.md.
 - Any browser test or local test server Claude runs must have the API key hidden, so it can never spend credit. Start the server with the key set to empty: `ANTHROPIC_API_KEY= npx next start …`. (Just removing the variable isn't enough: Next.js then reads the key from `.env.local` by itself.) Before testing, check the Chat tab says "basic mode", not "AI". (`npm test` never reaches the AI, and the test-after-edit hook hides the key too.)
 
