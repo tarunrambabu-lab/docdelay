@@ -36,18 +36,21 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | .env Read deny rule + shell hook | Done |
 | claude-code-setup plugin | Installed |
 | Test-after-edit hook (runs `npm test` after Claude edits `src/`) | Done (1 Oct) |
-| /wrap-up skill | Next |
-| "5 – Another doctor today" (FRD 5.4), Buttons + chat (basic and AI mode), with Dr. Karthik Raman as a second cardiologist | Done, live (2 Oct) |
+| "5 – Another doctor today" (FRD 5.4), Buttons + chat (basic and AI mode), with Dr. Karthik Raman as a second cardiologist | Done, live (1 Oct) |
 | Fixed demo clock: 9:00 AM on India's date (`CLOCK_MODE` in `src/lib/clock.ts`, kept on "demo") | Done, live (1 Oct) |
 | Tour step 6 of 9: "Another doctor, same day" (Buttons, press 5, pick a time with Dr. Karthik) | Done, live (1 Oct) |
 | Tour step 2 on small phones: pop-up now sits above the tour card; checked at 4 phone sizes in Chrome and Safari engines | Done, live (1 Oct) |
-| README screenshots retaken (4 doctors, demo clock badge, button 5) | Done (2 Oct) |
-| Another doctor in chat: suggested-phrase button; basic mode's "another doctor" reading wins over the AI | Done, live (2 Oct) — real-AI checks cost $0.1122 in total |
-| Confirmation guard: an AI reply that sounds like a confirmation with nothing booked is never shown | Done, live (2 Oct) |
-| WhatsApp Part 1 of 3: data and booking rules in the HMS module + 45 tests (opt-in, STOP, channel, change of answer, call queue, health check first, WhatsApp/SMS updates, heads-up for pushed patients and their replies). No screens yet | Done (2 Oct), pushed |
-| WhatsApp Part 2 (screens; voice notes and photos) and Part 3 | Next (1st) |
-| Demo video v2 (4 doctors, demo clock, another doctor; no send-time blanking needed) | Next (2nd) |
-| Add the video to the README and portfolio | Next (3rd) |
+| README screenshots retaken (4 doctors, demo clock badge, button 5) | Done (1 Oct) |
+| Another doctor in chat: suggested-phrase button; basic mode's "another doctor" reading wins over the AI | Done, live (1 Oct) — real-AI checks cost $0.1122 in total |
+| Confirmation guard: an AI reply that sounds like a confirmation with nothing booked is never shown | Done, live (1 Oct) |
+| WhatsApp Part 1 of 3: rules and data in the HMS module, 403 tests (opt-in, STOP, channel, change of answer, call queue, health check first, WhatsApp/SMS updates, heads-up for pushed patients). Pushed patients can cancel from the heads-up (only after "Reply YES"). No screens yet | Done, live (1 Oct, c9cc9fd) |
+| New Tamil and Hindi WhatsApp lines | First native-speaker check done by my mom (2 Oct). Still needs a second native speaker and a clinician before real patients |
+| WhatsApp Part 2: WhatsApp screen, voice notes/photos, call screen uses getCallQueue | Next (1st) |
+| WhatsApp Part 3: dashboard channel icons, Messages page WhatsApp/SMS, "Needs staff call · holding [time]", tour, README | Next (2nd) |
+| Waiting check (patients waiting 45+ min asked to keep waiting or reschedule; pushed patients asking for another day) | Next (3rd), details to discuss then |
+| Demo video v2 (4 doctors, demo clock, another doctor; no send-time blanking needed) | Next (4th) |
+| Add the video to the README and portfolio | Next (5th) |
+| /wrap-up skill | Next (6th) |
 | Phase 2: clinic interviews | After README/portfolio |
 | Real calls to my own phone | After the 4 AI backlog items |
 | Add the real-call clip to the video | After real calls |
@@ -72,13 +75,14 @@ Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinic
 - In chat, basic mode's reading wins over the AI for any health concern (always first) and for "another doctor"; the AI never handles those messages.
 - Confirmations only ever use DocDelay's fixed wording: an AI reply that sounds like a confirmation, with no booking saved in that message, is never shown; basic mode answers that message instead. The AI is also told never to say an appointment is booked, moved or confirmed.
 - WhatsApp (simulated, alongside calls and texts; rules in `src/hms/mockHms.ts`, "WhatsApp" section):
-  - Only "WhatsApp OK" patients. "STOP" (whole message, any case) closes WhatsApp for that appointment; calls continue; the one update then goes by SMS.
+  - Only opted-in ("WhatsApp OK") patients. "STOP" must be typed (whole message, any case) and closes WhatsApp for that appointment; calls and SMS continue; the one update then goes by SMS.
   - Health check first on every message → URGENT as in chat. Exception (my decision, not clinician-checked): after STOP or if not opted in, a health mention gets only the fixed 108 line — no URGENT, no staff note; everything else from them is ignored.
-  - Last finished answer wins: an answered patient can change on WhatsApp; it's a fresh answer under every existing rule; the old booking stays until the new answer is finished, then it's freed; pushed patients stay put. At most 2 changes; a 3rd attempt → "Needs staff call – Keeps changing", nothing changes. Picking the same slot isn't a change. "Needs staff call" and URGENT can't be changed by WhatsApp.
+  - Last finished answer wins (call or WhatsApp): an answered patient can change on WhatsApp; it's a fresh answer under every existing rule; the old booking stays until the new answer is finished, then it's freed; pushed patients stay put. At most 2 changes; a 3rd attempt → "Needs staff call – Keeps changing", nothing changes. Picking the same slot isn't a change. "Needs staff call" and URGENT can't be changed by WhatsApp.
   - Calls skip anyone who answered; a patient part-way through a WhatsApp reply goes to the end of the call queue.
-  - Updates: still one per patient, only when staff press "Send updates": WhatsApp if opted in, SMS if "WhatsApp fails" (labelled) or not opted in — never both. After an update, "1" = confirmed (no change), "2" = show the choices (not counted until they pick). Changing to "cancel" drops an unsent update.
+  - Updates: still one per patient, staff-approved, only when staff press "Send updates": WhatsApp if opted in, SMS if "WhatsApp fails" (labelled) or not opted in — never both. After an update, "1" = confirmed (no change), "2" = show the choices (not counted until they pick). Changing to "cancel" drops an unsent update.
   - Pushed (not affected) patients get a heads-up instead of the update: "…may start up to N minutes later, around [time]. Reply 1 if that's fine, 2 to cancel, 3 to talk to a person." Replies are read against the heads-up, never the main menu: 1 / "ok" = nothing changes; 2 / cancel wording = "Reply YES to cancel", cancelled only on YES (slot freed, nobody moves back); "don't cancel" never cancels; 3, another day or anything else = "Needs staff call – Replied to heads-up", booking kept.
-  - The 108-only line is in the patient's language (Tamil and Hindi not native-checked).
+  - The 108-only line is in the patient's language (Tamil and Hindi: first native-speaker check done 2 Oct; second native speaker and clinician still needed).
+  - Voice notes are understood (turned into text, same checks as a typed message); photos are not read.
   - WhatsApp uses basic mode only, never the AI.
 - WhatsApp rules (FRD 6.1) are frozen for the MVP (1 Oct 2026). Parts 2 and 3 only build screens; new ideas go to BACKLOG.md.
 - Any browser test or local test server Claude runs must have the API key hidden, so it can never spend credit. Start the server with the key set to empty: `ANTHROPIC_API_KEY= npx next start …`. (Just removing the variable isn't enough: Next.js then reads the key from `.env.local` by itself.) Before testing, check the Chat tab says "basic mode", not "AI". (`npm test` never reaches the AI, and the test-after-edit hook hides the key too.)
