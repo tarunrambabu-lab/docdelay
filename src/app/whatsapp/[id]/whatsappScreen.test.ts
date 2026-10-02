@@ -382,13 +382,88 @@ describe("voice notes", () => {
     expect((await appt(PUSHED)).whatsappStopped).toBe(true);
   });
 
-  it("pushed patient: a “stop” voice note after “Reply YES to cancel” never cancels", async () => {
+  it("pushed patient: a “stop” voice note keeps “Reply YES to cancel” open — like a photo", async () => {
     await pushSomeone();
     await sendPendingUpdates();
-    await whatsapp(PUSHED, "2");
+    expect(await whatsapp(PUSHED, "2")).toBe("cancel asked");
     expect(await whatsapp(PUSHED, "stop", "voice")).toBe("replied");
-    expect(await whatsapp(PUSHED, "YES")).not.toBe("cancelled"); // the question was closed
-    expect((await appt(PUSHED)).status).toBe("Time moved");
+    const a = await appt(PUSHED);
+    expect((await lastReply(PUSHED)).text).toBe(couldntUnderstandReply(a.patient.preferredLanguage));
+    expect([a.status, a.startTime]).toEqual(["Time moved", "12:15"]); // nothing cancelled
+    expect(await labels(PUSHED)).toEqual(["YES – cancel it", "No – keep it", "I’m unwell"]);
+    expect(await tap(PUSHED, "YES")).toBe("cancelled"); // YES afterwards cancels as normal
+    expect((await appt(PUSHED)).status).toBe("Cancelled");
+  });
+
+  // Tamil and Hindi "stop" words (not yet native-checked), in English letters and in script.
+  const STOP_SAID = [
+    "niruthu",
+    "Niruthunga",
+    "niruthidunga",
+    "நிறுத்துங்க",
+    "band karo",
+    "Band kar do!",
+    "band kijiye",
+    "बंद करो",
+  ];
+
+  it.each(STOP_SAID)(
+    "pushed patient: a voice note saying “%s” gets only the “Sorry…” line — no staff call",
+    async (said) => {
+      await pushSomeone();
+      await sendPendingUpdates();
+      const language = (await appt(PUSHED)).patient.preferredLanguage;
+      expect(await whatsapp(PUSHED, said, "voice")).toBe("replied");
+      const a = await appt(PUSHED);
+      expect([a.status, a.startTime, a.note, a.whatsappStopped]).toEqual([
+        "Time moved",
+        "12:15",
+        undefined,
+        undefined,
+      ]);
+      expect((await lastReply(PUSHED)).text).toBe(couldntUnderstandReply(language));
+      expect((await getStaffCallList()).map((x) => x.id)).not.toContain(PUSHED);
+    },
+  );
+
+  it("“ruko” (stop / wait) is read as “I'll wait”, as before — not as a stop word", async () => {
+    await pushSomeone();
+    await sendPendingUpdates();
+    expect(await whatsapp(PUSHED, "ruko", "voice")).toBe("staff");
+    expect((await appt(PUSHED)).startTime).toBe("12:15"); // booking kept
+  });
+
+  it("pushed patient: Tamil/Hindi “stop” with a health phrase still goes URGENT", async () => {
+    for (const said of ["niruthu, nenju vali", "band kar do, chest pain ho raha hai", "band karo, saans lene mein dikkat"]) {
+      steps = [];
+      await pushSomeone();
+      await sendPendingUpdates();
+      expect(await whatsapp(PUSHED, said, "voice")).toBe("urgent");
+    }
+  });
+
+  it("pushed patient: Tamil/Hindi “stop” with clear cancel wording is read normally", async () => {
+    for (const said of ["niruthu, cancel pannidunga", "band karo, cancel kar do"]) {
+      steps = [];
+      await pushSomeone();
+      await sendPendingUpdates();
+      expect(await whatsapp(PUSHED, said, "voice")).toBe("cancel asked");
+      expect((await appt(PUSHED)).status).toBe("Time moved");
+    }
+  });
+
+  it("Tamil/Hindi “stop” TYPED is not STOP — only the exact word STOP closes the chat", async () => {
+    await pushSomeone();
+    await sendPendingUpdates();
+    expect(await whatsapp(PUSHED, "band karo")).not.toBe("stopped");
+    expect((await appt(PUSHED)).whatsappStopped).toBeUndefined();
+  });
+
+  it("words that only look like “stop” words don't count", async () => {
+    await pushSomeone();
+    await sendPendingUpdates();
+    // "stopped", "bandage": not a stop word → the usual heads-up reply (front desk).
+    expect(await whatsapp(PUSHED, "the bus stopped near my bandage shop", "voice")).toBe("staff");
   });
 
   it("the first unclear voice note: “Sorry…”, and the tap-list still has “Talk to a person”", async () => {
@@ -557,6 +632,21 @@ describe("call queue", () => {
     expect(await whatsapp(KIRAN, "blah blah", "voice")).toBe("replied");
     expect(await whatsapp(REVATHI, "stop", "voice")).toBe("replied");
     expect(await order()).toEqual(before);
+  });
+
+  it("a TYPED message DocDelay couldn't understand also keeps the patient's place", async () => {
+    const u = (await away())!;
+    const order = async () => (await getCallQueue(u.id)).map((a) => a.id);
+    const before = await order();
+    expect(await whatsapp(NIKHIL, "blah blah")).toBe("replied");
+    expect((await appt(NIKHIL)).status).toBe("Affected – needs contact");
+    expect(await order()).toEqual(before);
+    // …while a typed reply DocDelay understood (offers shown) moves them to the end.
+    expect(await whatsapp(NIKHIL, "another day")).toBe("replied");
+    expect((await order()).at(-1)).toBe(NIKHIL);
+    // An unclear message while choosing doesn't bring them back to the front.
+    await whatsapp(NIKHIL, "blah blah");
+    expect((await order()).at(-1)).toBe(NIKHIL);
   });
 
   it("a voice note DocDelay understood (offers on screen) does move the patient to the end", async () => {

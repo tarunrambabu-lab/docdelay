@@ -1,6 +1,6 @@
 # DocDelay — Handoff
 
-Last updated: 2 Oct 2026. Read this first when starting a new chat or a new Claude Code session.
+Last updated: 3 Oct 2026. Read this first when starting a new chat or a new Claude Code session.
 
 ## What DocDelay is
 
@@ -26,7 +26,7 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | 6: chat mode | Done. Live site = basic word-list chat. Laptop = real AI (Claude Haiku 4.5) using my API key in `.env.local` |
 | Safety: wide health-keyword check runs first; "two unclear replies" counted in code | Done |
 | Alarm-fatigue fix ("tired of waiting", "heavy traffic", "work pressure", remove "doctor said") | Done |
-| Automated tests (npm test, 448 tests) | Done |
+| Automated tests (npm test, 462 tests) | Done |
 | Tamil/Hindi health-word fix (word beginnings, lookalike guards) | Done, live. Needs a second native-speaker and a clinician review before real patients |
 | 7: guided demo tour, suggested chat phrases, phone-width polish | Done, live (29 Sep) |
 | AI weekday fix + day check in code | Done. 4 AI items in BACKLOG under "Must do before real calls or laptop demos" |
@@ -45,8 +45,8 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | Confirmation guard: an AI reply that sounds like a confirmation with nothing booked is never shown | Done, live (1 Oct) |
 | WhatsApp Part 1 of 3: rules and data in the HMS module, 403 tests (opt-in, STOP, channel, change of answer, call queue, health check first, WhatsApp/SMS updates, heads-up for pushed patients). Pushed patients can cancel from the heads-up (only after "Reply YES"). No screens yet | Done, live (1 Oct, c9cc9fd) |
 | New Tamil and Hindi WhatsApp lines | First native-speaker check done by my mom (2 Oct). Still needs a second native speaker and a clinician before real patients |
-| WhatsApp Part 2 of 3: WhatsApp screen at `/whatsapp/<appointment id>` (opened from the patient details panel), tap-list, typing, voice notes and photos (demo), call screen uses getCallQueue; 45 new tests | Done, live (2 Oct) |
-| Part 2's new Tamil and Hindi lines: "Sorry, I couldn't understand that…" and what "I'm unwell" sends | NOT yet native-checked |
+| WhatsApp Part 2 of 3: WhatsApp screen at `/whatsapp/<appointment id>` (opened from the patient details panel), tap-list, typing, voice notes and photos (demo), call screen uses getCallQueue; 59 new tests | Done, live (2–3 Oct) |
+| Part 2's new Tamil and Hindi lines: "Sorry, I couldn't understand that…", what "I'm unwell" sends, and the "stop" words for pushed patients' voice notes | NOT yet native-checked |
 | WhatsApp Part 3: dashboard channel icons, Messages page WhatsApp/SMS, "Needs staff call · holding [time]", reword the first WhatsApp message, tour, README | Next (1st) |
 | Waiting check (patients waiting 45+ min asked to keep waiting or reschedule; pushed patients asking for another day) | Next (2nd), details to discuss then |
 | Demo video v2 (4 doctors, demo clock, another doctor; no send-time blanking needed) | Next (3rd) |
@@ -85,8 +85,8 @@ Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinic
   - The 108-only line is in the patient's language (Tamil and Hindi: first native-speaker check done 2 Oct; second native speaker and clinician still needed).
   - Voice notes are understood (turned into text, same checks as a typed message, 108-only exception after STOP). An unclear one gets "Sorry, I couldn't understand that. Please type your answer or tap an option. If this is an emergency, call 108."
   - Photos are not read and never health-checked (accepted for the MVP, 2 Oct 2026; clinician question in BACKLOG). The patient gets the same "Sorry…" line and staff get a line in the log. A photo counts towards "two unclear replies", only before the patient has answered, and never creates an URGENT alert.
-  - A pushed patient's voice note that says "stop" and nothing else DocDelay can read: only the "Sorry…" line, booking kept, no staff call. Health phrases and clear wording ("can't come", "cancel") in it are read as usual.
-  - A photo or an unclear voice note never moves a patient to the end of the call queue; only a reply DocDelay understood does.
+  - A pushed patient's voice note that says "stop" (English, or the Tamil/Hindi words in `src/hms/mockHms.ts`) and nothing else DocDelay can read: only the "Sorry…" line, booking kept, no staff call; an open "Reply YES to cancel" stays open (a later YES cancels). Health phrases and clear wording ("can't come", "cancel") in it are read as usual. "ruko" isn't a stop word (it's read as "I'll wait").
+  - Anything DocDelay couldn't understand (typed, voice note or photo) never moves a patient to the end of the call queue; only a reply DocDelay understood does.
   - The tap-list on the WhatsApp screen depends on where the patient is (menu, A/B/C, "1 Keep it / 2 Change", heads-up "1 / 2 / 3", "YES / No"), because "1" means different things at different moments.
   - WhatsApp uses basic mode only, never the AI.
 - WhatsApp rules (FRD 6.1) are frozen for the MVP (1 Oct 2026). Parts 2 and 3 only build screens; new ideas go to BACKLOG.md.

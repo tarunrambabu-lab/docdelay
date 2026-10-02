@@ -1411,16 +1411,50 @@ function openingLine(state: HmsState, appt: Appointment, unavailability: Unavail
 //     note in the log (no alert). Like any reply DocDelay can't read, a photo
 //     counts towards "two unclear replies → staff call", and only before the
 //     patient has answered. It never makes anyone URGENT.
-//   - A photo or an unclear voice note never moves a patient to the end of
-//     the call queue: only a reply DocDelay understood does.
-//   - A PUSHED patient's voice note that says "stop" and nothing else
-//     DocDelay can read gets only the "Sorry…" line — no staff call.
+//   - A message DocDelay couldn't understand (typed, voice note or photo)
+//     never moves a patient to the end of the call queue: only a reply
+//     DocDelay understood does.
+//   - A PUSHED patient's voice note that says "stop" (English, Tamil or
+//     Hindi) and nothing else DocDelay can read gets only the "Sorry…" line —
+//     no staff call, and an open "Reply YES to cancel" question stays open.
 // WhatsApp uses the rule-based understanding only (never the AI).
 
 export const MAX_ANSWER_CHANGES = 2;
 
 // What staff see under a photo: DocDelay didn't look at it.
 const PHOTO_NOT_READ = "photo — not read";
+
+// "Stop" words, for a PUSHED patient's voice note only (see applyWhatsApp).
+// They never close the chat — only a TYPED "STOP" does.
+// ⚠️ Tamil and Hindi: NOT yet native-checked (BACKLOG.md).
+// Not here: "ruko" / "rukiye" — they also mean "wait", and the chat
+// understanding already reads them as "I'll wait" (a pushed patient who
+// says that goes to the front desk, as before).
+const STOP_WORDS_LATIN = [
+  "stop", // English
+  "niruthu", // Tamil: stop (it)
+  "niruthunga", // Tamil: please stop
+  "niruthidunga", // Tamil: please stop (it)
+  "band karo", // Hindi: stop it / switch it off
+  "band kar do", // Hindi: stop it
+  "band kijiye", // Hindi: please stop it (polite)
+];
+const STOP_WORDS_SCRIPT = [
+  "நிறுத்து", // niruthu — also matches niruthunga ("நிறுத்துங்க")
+  "நிறுத்தி", // matches niruthidunga ("நிறுத்திடுங்க")
+  "बंद करो", // band karo
+  "बंद कर दो", // band kar do
+  "बंद कीजिए", // band kijiye
+];
+// Does a voice note's text contain a "stop" word? (Whole words for English
+// letters, so "stopped" or "bandage" don't count.)
+function saysStop(text: string): boolean {
+  const t = ` ${text.toLowerCase().replace(/[^\p{L}\p{M}\p{N}]+/gu, " ").trim()} `;
+  return (
+    STOP_WORDS_LATIN.some((w) => t.includes(` ${w} `)) ||
+    STOP_WORDS_SCRIPT.some((w) => text.includes(w))
+  );
+}
 
 // A finished answer that WhatsApp can change.
 const ANSWERED: AppointmentStatus[] = [
@@ -1601,23 +1635,26 @@ function applyWhatsApp(
       return "replied";
     }
     const reading = readHeadsUpReply(step.text, u.intent === "cancel");
-    const wasAsked = appt.headsUpCancelAsked === true;
-    delete appt.headsUpCancelAsked; // the question is only open for ONE reply
 
-    // A VOICE NOTE that says "stop" and nothing DocDelay can read: it is NOT
-    // a STOP (only a typed STOP is), and it's no reason for a staff call
-    // either. Only the "Sorry…" line; the booking stays. (Clear wording in
-    // the same voice note — "can't come", "cancel" — is read as usual below.)
+    // A VOICE NOTE that says "stop" (in any of the 3 languages) and nothing
+    // DocDelay can read: it is NOT a STOP (only a typed STOP is), and it's no
+    // reason for a staff call either. Only the "Sorry…" line, like a photo:
+    // the booking stays, and an open "Reply YES to cancel" question stays
+    // open. (Clear wording in the same voice note — "can't come", "cancel" —
+    // is read as usual below.)
     if (
       media === "voice" &&
       reading === "other" &&
       u.intent === "unclear" &&
-      /\bstop\b/i.test(step.text)
+      saysStop(step.text)
     ) {
       hear(describeUnderstanding(u));
       sorry();
       return "replied";
     }
+
+    const wasAsked = appt.headsUpCancelAsked === true;
+    delete appt.headsUpCancelAsked; // the question is only open for ONE reply
 
     // Cancelled ONLY by "YES" straight after the question. The slot is freed
     // (cancelled appointments don't hold one) and nobody else moves.
@@ -1674,10 +1711,10 @@ function applyWhatsApp(
     }
     if (!chatTurn(state, step, "WhatsApp")) return "ignored";
     if (appt.status === "Affected – needs contact") {
-      // Not finished → end of the call queue. But a photo, or a voice note
-      // DocDelay couldn't understand, isn't the start of an answer: the
-      // patient keeps their place in the queue.
-      if (!(media && u.intent === "unclear")) appt.whatsappStarted = true;
+      // Not finished → end of the call queue. But anything DocDelay couldn't
+      // understand (typed, a voice note or a photo) isn't the start of an
+      // answer: the patient keeps their place in the queue.
+      if (u.intent !== "unclear") appt.whatsappStarted = true;
       return "replied";
     }
     delete appt.whatsappStarted;
