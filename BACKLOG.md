@@ -215,7 +215,7 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Photos: from a pushed patient, a photo changes nothing and leaves an open "Reply YES to cancel" question open. From a patient after STOP, or not opted in, it's ignored.
 - Call queue: a message DocDelay couldn't understand (typed, voice note or photo) doesn't move the patient; only a reply DocDelay understood (e.g. offers on screen) moves them to the end (decided 2–3 Oct 2026). Someone already at the end (part-way through a choice) stays there.
 - Saved demo steps: voice notes and photos are saved with new first letters ("v", "p"); older saved demos still load.
-- REVIEW.md: the "Why we're not sure" text for photos (a patient may send a photo instead of describing a problem), the STOP/not-opted-in 108 line (we assumed a real emergency would call 108; not clinician-checked) and the Tamil/Hindi lines (written for the demo) was written by Claude from earlier notes. It's a table, newest first except where entries share a topic, and it points to `src/hms/mockHms.ts` for the stop-word list.
+- REVIEW.md: the "Why we're not sure" text for photos (a patient may send a photo instead of describing a problem), the STOP/not-opted-in 108 line (we assumed a real emergency would call 108; not clinician-checked) and the Tamil/Hindi lines (written for the demo) was written by Claude from earlier notes. It's a table, in the order the items were given, and it points to `src/hms/mockHms.ts` for the stop-word list.
 
 ## Done
 
