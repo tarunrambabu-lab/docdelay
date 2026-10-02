@@ -208,7 +208,7 @@ export function emergencyOnlyReply(language: Language): string {
 
 // Sent when a voice note couldn't be understood, and for every photo
 // (DocDelay never reads photos, documents or stickers).
-// ⚠️ Tamil and Hindi are NOT yet native-checked (BACKLOG.md).
+// Tamil and Hindi: checked by a native speaker (3 Oct 2026).
 export function couldntUnderstandReply(language: Language): string {
   return {
     English:

@@ -37,6 +37,7 @@ export interface TapList {
 
 // What "I'm unwell" sends, in the patient's language. Each sentence must be
 // caught by the health check (a test makes sure), so it always goes URGENT.
+// Tamil and Hindi: checked by a native speaker (3 Oct 2026).
 export const UNWELL_MESSAGE: Record<Language, string> = {
   English: "I feel unwell",
   Tamil: "enakku udambu sari illai",
