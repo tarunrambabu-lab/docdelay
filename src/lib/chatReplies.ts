@@ -206,6 +206,23 @@ export function emergencyOnlyReply(language: Language): string {
   }[language];
 }
 
+// Sent when a voice note couldn't be understood, and for every photo
+// (DocDelay never reads photos, documents or stickers).
+// ⚠️ Tamil and Hindi are NOT yet native-checked (BACKLOG.md).
+export function couldntUnderstandReply(language: Language): string {
+  return {
+    English:
+      "Sorry, I couldn't understand that. Please type your answer or tap an option. " +
+      "If this is an emergency, call 108.",
+    Tamil:
+      "மன்னிக்கவும், அது எனக்குப் புரியவில்லை. உங்கள் பதிலை டைப் செய்யவும் அல்லது ஒரு விருப்பத்தைத் தட்டவும். " +
+      "இது அவசரநிலை என்றால், 108 ஐ அழைக்கவும்.",
+    Hindi:
+      "माफ़ कीजिए, यह समझ नहीं आया। कृपया अपना जवाब टाइप करें या कोई विकल्प चुनें। " +
+      "अगर यह इमरजेंसी है, तो 108 पर कॉल करें।",
+  }[language];
+}
+
 // Sent when a patient replies "2" (change) to an update message: the same
 // choices as on the call. (Tamil and Hindi reuse the call wording; they need
 // native-speaker review.)

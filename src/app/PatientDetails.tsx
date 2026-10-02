@@ -65,6 +65,18 @@ export default function PatientDetails({
           )}
         </section>
 
+        {/* Only "WhatsApp OK" patients DocDelay has contacted have a WhatsApp chat */}
+        {a.patient.whatsappOptIn && (a.unavailabilityId || a.timeHistory?.length) && (
+          <p className="mb-6">
+            <Link
+              href={`/whatsapp/${a.id}`}
+              className={`text-sm font-medium text-teal-700 hover:underline ${TAP}`}
+            >
+              Open WhatsApp chat (simulated) →
+            </Link>
+          </p>
+        )}
+
         {a.chat && a.chat.length > 0 && (
           <section className="mb-6">
             <h3 className="mb-3 text-sm font-semibold text-slate-900">Chat</h3>

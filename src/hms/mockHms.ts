@@ -36,6 +36,7 @@ import type {
   SmsMessage,
   Unavailability,
   UnavailabilityReason,
+  WhatsAppMedia,
 } from "./types";
 import {
   clearSteps,
@@ -99,6 +100,7 @@ import {
   noOtherDoctorFreeReply,
   slotTakenPrefix,
   staffWillCallReply,
+  couldntUnderstandReply,
   unclearReply,
   urgentReply,
 } from "@/lib/chatReplies";
@@ -1102,7 +1104,13 @@ function applyChat(state: HmsState, step: Extract<DemoStep, { kind: "chat" }>): 
 // patient changes an answer they already gave).
 function chatTurn(
   state: HmsState,
-  step: { at: number; appointmentId: string; text: string; understanding: Understanding },
+  step: {
+    at: number;
+    appointmentId: string;
+    text: string;
+    understanding: Understanding;
+    media?: WhatsAppMedia; // WhatsApp only: a voice note or a photo
+  },
   channel: Channel,
   withOpening = true,
 ): boolean {
@@ -1140,7 +1148,8 @@ function chatTurn(
     at: when,
     from: "patient",
     text: step.text,
-    understood: describeUnderstanding(u),
+    understood: step.media === "photo" ? PHOTO_NOT_READ : describeUnderstanding(u),
+    ...(step.media ? { media: step.media } : {}),
   });
 
   // Couldn't understand: ask again once; the second time in a row, hand over to staff.
@@ -1153,7 +1162,12 @@ function chatTurn(
       say(staffWillCallReply(language));
       log("Needs staff call", "couldn't understand 2 replies in a row");
     } else {
-      say(unclearReply(language, Boolean(appt.offers)));
+      // A voice note or a photo gets its own line ("…please type your answer…").
+      say(
+        step.media
+          ? couldntUnderstandReply(language)
+          : unclearReply(language, Boolean(appt.offers)),
+      );
     }
     return true;
   };
@@ -1387,9 +1401,26 @@ function openingLine(state: HmsState, appt: Appointment, unavailability: Unavail
 //   - PUSHED patients (time moved, not affected) answer their heads-up:
 //     1 / "ok" = fine; 2 / cancel wording = "Reply YES to cancel" (cancelled
 //     only on YES); 3, another day or anything else = front desk, booking kept.
+//   - VOICE NOTES are turned into text (in the demo, the visitor types it) and
+//     then go through exactly the same steps as a typed message — health
+//     check first — with ONE difference: a voice note can never be "STOP"
+//     (speech-to-text can mishear words). If it's unclear, the patient gets
+//     "Sorry, I couldn't understand that. Please type your answer…".
+//   - PHOTOS (and documents, stickers) are never read — so never health-
+//     checked either. The patient gets the same "Sorry…" line and staff get a
+//     note in the log (no alert). Like any reply DocDelay can't read, a photo
+//     counts towards "two unclear replies → staff call", and only before the
+//     patient has answered. It never makes anyone URGENT.
+//   - A photo or an unclear voice note never moves a patient to the end of
+//     the call queue: only a reply DocDelay understood does.
+//   - A PUSHED patient's voice note that says "stop" and nothing else
+//     DocDelay can read gets only the "Sorry…" line — no staff call.
 // WhatsApp uses the rule-based understanding only (never the AI).
 
 export const MAX_ANSWER_CHANGES = 2;
+
+// What staff see under a photo: DocDelay didn't look at it.
+const PHOTO_NOT_READ = "photo — not read";
 
 // A finished answer that WhatsApp can change.
 const ANSWERED: AppointmentStatus[] = [
@@ -1419,27 +1450,36 @@ export type WhatsAppResult =
 
 // A WhatsApp message from a patient about one appointment. Works out what it
 // means (rule-based), runs the conversation one step and saves it.
+// `media`: "voice" = `message` is what was heard in a voice note;
+//          "photo" = a photo (`message` is not used — photos are never read).
 export async function sendWhatsAppMessage(
   appointmentId: string,
   message: string,
+  media?: WhatsAppMedia,
 ): Promise<WhatsAppResult> {
   const steps = await readSteps();
   const state = replay(steps);
   const appt = state.appointments.find((a) => a.id === appointmentId);
-  if (!appt || !message.trim()) return "ignored";
+  const text = media === "photo" ? "" : message.slice(0, MAX_CHAT_TEXT);
+  if (!appt || (media !== "photo" && !text.trim())) return "ignored";
   const patient = patients.find((p) => p.id === appt.patientId)!;
   // Understood from the WHOLE message (health words first), then saved with
   // the step — so rebuilding the demo never has to work it out again.
-  const understanding = await interpretWithRules(message, {
-    language: patient.preferredLanguage,
-    offers: appt.change?.offers ?? appt.offers ?? [],
-  });
+  // A photo has no words: it is always "couldn't understand".
+  const understanding: Understanding =
+    media === "photo"
+      ? { intent: "unclear", preferences: {} }
+      : await interpretWithRules(text, {
+          language: patient.preferredLanguage,
+          offers: appt.change?.offers ?? appt.offers ?? [],
+        });
   const step: Extract<DemoStep, { kind: "whatsapp" }> = {
     kind: "whatsapp",
     at: realTimestamp(),
     appointmentId,
-    text: message.slice(0, MAX_CHAT_TEXT),
+    text,
     understanding,
+    ...(media ? { media } : {}),
   };
   const result = applyWhatsApp(state, step);
   if (result === "ignored") return result;
@@ -1470,6 +1510,7 @@ function applyWhatsApp(
   const when = new Date(step.at).toISOString();
   const u = step.understanding;
   const typed = step.text.trim().toLowerCase();
+  const media = step.media; // a voice note or a photo; undefined = typed
   // Is WhatsApp on for this patient and this appointment?
   const whatsAppOn = patient.whatsappOptIn === true && !appt.whatsappStopped;
 
@@ -1477,8 +1518,10 @@ function applyWhatsApp(
   const hear = (understood: string) =>
     (appt.whatsapp = [
       ...(appt.whatsapp ?? []),
-      { at: when, from: "patient", text: step.text, understood },
+      { at: when, from: "patient", text: step.text, understood, ...(media ? { media } : {}) },
     ]);
+  // The reply to a voice note or photo DocDelay couldn't understand.
+  const sorry = () => say(couldntUnderstandReply(language));
   const say = (text: string) => appt.whatsapp!.push({ at: when, from: "docdelay", text });
   const log = (result: CallResult | undefined, detail: string) =>
     (appt.callLog = [
@@ -1523,7 +1566,9 @@ function applyWhatsApp(
 
   // 3. STOP (must be the whole message): no more WhatsApp for this
   //    appointment — no replies, and any update goes by SMS. Calls continue.
-  if (typed === "stop") {
+  //    Only a TYPED "STOP" counts: a voice note that says "stop" is handled
+  //    like any other voice note below.
+  if (typed === "stop" && !media) {
     hear("STOP → WhatsApp off for this appointment");
     appt.whatsappStopped = true;
     delete appt.change;
@@ -1547,9 +1592,32 @@ function applyWhatsApp(
       say(staffWillCallReply(language));
       return "replied";
     }
+    // A photo can't be read: nothing changes (and the "YES to cancel"
+    // question, if open, stays open).
+    if (media === "photo") {
+      hear(PHOTO_NOT_READ);
+      sorry();
+      log(undefined, "photo received — not read");
+      return "replied";
+    }
     const reading = readHeadsUpReply(step.text, u.intent === "cancel");
     const wasAsked = appt.headsUpCancelAsked === true;
     delete appt.headsUpCancelAsked; // the question is only open for ONE reply
+
+    // A VOICE NOTE that says "stop" and nothing DocDelay can read: it is NOT
+    // a STOP (only a typed STOP is), and it's no reason for a staff call
+    // either. Only the "Sorry…" line; the booking stays. (Clear wording in
+    // the same voice note — "can't come", "cancel" — is read as usual below.)
+    if (
+      media === "voice" &&
+      reading === "other" &&
+      u.intent === "unclear" &&
+      /\bstop\b/i.test(step.text)
+    ) {
+      hear(describeUnderstanding(u));
+      sorry();
+      return "replied";
+    }
 
     // Cancelled ONLY by "YES" straight after the question. The slot is freed
     // (cancelled appointments don't hold one) and nobody else moves.
@@ -1583,26 +1651,33 @@ function applyWhatsApp(
     return "staff";
   }
 
+  // Staff's note for a photo: a line in the log, never an alert.
+  if (media === "photo") log(undefined, "photo received — not read");
+
   // 4. Not answered yet: the same conversation as a chat on a call.
   if (!ANSWERED.includes(appt.status)) {
     // Already with staff: WhatsApp can't undo that.
     if (appt.status === "Needs staff call" || appt.status === "URGENT – staff call now") {
-      hear(describeUnderstanding(u));
+      hear(media === "photo" ? PHOTO_NOT_READ : describeUnderstanding(u));
       say(staffWillCallReply(language));
       return "replied";
     }
     // Didn't pick up the call: they can still answer here (a first answer).
     if (appt.status === "No answer") {
       if (u.intent === "unclear") {
-        hear(describeUnderstanding(u));
-        say(unclearReply(language, false));
+        hear(media === "photo" ? PHOTO_NOT_READ : describeUnderstanding(u));
+        if (media) sorry();
+        else say(unclearReply(language, false));
         return "replied";
       }
       appt.status = "Affected – needs contact";
     }
     if (!chatTurn(state, step, "WhatsApp")) return "ignored";
     if (appt.status === "Affected – needs contact") {
-      appt.whatsappStarted = true; // not finished → end of the call queue
+      // Not finished → end of the call queue. But a photo, or a voice note
+      // DocDelay couldn't understand, isn't the start of an answer: the
+      // patient keeps their place in the queue.
+      if (!(media && u.intent === "unclear")) appt.whatsappStarted = true;
       return "replied";
     }
     delete appt.whatsappStarted;
@@ -1649,9 +1724,11 @@ function applyWhatsApp(
     );
   if (!asksForChange) {
     // "ok thanks" and the like: repeat their booking. Not counted as a change,
-    // and never handed to staff.
-    hear(describeUnderstanding(u));
-    say(bookingLine(appt, language));
+    // and never handed to staff. (An unclear voice note, or a photo, gets the
+    // "Sorry, I couldn't understand that…" line instead.)
+    hear(media === "photo" ? PHOTO_NOT_READ : describeUnderstanding(u));
+    if (media && u.intent === "unclear") sorry();
+    else say(bookingLine(appt, language));
     return "replied";
   }
 

@@ -47,7 +47,16 @@ export interface ChatTurn {
   text: string;
   // For patient lines: what DocDelay understood (e.g. "another_day: Thu, after 16:00").
   understood?: string;
+  // WhatsApp only: the patient sent a voice note (`text` = what was heard) or
+  // a photo (never read, so `text` is empty). Left out = a typed message.
+  media?: WhatsAppMedia;
 }
+
+// A WhatsApp message that wasn't typed.
+//   "voice" = a voice note: turned into text, then handled like a typed
+//             message (health check first) — except that it can never be "STOP".
+//   "photo" = a photo, document or sticker: DocDelay can't read it.
+export type WhatsAppMedia = "voice" | "photo";
 
 // A staff member said an URGENT flag was a false alarm.
 export interface FalseAlarm {

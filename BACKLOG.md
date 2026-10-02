@@ -13,14 +13,20 @@ Ideas and known gaps to pick up later.
 
 ## WhatsApp channel (simulated) — to revisit
 
-Part 1 (data and booking rules, 2 Oct 2026) is done. Still open:
+Part 1 (data and booking rules, 1 Oct 2026) and Part 2 (the WhatsApp screen, voice notes and photos, 2 Oct 2026) are done. Still open:
 
 - **After answering, unclear WhatsApp messages never reach staff.** "ok thanks" and anything else DocDelay can't read only gets the patient's booking repeated: it isn't counted, and the "two unclear replies → staff call" rule doesn't apply. Revisit: a patient could be asking for help in words DocDelay doesn't know.
-- **Voice notes and photos** come in Part 2. Part 1 only handles typed text.
+- **Clinician question for Phase 2 — photos are never read:** a patient may send a photo of a wound or report; DocDelay can't read it. The patient only gets "Sorry, I couldn't understand that. Please type your answer or tap an option. If this is an emergency, call 108." and staff get a line in the log — no URGENT. Accepted for the MVP (2 Oct 2026).
+- **Unclear voice notes and photos AFTER an answer never reach staff** (same gap as typed messages, above): they get the "Sorry…" line and aren't counted.
+- **Reword the first WhatsApp message (Part 3):** it still uses the call wording ("Press 4…", "Press 5…"). Change it to fit WhatsApp ("Reply 1…" / "tap an option"). Needs a native-speaker check.
+- **Example sentences on the WhatsApp screen:** the "Try a reply (demo)" phrases are only on the call simulator's Chat tab (a test keeps it that way). If Tamil/Hindi example sentences are wanted on the WhatsApp screen, decide then.
+- **WhatsApp tap-list labels are in English for all patients.** Translate them with the Meta templates before real use (Phase 3, native-speaker check).
+- **"No answer" patients don't see "5 – Another doctor"** on the WhatsApp screen (the call's check only covers patients still waiting for contact). Typing "another doctor" works.
+- **Real speech-to-text** for voice notes is the same piece as for real calls. In the demo the visitor types what the patient says.
 - **The STOP / not-opted-in health exception is not clinician-checked.** A health mention from a patient who sent STOP, or isn't "WhatsApp OK", gets only the fixed line ("If this is an emergency or you're worried, please call 108…") — no URGENT, no staff note. Revisit in Phase 2 with a clinician.
-- **Native-speaker review list (all new Tamil/Hindi wording, written for the demo, not checked):** the emergency line (`emergencyOnlyReply`), the choices shown after "2" (`changeMenuReply`), and the heads-up replies (`headsUpFineReply`, `headsUpCancelQuestion`, `headsUpStaffReply`) in `src/lib/chatReplies.ts`; the heads-up itself (`headsUpSms` in `src/lib/smsText.ts`); and the yes / no / fine / cancel / "don't cancel" word lists in `src/lib/understanding/headsUpReply.ts`.
+- **Native-speaker review list (all new Tamil/Hindi wording, written for the demo, not checked):** the emergency line (`emergencyOnlyReply`), the choices shown after "2" (`changeMenuReply`), and the heads-up replies (`headsUpFineReply`, `headsUpCancelQuestion`, `headsUpStaffReply`) in `src/lib/chatReplies.ts`; the heads-up itself (`headsUpSms` in `src/lib/smsText.ts`); and the yes / no / fine / cancel / "don't cancel" word lists in `src/lib/understanding/headsUpReply.ts`. **Added in Part 2, NOT yet native-checked:** the "Sorry, I couldn't understand that…" line (`couldntUnderstandReply` in `src/lib/chatReplies.ts`) and what the "I'm unwell" button sends in Tamil and Hindi (`UNWELL_MESSAGE` in `src/app/whatsapp/[id]/whatsappMenu.ts`).
 - **Replies by SMS aren't read.** DocDelay has no way to receive a text-message reply yet. A patient who gets the heads-up ("Reply 1 … 2 to cancel, 3 …") or an update ("Reply 1 to confirm, 2 to change") by SMS — not opted in, STOP, or "WhatsApp fails" — can't answer it. Decide before real use: read SMS replies, or change the SMS wording to "call the front desk".
-- **Screens (Part 2):** the call screen should use `getCallQueue`; the Messages page should show each message's channel ("WhatsApp", "SMS", "WhatsApp failed → SMS") — today it lists them all the same way.
+- **Screens (Part 3):** (the call screen uses `getCallQueue` since Part 2.) The Messages page should show each message's channel ("WhatsApp", "SMS", "WhatsApp failed → SMS") — today it lists them all the same way.
 - **No "START"** to turn WhatsApp back on after STOP.
 
 ## Next feature after WhatsApp: waiting check
@@ -191,6 +197,24 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Heads-up replies: a reply only counts once the heads-up was sent; before that it's ignored. After cancelling, later messages get the cancellation line again; once with staff, "Our front desk will call you shortly".
 - Heads-up replies: cancelling removes an unsent update for that patient; no extra cancellation message is sent besides the WhatsApp reply.
 - Heads-up reply reader lives in its own new file, so the frozen chat keyword file (`rules.ts`) is untouched.
+- WhatsApp screen: one page per appointment at `/whatsapp/<appointment id>`, with a "Back to dashboard" link. The "Open WhatsApp chat (simulated)" link is in the patient details panel, not on the row itself (row icons are Part 3).
+- WhatsApp screen: only "WhatsApp OK" patients DocDelay has contacted (affected or pushed) have a chat; anyone else sees a short "no WhatsApp chat" note and no reply box.
+- WhatsApp screen: before the patient's first message, an affected patient who hasn't answered sees DocDelay's first message (the call wording). A patient who answered on a call, or a pushed patient before the heads-up, sees "No WhatsApp messages yet".
+- WhatsApp tap-list: chosen from the patient's state (menu / A-B-C offers / "1 Keep it, 2 Change" after an update / "1, 2, 3" after a heads-up / "YES, No" after "Reply YES to cancel"); labels are in English, like the other staff screens. With offers on screen, the extra button is "4 – Talk to a person".
+- WhatsApp tap-list: none after STOP or once the patient is with staff or URGENT; the typing box, voice note and photo buttons stay, so the 108-only reply can be tried. A grey note says the chat is closed.
+- WhatsApp tap-list: "5 – Another doctor today" is hidden while a patient is changing an earlier answer, even if a slot is free; typing "another doctor" still works (and is re-checked by the HMS).
+- WhatsApp tap-list: "I'm unwell" sends one fixed sentence per language ("I feel unwell", "enakku udambu sari illai", "meri tabiyat theek nahi hai"); a test checks each is caught by the health check.
+- WhatsApp screen: a message DocDelay ignores (after STOP, or nothing to reply to) shows an amber note "DocDelay didn't reply to that message…"; nothing is saved.
+- WhatsApp screen: the status badge, and the red URGENT banner, stick to the top of the screen while scrolling.
+- Voice notes: shown with a microphone label and the text DocDelay heard; there is no real audio or "play" button.
+- Voice notes: an unclear one gets the "Sorry, I couldn't understand that…" line instead of the typed "Sorry, I didn't understand…" line; before an answer it counts towards "two unclear replies".
+- Voice note saying "stop" before an answer: handled like any unclear voice note (it counts as one unclear reply).
+- Voice note saying "stop" from a pushed patient, with nothing else DocDelay can read: only the "Sorry…" line, booking kept, no staff call (decided 2 Oct 2026). Only the English word "stop" is looked for; other unclear voice notes from a pushed patient still go to "Needs staff call – Replied to heads-up", like any reply the heads-up can't read.
+- That "stop" voice note also closes an open "Reply YES to cancel" question (a later YES doesn't cancel) — on the safe side. A photo leaves the question open (accepted 2 Oct 2026).
+- Photos: the staff note is a line in the patient's log ("WhatsApp: photo received — not read"), not the status note, so it can't overwrite a "Needs staff call" reason. Any text sent with a photo is not read.
+- Photos: from a pushed patient, a photo changes nothing and leaves an open "Reply YES to cancel" question open. From a patient after STOP, or not opted in, it's ignored.
+- Call queue: a photo or an unclear voice note doesn't move the patient; only a reply DocDelay understood (e.g. offers on screen) moves them to the end (decided 2 Oct 2026). A TYPED unclear message still moves them to the end, as in Part 1.
+- Saved demo steps: voice notes and photos are saved with new first letters ("v", "p"); older saved demos still load.
 
 ## Done
 

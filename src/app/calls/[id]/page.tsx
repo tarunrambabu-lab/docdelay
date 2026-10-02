@@ -3,8 +3,10 @@
 // Address: /calls/<unavailability id>
 //
 // There's no "current patient" to remember: the next patient to call is
-// simply the earliest one still marked "Affected – needs contact".
-// When nobody is left, we show the summary.
+// the first one in the hms module's call queue (getCallQueue) — the earliest
+// one still marked "Affected – needs contact". Anyone who already answered
+// (on a call or on WhatsApp) is skipped, and a patient who is part-way through
+// a WhatsApp reply is called last. When nobody is left, we show the summary.
 //
 // Pressing "2 – Another day" (or "1" when there's no room today) keeps the
 // same patient on screen with 3 other-day offers (A / B / C). Pressing
@@ -26,6 +28,7 @@ import {
   getAffectedAppointments,
   getAnotherDoctorOptions,
   getAppointment,
+  getCallQueue,
   getDoctor,
   getDoctors,
   getHospital,
@@ -72,7 +75,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
   const hospital = await getHospital();
   const doctor = (await getDoctor(unavailability.doctorId))!;
   const appointments = await getAffectedAppointments(id);
-  const toCall = appointments.filter((a) => a.status === "Affected – needs contact");
+  const toCall = await getCallQueue(id); // who still needs a call, in calling order
   const current = toCall[0]; // undefined when everyone has been called
   const calledCount = appointments.length - toCall.length;
   const dashboardLink = `/?doctor=${doctor.id}`;

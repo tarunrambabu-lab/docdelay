@@ -16,12 +16,14 @@ import {
   recordCallResult,
   resetDemo,
   sendPendingUpdates,
+  sendWhatsAppMessage,
 } from "@/hms/mockHms";
 import {
   CALL_RESULTS,
   UNAVAILABILITY_REASONS,
   type CallResult,
   type UnavailabilityReason,
+  type WhatsAppMedia,
 } from "@/hms/types";
 import { isValidTime } from "@/lib/time";
 import { activeEngine, interpretWithRules, mentionsHealth } from "@/lib/understanding";
@@ -154,6 +156,27 @@ export async function chatAction(
   const after = await getAppointment(appointmentId);
   if (after && after.status !== "Affected – needs contact") {
     redirect(`${callsPage}?mode=chat&answered=${appointmentId}`);
+  }
+  refresh();
+}
+
+// WhatsApp screen: the patient tapped an option, typed a message, or sent a
+// voice note / photo (demo). The hms module does everything — the health
+// check first, then the WhatsApp rules. WhatsApp never uses the AI.
+// `media`: "voice" = `message` is what the patient said; "photo" = no text.
+export async function whatsappAction(
+  appointmentId: string,
+  message: string,
+  media?: WhatsAppMedia,
+): Promise<{ notice?: string } | void> {
+  if (media !== undefined && media !== "voice" && media !== "photo") return; // ignore anything unexpected
+  const result = await sendWhatsAppMessage(appointmentId, String(message), media);
+  if (result === "ignored") {
+    return {
+      notice:
+        "DocDelay didn’t reply to that message: WhatsApp is closed for this patient, or there " +
+        "was nothing to answer. (If this demo has a lot of history, press “Reset demo”.)",
+    };
   }
   refresh();
 }

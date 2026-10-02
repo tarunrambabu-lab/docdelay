@@ -15,6 +15,8 @@
 //                              (<text>, base64) and what it was understood to mean
 //                              (intent #1, no offer, day 4, any time, after 16:00)
 //   w.12.1.n.4.n.1600.n.<text>.mg3k2g22   WhatsApp message for appt-012 (same parts as "h")
+//   v.12.…                     the same, sent as a VOICE NOTE (<text> = what was heard)
+//   p.12.…                     the same, a PHOTO (never read, so <text> is empty)
 //   f.12.mg3k2h33              staff marked appt-012's URGENT flag a false alarm
 //   b.12.3.1015.mg3k2i44       bookSlot tool: book appt-012 on day 3 at 10:15
 //   a.12.b3-1615.<text>.<reply>.3-1600~4-1615.mg3k2j55
@@ -31,7 +33,7 @@ import { cookies } from "next/headers";
 import { deflateRawSync, inflateRawSync } from "node:zlib";
 import startingData from "./mockData.json";
 import { CALL_RESULTS, UNAVAILABILITY_REASONS } from "./types";
-import type { CallResult, SlotOffer, UnavailabilityReason } from "./types";
+import type { CallResult, SlotOffer, UnavailabilityReason, WhatsAppMedia } from "./types";
 import { isValidTime } from "@/lib/time";
 import { INTENTS, type Understanding } from "@/lib/understanding/types";
 import type { TimeOfDay } from "@/lib/reschedulingRules";
@@ -62,6 +64,7 @@ export type DemoStep =
       appointmentId: string;
       text: string;
       understanding: Understanding;
+      media?: WhatsAppMedia; // a voice note or a photo; left out = typed
     }
   | { kind: "falseAlarm"; at: number; appointmentId: string }
   | { kind: "book"; at: number; appointmentId: string; dayOffset: number; startTime: string }
@@ -113,6 +116,8 @@ const unHhmm = (code: string) => `${code.slice(0, 2)}:${code.slice(2)}`; // "090
 const apptNumber = (id: string) => Number(id.replace("appt-", "")); // "appt-012" → 12
 const apptId = (n: number) => `appt-${String(n).padStart(3, "0")}`; // 12 → "appt-012"
 const TIMES_OF_DAY: TimeOfDay[] = ["morning", "afternoon", "evening"];
+// The first letter of a saved WhatsApp message: typed, voice note or photo.
+const WHATSAPP_CODES = { typed: "w", voice: "v", photo: "p" } as const;
 // Chat text → cookie-safe letters (base64, with "_" swapped for "*" because
 // "_" separates the steps) and back.
 const packText = (text: string) =>
@@ -214,7 +219,7 @@ export function encodeStep(step: DemoStep): string {
       const u = step.understanding;
       const p = u.preferences;
       return [
-        step.kind === "chat" ? "h" : "w",
+        step.kind === "chat" ? "h" : WHATSAPP_CODES[step.media ?? "typed"],
         apptNumber(step.appointmentId),
         INTENTS.indexOf(u.intent),
         orN(u.offerIndex),
@@ -273,7 +278,7 @@ export function decodeStep(code: string): DemoStep | null {
     return { kind: "offer", at, appointmentId: apptId(Number(parts[0])), choice };
   }
   if (kind === "s" && parts.length === 1) return { kind: "send", at };
-  if ((kind === "h" || kind === "w") && parts.length === 9) {
+  if (["h", "w", "v", "p"].includes(kind) && parts.length === 9) {
     const [appt, intentIndex, offer, day, tod, after, before, text] = parts;
     const intent = INTENTS[Number(intentIndex)];
     const num = (v: string) => (v === "n" ? undefined : Number(v));
@@ -294,13 +299,11 @@ export function decodeStep(code: string): DemoStep | null {
     );
     const badTime = [p.after, p.before].some((t) => t !== undefined && !isValidTime(t));
     if (!intent || badNumber || badTime || (tod !== "n" && !p.timeOfDay)) return null;
-    return {
-      kind: kind === "h" ? "chat" : "whatsapp",
-      at,
-      appointmentId: apptId(Number(appt)),
-      text: unpackText(text),
-      understanding,
-    };
+    const step = { at, appointmentId: apptId(Number(appt)), text: unpackText(text), understanding };
+    if (kind === "h") return { kind: "chat", ...step };
+    if (kind === "v") return { kind: "whatsapp", ...step, media: "voice" };
+    if (kind === "p") return { kind: "whatsapp", ...step, media: "photo" };
+    return { kind: "whatsapp", ...step };
   }
   if (kind === "f" && parts.length === 2 && Number.isInteger(Number(parts[0]))) {
     return { kind: "falseAlarm", at, appointmentId: apptId(Number(parts[0])) };
