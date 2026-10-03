@@ -4,15 +4,22 @@
 //
 //   - "WhatsApp OK": before DocDelay contacts an opted-in patient.
 //   - After contact: which channel the answer came from ("Answered by call" /
-//     "Answered on WhatsApp") and where WhatsApp stands now (sent, replied,
-//     update sent, fell back to SMS, closed after STOP).
+//     "Answered on WhatsApp" when the patient made a choice; otherwise "Last
+//     reply by call" / "Last reply on WhatsApp") and where WhatsApp stands
+//     now (sent, replied, update sent, fell back to SMS, closed after STOP).
 //   - An "Open WhatsApp" link for opted-in patients DocDelay has contacted.
 //   - Photo notes: photos are never read, so staff just see that one came.
 
 import type { AppointmentWithPatient, CallLogEntry, SmsMessage } from "@/hms/types";
 import { ANSWERED_STATUSES } from "@/lib/status";
 
-export type AnswerChannel = "Answered by call" | "Answered on WhatsApp";
+export type AnswerChannel =
+  // The patient made a choice (a new time, another doctor, or cancel).
+  | "Answered by call"
+  | "Answered on WhatsApp"
+  // No choice: e.g. URGENT, asked for a person, or two unclear replies.
+  | "Last reply by call"
+  | "Last reply on WhatsApp";
 
 export type WhatsAppState =
   | "WhatsApp sent"
@@ -47,6 +54,8 @@ function answerLine(a: AppointmentWithPatient): CallLogEntry | undefined {
 
 // Which channel the answer came from. Only once there IS an answer (or a
 // staff call), never for a patient still waiting or who didn't pick up.
+// "Answered…" only when the patient made a choice; for a staff call (URGENT,
+// asked for a person, couldn't be understood…) it's "Last reply…".
 export function answerChannel(a: AppointmentWithPatient): AnswerChannel | undefined {
   const done =
     ANSWERED_STATUSES.includes(a.status) ||
@@ -55,7 +64,11 @@ export function answerChannel(a: AppointmentWithPatient): AnswerChannel | undefi
   if (!done) return undefined;
   const line = answerLine(a);
   if (!line) return undefined;
-  return line.channel === "WhatsApp" ? "Answered on WhatsApp" : "Answered by call";
+  const onWhatsApp = line.channel === "WhatsApp";
+  if (ANSWERED_STATUSES.includes(a.status)) {
+    return onWhatsApp ? "Answered on WhatsApp" : "Answered by call";
+  }
+  return onWhatsApp ? "Last reply on WhatsApp" : "Last reply by call";
 }
 
 // Where WhatsApp stands for this patient: whichever happened last. STOP

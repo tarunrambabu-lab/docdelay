@@ -45,6 +45,7 @@ import {
 } from "@/hms/mockHms";
 import { UNAVAILABILITY_REASONS, type Language, type UnavailabilityReason } from "@/hms/types";
 import { callScript, whatsappScript } from "@/lib/callScript";
+import { couldntUnderstandReply, emergencyOnlyReply, urgentReply } from "@/lib/chatReplies";
 import { doctorNameFor } from "@/lib/names";
 import { holdingLabel } from "@/lib/status";
 import { interpretWithRules } from "@/lib/understanding";
@@ -161,10 +162,100 @@ describe("dashboard: which channel the answer came from", () => {
     expect(await whatsapp(REVATHI, "enakku udambu sari illai")).toBe("urgent");
     expect((await info(NIKHIL)).answeredBy).toBe("Answered by call");
     expect((await info(KIRAN)).answeredBy).toBe("Answered on WhatsApp");
-    expect((await info(REVATHI)).answeredBy).toBe("Answered on WhatsApp");
+    // URGENT isn't a choice → "Last reply…"
+    expect((await info(REVATHI)).answeredBy).toBe("Last reply on WhatsApp");
     // Not opted in: no channel label (it can only be a call).
     expect(await recordCallResult(GANESH, "Cancelled")).toBe(true);
     expect((await info(GANESH)).answeredBy).toBeUndefined();
+  });
+});
+
+describe("dashboard: “Answered…” only when the patient made a choice", () => {
+  it("no choice (two unclear replies, asked for a person, URGENT, staff call) → “Last reply…”", async () => {
+    await pushSneha(); // Nikhil, Kiran and Revathi answered "later today" on a call
+    // Two unclear WhatsApp replies → Needs staff call
+    await whatsapp("appt-009", "hmm");
+    await whatsapp("appt-009", "blah");
+    expect((await appt("appt-009")).status).toBe("Needs staff call");
+    expect((await info("appt-009")).answeredBy).toBe("Last reply on WhatsApp");
+    // Asked for a person on WhatsApp (after a call answer)
+    await whatsapp(NIKHIL, "I want to talk to a person");
+    expect((await appt(NIKHIL)).status).toBe("Needs staff call");
+    expect((await info(NIKHIL)).answeredBy).toBe("Last reply on WhatsApp");
+    // URGENT on WhatsApp
+    await whatsapp(KIRAN, "I have chest pain");
+    expect((await info(KIRAN)).answeredBy).toBe("Last reply on WhatsApp");
+    // Asked for a person on the call
+    expect(await recordCallResult("appt-007", "Needs staff call")).toBe(true);
+    expect((await info("appt-007")).answeredBy).toBe("Last reply by call");
+    // A pushed patient: "3" is no choice; "YES" to cancel is.
+    await sendPendingUpdates();
+    await whatsapp(SNEHA, "3");
+    expect((await info(SNEHA)).answeredBy).toBe("Last reply on WhatsApp");
+  });
+
+  it("a choice → “Answered…” (call and WhatsApp, including a pushed patient who cancels)", async () => {
+    await pushSneha();
+    expect((await info(REVATHI)).answeredBy).toBe("Answered by call");
+    expect(await whatsapp("appt-007", "cancel")).toBe("answered");
+    expect((await info("appt-007")).answeredBy).toBe("Answered on WhatsApp");
+    await sendPendingUpdates();
+    await whatsapp(SNEHA, "2");
+    expect(await whatsapp(SNEHA, "YES")).toBe("cancelled");
+    expect((await info(SNEHA)).answeredBy).toBe("Answered on WhatsApp");
+  });
+});
+
+describe("WhatsApp updates never mention an emergency (privacy); SMS is unchanged", () => {
+  const EMERGENCY = /emergency|அவசர|इमरजेंसी/i;
+  // The only WhatsApp lines allowed to say "emergency": the 108 safety lines.
+  const safetyLines = (language: Language) => [
+    urgentReply(language),
+    emergencyOnlyReply(language),
+    couldntUnderstandReply(language),
+  ];
+
+  it.each(UNAVAILABILITY_REASONS)("reason: %s", async (reason) => {
+    await away("12:00", reason);
+    // Updates: Nikhil (English), Kiran (Hindi), Revathi (Tamil) on WhatsApp;
+    // Gayathri (not opted in) and Divya ("WhatsApp fails") by SMS.
+    for (const id of [NIKHIL, KIRAN, REVATHI, "appt-004", "appt-007"]) {
+      expect(await recordCallResult(id, "Wants another day")).toBe(true);
+      expect(await chooseOffer(id, 0)).toBe("booked");
+    }
+    // Some WhatsApp replies too, including the 108 lines.
+    await whatsapp("appt-009", "", "photo");
+    await whatsapp("appt-009", "I feel dizzy");
+    await sendPendingUpdates();
+    await whatsapp(NIKHIL, "2");
+    await whatsapp(NIKHIL, "STOP");
+    await whatsapp(NIKHIL, "I have chest pain");
+
+    const sent = await getMessages();
+    const onWhatsApp = sent.filter((m) => m.channel === "WhatsApp");
+    expect(onWhatsApp.map((m) => m.appointmentId).sort()).toEqual([NIKHIL, KIRAN, REVATHI].sort());
+    for (const m of onWhatsApp) {
+      expect(m.text, m.appointmentId).not.toMatch(EMERGENCY);
+      expect(m.text).toMatch(/schedule change|அட்டவணை மாற்றம்|समय-सारणी में बदलाव/);
+    }
+    // Every WhatsApp line from DocDelay: "emergency" only in the 108 lines.
+    let safety = 0;
+    for (const id of [NIKHIL, KIRAN, REVATHI, "appt-009"]) {
+      const a = await appt(id);
+      for (const turn of (a.whatsapp ?? []).filter((t) => t.from === "docdelay")) {
+        if (!EMERGENCY.test(turn.text)) continue;
+        expect(safetyLines(a.patient.preferredLanguage), turn.text).toContain(turn.text);
+        safety++;
+      }
+    }
+    expect(safety).toBeGreaterThan(0);
+    // SMS wording is unchanged: an emergency reason still says so.
+    const sms = sent.filter((m) => m.channel === "SMS");
+    expect(sms).toHaveLength(2);
+    for (const m of sms) {
+      if (reason === "Other") expect(m.text).toContain("due to a schedule change");
+      else expect(m.text).toContain("due to an emergency");
+    }
   });
 });
 

@@ -277,9 +277,11 @@ describe("one text per patient, naming the new doctor and time, in their languag
       return mine[0].text;
     };
 
+    // appt-001 is "WhatsApp OK", so its update goes on WhatsApp, which always
+    // says "due to a schedule change" (privacy). appt-002 gets an SMS.
     expect(textFor("appt-001")).toBe(
       "Sunrise Multispeciality Hospital: your appointment is now with Dr. Karthik Raman " +
-        "(instead of Dr. Meera Krishnan) at 9:30 AM today due to an emergency. " +
+        "(instead of Dr. Meera Krishnan) at 9:30 AM today due to a schedule change. " +
         "Reply 1 to confirm, 2 to change.",
     );
     const tamil = textFor("appt-002");

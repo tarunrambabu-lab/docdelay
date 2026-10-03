@@ -133,7 +133,7 @@ describe("answer channel", () => {
     expect(answerChannel(a)).toBe("Answered by call");
   });
 
-  it("URGENT from WhatsApp, then a photo → Answered on WhatsApp", () => {
+  it("URGENT from WhatsApp, then a photo → Last reply on WhatsApp (not a choice)", () => {
     const a = appt({
       status: "URGENT – staff call now",
       callLog: [
@@ -145,7 +145,7 @@ describe("answer channel", () => {
         { calledAt: at(2), channel: "WhatsApp", detail: "WhatsApp: photo received — not read" },
       ],
     });
-    expect(answerChannel(a)).toBe("Answered on WhatsApp");
+    expect(answerChannel(a)).toBe("Last reply on WhatsApp");
   });
 
   it("no answer yet (waiting, or didn't pick up) → nothing", () => {

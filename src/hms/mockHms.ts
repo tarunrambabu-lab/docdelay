@@ -740,6 +740,8 @@ function applySend(state: HmsState, step: Extract<DemoStep, { kind: "send" }>): 
         ? doctors.find((d) => d.id === firstDoctorId)
         : undefined;
     const language = patient.preferredLanguage;
+    const wantsWhatsApp = patient.whatsappOptIn === true && !appt.whatsappStopped;
+    const onWhatsApp = wantsWhatsApp && !patient.whatsappFails;
     // A pushed (not affected) patient gets the short heads-up; everyone else
     // gets the update they can answer with 1 or 2.
     const text = update.headsUp
@@ -755,12 +757,13 @@ function applySend(state: HmsState, step: Extract<DemoStep, { kind: "send" }>): 
           hospitalName: hospital.name,
           doctorName: doctorNameFor(doctor, language),
           previousDoctorName: previousDoctor && doctorNameFor(previousDoctor, language),
-          reason: update.reason,
+          // PRIVACY (FRD 6.1): on WhatsApp the update always says "due to a
+          // schedule change", whatever the reason — previews show on locked
+          // phones. Wording only. (The SMS wording is unchanged: REVIEW.md.)
+          reason: onWhatsApp ? "Other" : update.reason,
           newDayOffset: update.newDayOffset,
           newStartTime: update.newStartTime,
         });
-    const wantsWhatsApp = patient.whatsappOptIn === true && !appt.whatsappStopped;
-    const onWhatsApp = wantsWhatsApp && !patient.whatsappFails;
     state.messages.push({
       id: `sms-${state.messages.length + 1}`,
       channel: onWhatsApp ? "WhatsApp" : "SMS",
