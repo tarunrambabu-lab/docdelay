@@ -26,7 +26,7 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | 6: chat mode | Done. Live site = basic word-list chat. Laptop = real AI (Claude Haiku 4.5) using my API key in `.env.local` |
 | Safety: wide health-keyword check runs first; "two unclear replies" counted in code | Done |
 | Alarm-fatigue fix ("tired of waiting", "heavy traffic", "work pressure", remove "doctor said") | Done |
-| Automated tests (npm test, 462 tests) | Done |
+| Automated tests (npm test, 504 tests) | Done |
 | Tamil/Hindi health-word fix (word beginnings, lookalike guards) | Done, live. Needs a second native-speaker and a clinician review before real patients |
 | 7: guided demo tour, suggested chat phrases, phone-width polish | Done, live (29 Sep) |
 | AI weekday fix + day check in code | Done. 4 AI items in BACKLOG under "Must do before real calls or laptop demos" |
@@ -48,12 +48,12 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | WhatsApp Part 2 of 3: WhatsApp screen at `/whatsapp/<appointment id>` (opened from the patient details panel), tap-list, typing, voice notes and photos (demo), call screen uses getCallQueue; 59 new tests | Done, live (2–3 Oct) |
 | Part 2's new Tamil and Hindi lines: "Sorry, I couldn't understand that…" and what "I'm unwell" sends | Checked by my mom (3 Oct), correct |
 | REVIEW.md: decisions we're unsure about (7 items) | Created (3 Oct) |
-| Still to check by my mom | (1) the Tamil/Hindi "stop" words for pushed patients' voice notes (see REVIEW.md); (2) the new first WhatsApp message lines (see PLAN-whatsapp-part3.md). Neither is native-checked yet |
-| WhatsApp Part 3: dashboard channel icons, Messages page WhatsApp/SMS, "Needs staff call · holding [time]", reword the first WhatsApp message, tour, README | Next (1st). Plan written, NOT approved: waiting for my answers to questions a–d (see PLAN-whatsapp-part3.md) |
-| Waiting check (patients waiting 45+ min asked to keep waiting or reschedule; pushed patients asking for another day) | Next (2nd), details to discuss then |
-| Demo video v2 (4 doctors, demo clock, another doctor; no send-time blanking needed) | Next (3rd) |
-| Add the video to the README and portfolio | Next (4th) |
-| /wrap-up skill | Next (5th) |
+| Still to check by my mom | (1) the Tamil/Hindi "stop" words for pushed patients' voice notes (see REVIEW.md); (2) the new first WhatsApp message lines: opening, option 4, option 5, closing line, and the "unexpectedly called away" line (listed in English letters in BACKLOG.md, "Native-speaker review list"). Neither is native-checked yet |
+| WhatsApp Part 3 of 3: dashboard labels ("WhatsApp OK", answered by call / on WhatsApp, WhatsApp state incl. "Update sent (WhatsApp)"), "Open WhatsApp" on rows, photo notes, "Needs staff call · holding [time]", WhatsApp chat in the details panel, Messages page channel labels, new first WhatsApp message (hospital, doctor and time only), tour step 7 of 10 (Revathi on WhatsApp), README section and screenshots; 42 new tests; checked at 320/375 px in Chrome and Safari engines | Done, pushed (3 Oct). Plan and answers: PLAN-whatsapp-part3.md |
+| Waiting check (patients waiting 45+ min asked to keep waiting or reschedule; pushed patients asking for another day) | Next (1st), details to discuss then |
+| Demo video v2 (4 doctors, demo clock, another doctor, WhatsApp; tour now has 10 steps; no send-time blanking needed) | Next (2nd) |
+| Add the video to the README and portfolio | Next (3rd) |
+| /wrap-up skill | Next (4th) |
 | Phase 2: clinic interviews | After README/portfolio |
 | Real calls to my own phone | After the 4 AI backlog items |
 | Add the real-call clip to the video | After real calls |
@@ -78,6 +78,7 @@ Roadmap position: finishing Phase 1 (Finish MVP). Phase 2 = interview 15+ clinic
 - In chat, basic mode's reading wins over the AI for any health concern (always first) and for "another doctor"; the AI never handles those messages.
 - Confirmations only ever use DocDelay's fixed wording: an AI reply that sounds like a confirmation, with no booking saved in that message, is never shown; basic mode answers that message instead. The AI is also told never to say an appointment is booked, moved or confirmed.
 - WhatsApp (simulated, alongside calls and texts; rules in `src/hms/mockHms.ts`, "WhatsApp" section):
+  - The first WhatsApp message names only the hospital, the doctor and the time: no patient name, no visit reason, and always "unexpectedly called away" whatever the real reason (decided 3 Oct 2026). The call wording is unchanged.
   - Only opted-in ("WhatsApp OK") patients. "STOP" works only when typed (whole message, any case; there is no STOP button) and closes WhatsApp for that appointment. A voice note that says "stop" does NOT close the chat: it goes through the normal voice-note handling (health check first, then understanding) (decided 2 Oct 2026); calls and SMS continue; the one update then goes by SMS.
   - Health check first on every message → URGENT as in chat. Exception (my decision, not clinician-checked): after STOP or if not opted in, a health mention gets only the fixed 108 line — no URGENT, no staff note; everything else from them is ignored.
   - Last finished answer wins (call or WhatsApp): an answered patient can change on WhatsApp; it's a fresh answer under every existing rule; the old booking stays until the new answer is finished, then it's freed; pushed patients stay put. At most 2 changes; a 3rd attempt → "Needs staff call – Keeps changing", nothing changes. Picking the same slot isn't a change. "Needs staff call" and URGENT can't be changed by WhatsApp.

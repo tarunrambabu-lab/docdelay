@@ -16,6 +16,11 @@ export const TOUR_UNAVAILABLE = { fromTime: "09:00", untilTime: "12:00" };
 // Where "Take me back" goes: the dashboard, Dr. Meera Krishnan, today.
 export const TOUR_HOME = "/?doctor=doc-cardio&day=0";
 
+// The WhatsApp step uses Revathi Krishnan (10:00 AM, Tamil, "WhatsApp OK"):
+// the next patient still waiting after the earlier steps. Her row's "Open
+// WhatsApp" link carries the "tour-whatsapp-link" marker.
+export const TOUR_WHATSAPP_APPOINTMENT = "appt-005";
+
 export interface TourScreen {
   markers: Set<string>; // every data-tour marker on screen
   outcome?: string; // the chat outcome shown, e.g. "URGENT – staff call now"
@@ -87,9 +92,9 @@ export const TOUR_STEPS: TourStep[] = [
   {
     title: "Affected patients turn red",
     text:
-      "Every patient booked while the doctor is away is now marked red, and the banner shows how " +
-      "many. When patients pick a new time, DocDelay follows fair rules: free slots first, nobody " +
-      "already booked is pushed more than 45 minutes, and nothing is booked after 7 PM.",
+      "Every patient booked while the doctor is away is now marked red. When patients pick a new " +
+      "time, DocDelay follows fair rules: free slots first, nobody already booked is pushed more " +
+      "than 45 minutes, and nothing after 7 PM.",
     nextLabel: "Next",
     ready: (s) => s.markers.has("appointments"),
     target: (s) => (s.markers.has("appointments") ? "appointments" : undefined),
@@ -137,24 +142,49 @@ export const TOUR_STEPS: TourStep[] = [
     target: towardsAnotherDoctor,
   },
   {
+    title: "Patients can also answer on WhatsApp",
+    text:
+      "Tap “Back to dashboard”. Patients marked “WhatsApp OK” get a WhatsApp message too. Tap " +
+      "“Open WhatsApp” on Revathi Krishnan's row, then tap “1 – Later today”. Her messages are " +
+      "in Tamil; the buttons are in English.",
+    // Back to the dashboard → Revathi's "Open WhatsApp" → "1 – Later today"
+    // (or, if there's no room today, the first other-day time).
+    target: (s) =>
+      s.markers.has("whatsapp-offer-pick")
+        ? "whatsapp-offer-pick"
+        : s.markers.has("whatsapp-later-today")
+          ? "whatsapp-later-today"
+          : s.markers.has("tour-whatsapp-link")
+            ? "tour-whatsapp-link"
+            : s.markers.has("back-to-dashboard")
+              ? "back-to-dashboard"
+              : undefined,
+    done: (s) => s.markers.has("whatsapp-answered"),
+  },
+  {
     title: "The staff call list",
     text:
       "Back on the dashboard, patients who need a person are listed at the top, URGENT first. " +
       "Scroll down to see the first patient's new time, shown as “was → now”.",
     nextLabel: "Next",
-    ready: (s) => s.markers.has("staff-list"),
+    // The WhatsApp screen's "Back to dashboard" opens the patient's details:
+    // close them first, so the list can be seen.
+    ready: (s) => s.markers.has("staff-list") && !s.markers.has("close-details"),
     target: (s) =>
-      s.markers.has("staff-list")
-        ? "staff-list"
-        : s.markers.has("back-to-dashboard")
-          ? "back-to-dashboard"
-          : undefined,
+      s.markers.has("close-details")
+        ? "close-details"
+        : s.markers.has("staff-list")
+          ? "staff-list"
+          : s.markers.has("back-to-dashboard")
+            ? "back-to-dashboard"
+            : undefined,
   },
   {
-    title: "One text per patient",
+    title: "One update per patient",
     text:
-      "Time changes wait here until staff approve them, so each patient gets one text with their " +
-      "latest time. Tap “Messages”, then “Send updates”.",
+      "Time changes wait here until staff approve them, so each patient gets one update with " +
+      "their latest time — on WhatsApp if they agreed to it, otherwise by text. Tap “Messages”, " +
+      "then “Send updates”.",
     target: (s) =>
       s.markers.has("send-updates")
         ? "send-updates"

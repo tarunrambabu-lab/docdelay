@@ -55,7 +55,8 @@ export function describeTimeChange(appt: Appointment, doctors: Doctor[] = []): s
   if (first.oldDoctorId && first.oldDoctorId !== appt.doctorId) {
     const name = (id: string) => doctors.find((d) => d.id === id)?.name ?? id;
     const sameDay = first.oldDayOffset === appt.dayOffset;
-    const when = (day: number, time: string) => (sameDay ? formatTime(time) : formatWhen(day, time));
+    const when = (day: number, time: string) =>
+      sameDay ? formatTime(time) : formatWhen(day, time);
     return (
       `was ${when(first.oldDayOffset, first.oldStartTime)}, ${name(first.oldDoctorId)} → ` +
       `now ${when(appt.dayOffset, appt.startTime)}, ${name(appt.doctorId)}`
@@ -64,4 +65,25 @@ export function describeTimeChange(appt: Appointment, doctors: Doctor[] = []): s
   return first.oldDayOffset === appt.dayOffset
     ? `was ${formatTime(first.oldStartTime)} → now ${formatTime(appt.startTime)}`
     : `was ${formatWhen(first.oldDayOffset, first.oldStartTime)} → now ${formatWhen(appt.dayOffset, appt.startTime)}`;
+}
+
+// A finished answer: the patient chose a new time, another doctor, or to cancel.
+export const ANSWERED_STATUSES: AppointmentStatus[] = [
+  "Rescheduled – later today",
+  "Rescheduled – another day",
+  "Rebooked – another doctor",
+  "Cancelled",
+];
+
+// "holding 2:15 PM" (or "holding Mon 5 Oct, 10:15 AM" on another day) for a
+// "Needs staff call" patient who still has a booked new time — e.g. they had
+// picked a time, then asked for a person. Staff then know the slot is still
+// theirs. Returns "" for everyone else (screen only; nothing is changed).
+// Every appointment that isn't cancelled keeps its slot, so the time shown is
+// the slot they hold. Only an appointment whose time changed has a NEW time.
+export function holdingLabel(appt: Appointment): string {
+  if (appt.status !== "Needs staff call" || !appt.timeHistory?.length) return "";
+  const when =
+    appt.dayOffset === 0 ? formatTime(appt.startTime) : formatWhen(appt.dayOffset, appt.startTime);
+  return `holding ${when}`;
 }

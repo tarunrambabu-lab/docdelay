@@ -1,4 +1,4 @@
-> **PLAN ONLY — not approved yet. Waiting for the founder's answers to questions a–d.**
+> **APPROVED and BUILT (3 Oct 2026).** The founder's answers are at the end ("Founder's answers"). This was first saved as "PLAN ONLY — not approved yet".
 >
 > Saved word for word from the planning session on 2026-10-03. Nothing below has been built.
 
@@ -156,3 +156,14 @@ Tell me: (a) is the one-line `mockHms.ts` change OK, (b) can I update the two to
 - **(d)** Add "Needs staff call · holding [time]": yes.
 - Show "Update sent" instead of "Update delivered", so staff don't think the patient has read it.
 - **Question:** the tour's WhatsApp step uses Revathi, whose chat is in Tamil. Is that clear for English-speaking visitors?
+
+## Founder's answers (3 Oct 2026) — approved, built
+
+- (a) Yes: `openingLine` picks the WhatsApp wording on WhatsApp. Wording only.
+- (b) Yes: the tour tests were updated.
+- (c) The first WhatsApp message names only the hospital, doctor and time: no patient name ("Hello, this is a message from [hospital]."), and always the call's "Other" line ("has been unexpectedly called away") whatever the reason. The call wording is unchanged. The new lines are on mom's list (BACKLOG.md).
+- (d) Yes: "Needs staff call · holding [time]" (screen only).
+- "Update sent (WhatsApp)" everywhere, not "Update delivered".
+- Tour step 7 keeps Revathi and says "Her messages are in Tamil; the buttons are in English."
+- README dashboard screenshot retaken, plus the new whatsapp.png.
+- REVIEW.md: the first WhatsApp message has no patient name (shared family phones).

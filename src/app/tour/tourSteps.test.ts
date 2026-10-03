@@ -3,7 +3,13 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { TOUR_STEPS, TOUR_UNAVAILABLE, tourView, type TourScreen } from "./tourSteps";
+import {
+  TOUR_STEPS,
+  TOUR_UNAVAILABLE,
+  TOUR_WHATSAPP_APPOINTMENT,
+  tourView,
+  type TourScreen,
+} from "./tourSteps";
 
 const screen = (markers: string[], outcome?: string): TourScreen => ({
   markers: new Set(markers),
@@ -12,9 +18,9 @@ const screen = (markers: string[], outcome?: string): TourScreen => ({
 const step = (title: string) => TOUR_STEPS.findIndex((s) => s.title === title);
 
 describe("wording", () => {
-  it("has 6–9 steps, each with a title and text", () => {
+  it("has 6–10 steps, each with a title and text", () => {
     expect(TOUR_STEPS.length).toBeGreaterThanOrEqual(6);
-    expect(TOUR_STEPS.length).toBeLessThanOrEqual(9);
+    expect(TOUR_STEPS.length).toBeLessThanOrEqual(10);
     for (const s of TOUR_STEPS) {
       expect(s.title).toBeTruthy();
       expect(s.text).toBeTruthy();
@@ -52,6 +58,21 @@ describe("wording", () => {
 
   it("the another-doctor step comes right after the symptom step", () => {
     expect(step("Another doctor, same day")).toBe(step("A patient mentions a symptom") + 1);
+  });
+
+  it("the WhatsApp step is step 7, right after the another-doctor step, and says the chat is in Tamil", () => {
+    const i = step("Patients can also answer on WhatsApp");
+    expect(i).toBe(6); // step 7 of 10
+    expect(i).toBe(step("Another doctor, same day") + 1);
+    expect(TOUR_STEPS[i].text).toContain("Revathi Krishnan");
+    expect(TOUR_STEPS[i].text).toContain("Her messages are in Tamil; the buttons are in English.");
+    expect(TOUR_WHATSAPP_APPOINTMENT).toBe("appt-005");
+  });
+
+  it("step 9 says one update per patient, on WhatsApp or by text", () => {
+    const s = TOUR_STEPS[step("One update per patient")];
+    expect(s.text).toContain("on WhatsApp if they agreed to it, otherwise by text");
+    expect(step("One text per patient")).toBe(-1);
   });
 
   it("the tour's pop-up times are 9:00 AM – 12:00 PM", () => {
@@ -144,7 +165,37 @@ describe("where each step points, and when it moves on", () => {
     expect(at(["banner", "start-calling"]).target).toBe("start-calling");
   });
 
-  it("7: Back to dashboard → the staff call list; Next only once the list is on screen", () => {
+  it("7: Back to dashboard → Revathi's “Open WhatsApp” → “1 – Later today” → done when answered", () => {
+    const i = step("Patients can also answer on WhatsApp");
+    const at = (markers: string[]) => tourView(i, screen(markers));
+    // Starts on the call screen (after the another-doctor booking)
+    expect(at(["back-to-dashboard", "outcome", "next-patient"]).target).toBe("back-to-dashboard");
+    // The dashboard: Revathi's link (other rows' links carry no marker)
+    expect(at(["banner", "staff-list", "tour-whatsapp-link"]).target).toBe("tour-whatsapp-link");
+    // Her WhatsApp screen: "1 – Later today"
+    expect(at(["back-to-dashboard", "whatsapp-later-today"]).target).toBe("whatsapp-later-today");
+    // No room today: the first other-day time
+    expect(at(["back-to-dashboard", "whatsapp-offer-pick"]).target).toBe("whatsapp-offer-pick");
+    // Her answer is saved → done
+    expect(at(["back-to-dashboard", "whatsapp-answered"]).done).toBe(true);
+    expect(at(["back-to-dashboard", "whatsapp-later-today"]).done).toBe(false);
+    // Never "lost" along the way
+    for (const markers of [["back-to-dashboard"], ["tour-whatsapp-link"], ["whatsapp-later-today"]]) {
+      expect(at(markers).lost).toBe(false);
+    }
+  });
+
+  it("8: coming back from WhatsApp with the details panel open → “Close” first", () => {
+    const i = step("The staff call list");
+    const open = tourView(i, screen(["staff-list", "banner", "close-details"]));
+    expect(open.target).toBe("close-details");
+    expect(open.ready).toBe(false); // no "Next" until the list can be seen
+    const closed = tourView(i, screen(["staff-list", "banner"]));
+    expect(closed.target).toBe("staff-list");
+    expect(closed.ready).toBe(true);
+  });
+
+  it("8: Back to dashboard → the staff call list; Next only once the list is on screen", () => {
     const i = step("The staff call list");
     expect(tourView(i, screen(["back-to-dashboard"])).target).toBe("back-to-dashboard");
     expect(tourView(i, screen(["back-to-dashboard"])).ready).toBe(false);
@@ -152,8 +203,8 @@ describe("where each step points, and when it moves on", () => {
     expect(tourView(i, screen(["staff-list", "banner"])).ready).toBe(true);
   });
 
-  it("8: Messages → Send updates → done when a text is sent", () => {
-    const i = step("One text per patient");
+  it("9: Messages → Send updates → done when an update is sent", () => {
+    const i = step("One update per patient");
     expect(tourView(i, screen(["back-to-dashboard"])).target).toBe("back-to-dashboard");
     expect(tourView(i, screen(["messages-link", "staff-list"])).target).toBe("messages-link");
     expect(tourView(i, screen(["send-updates"])).target).toBe("send-updates");

@@ -13,26 +13,25 @@ Ideas and known gaps to pick up later.
 
 ## WhatsApp channel (simulated) — to revisit
 
-Part 1 (data and booking rules, 1 Oct 2026) and Part 2 (the WhatsApp screen, voice notes and photos, 2 Oct 2026) are done. Still open:
+Part 1 (data and booking rules, 1 Oct 2026), Part 2 (the WhatsApp screen, voice notes and photos, 2 Oct 2026) and Part 3 (dashboard labels, Messages page channels, new first message, tour step, README, 3 Oct 2026) are done. Still open:
 
 - **After answering, unclear WhatsApp messages never reach staff.** "ok thanks" and anything else DocDelay can't read only gets the patient's booking repeated: it isn't counted, and the "two unclear replies → staff call" rule doesn't apply. Revisit: a patient could be asking for help in words DocDelay doesn't know.
 - **Clinician question for Phase 2 — photos are never read:** a patient may send a photo of a wound or report; DocDelay can't read it. The patient only gets "Sorry, I couldn't understand that. Please type your answer or tap an option. If this is an emergency, call 108." and staff get a line in the log — no URGENT. Accepted for the MVP (2 Oct 2026).
 - **Unclear voice notes and photos AFTER an answer never reach staff** (same gap as typed messages, above): they get the "Sorry…" line and aren't counted.
-- **Reword the first WhatsApp message (Part 3):** it still uses the call wording ("Press 4…", "Press 5…"). Change it to fit WhatsApp ("Reply 1…" / "tap an option"). Needs a native-speaker check.
 - **Example sentences on the WhatsApp screen:** the "Try a reply (demo)" phrases are only on the call simulator's Chat tab (a test keeps it that way). If Tamil/Hindi example sentences are wanted on the WhatsApp screen, decide then.
 - **WhatsApp tap-list labels are in English for all patients.** Translate them with the Meta templates before real use (Phase 3, native-speaker check).
 - **"No answer" patients don't see "5 – Another doctor"** on the WhatsApp screen (the call's check only covers patients still waiting for contact). Typing "another doctor" works.
-- **Real speech-to-text** for voice notes is the same piece as for real calls. In the demo the visitor types what the patient says.
+- **Real speech-to-text** for voice notes is the same piece as for real calls. In the demo the visitor types what the patient says. Playing the recording too: the details panel and WhatsApp screen show only the text DocDelay "heard", with no play button.
 - **The STOP / not-opted-in health exception is not clinician-checked.** A health mention from a patient who sent STOP, or isn't "WhatsApp OK", gets only the fixed line ("If this is an emergency or you're worried, please call 108…") — no URGENT, no staff note. Revisit in Phase 2 with a clinician.
-- **Native-speaker review list (all new Tamil/Hindi wording, written for the demo, not checked):** the emergency line (`emergencyOnlyReply`), the choices shown after "2" (`changeMenuReply`), and the heads-up replies (`headsUpFineReply`, `headsUpCancelQuestion`, `headsUpStaffReply`) in `src/lib/chatReplies.ts`; the heads-up itself (`headsUpSms` in `src/lib/smsText.ts`); and the yes / no / fine / cancel / "don't cancel" word lists in `src/lib/understanding/headsUpReply.ts`. **Added in Part 2, NOT yet native-checked:** the Tamil/Hindi "stop" words for pushed patients' voice notes (`STOP_WORDS_LATIN` / `STOP_WORDS_SCRIPT` in `src/hms/mockHms.ts`). (The "Sorry, I couldn't understand that…" line and the "I'm unwell" sentences were checked by a native speaker on 3 Oct 2026.)
+- **Native-speaker review list (all new Tamil/Hindi wording, written for the demo, not checked):** the emergency line (`emergencyOnlyReply`), the choices shown after "2" (`changeMenuReply`), and the heads-up replies (`headsUpFineReply`, `headsUpCancelQuestion`, `headsUpStaffReply`) in `src/lib/chatReplies.ts`; the heads-up itself (`headsUpSms` in `src/lib/smsText.ts`); and the yes / no / fine / cancel / "don't cancel" word lists in `src/lib/understanding/headsUpReply.ts`. **Added in Part 2, NOT yet native-checked:** the Tamil/Hindi "stop" words for pushed patients' voice notes (`STOP_WORDS_LATIN` / `STOP_WORDS_SCRIPT` in `src/hms/mockHms.ts`). **Added in Part 3, NOT yet native-checked — the first WhatsApp message (`whatsappScript` in `src/lib/callScript.ts`):** opening "Vanakkam, idhu [hospital] ilirundhu seidhi." / "Namaste, yeh [hospital] se sandesh hai." ("Hello, this is a message from [hospital]."); option 4 "Engal varaverppu mesaiyudan pesa 4 ena badhilalikkavum." / "Hamare front desk se baat karne ke liye 4 bhejein." ("Reply 4 to speak with our front desk."); option 5 "Indre adhe pirivai serndha veru maruthuvarai paarkka 5 ena badhilalikkavum." / "Aaj hi usi vibhaag ke kisi doosre doctor se milne ke liye 5 bhejein." ("Reply 5 to see another doctor from the same department today."); closing "Oru ennai anuppavum alladhu oru viruppathai thattavum." / "Koi number bhejein ya koi vikalp chunein." ("Reply with a number or tap an option."); and the "unexpectedly called away" line, now used on WhatsApp whatever the reason: "[doctor] edhirpaaradha vidhamaaga veliye sella vendiyadhaayitru. Enave ungal [time] sandhippin podhu maruthuvar irukka maattaar." / "[doctor] ko achaanak kisi zaroori kaam se jaana pada hai, isliye aapki [time] ki appointment ke samay doctor uplabdh nahin hain." ("[doctor] has been unexpectedly called away and won't be available at your [time] appointment."). (The "Sorry, I couldn't understand that…" line and the "I'm unwell" sentences were checked by a native speaker on 3 Oct 2026.)
 - **Replies by SMS aren't read.** DocDelay has no way to receive a text-message reply yet. A patient who gets the heads-up ("Reply 1 … 2 to cancel, 3 …") or an update ("Reply 1 to confirm, 2 to change") by SMS — not opted in, STOP, or "WhatsApp fails" — can't answer it. Decide before real use: read SMS replies, or change the SMS wording to "call the front desk".
-- **Screens (Part 3):** (the call screen uses `getCallQueue` since Part 2.) The Messages page should show each message's channel ("WhatsApp", "SMS", "WhatsApp failed → SMS") — today it lists them all the same way.
+- **The real 15-minute wait before falling back to SMS.** The demo falls back at once (the clock is fixed at 9:00 AM); the Messages page says "(a real system waits 15 minutes first)".
+- **Meta templates and consent:** WhatsApp message templates (including translated tap-list labels) and asking for WhatsApp consent at booking need legal review before real use.
 - **No "START"** to turn WhatsApp back on after STOP.
 
 ## Next feature after WhatsApp: waiting check
 
 - **Pushed patients asking for another day** go to staff for now ("Needs staff call – Replied to heads-up", booking kept). Decide self-service rebooking for them then.
-- **The dashboard must show both statuses** when a patient needs a staff call but still holds a slot, e.g. "Needs staff call · holding 2:15 PM" (do this in Part 2).
 
 ## Must do before real calls or laptop demos
 
@@ -216,6 +215,20 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Call queue: a message DocDelay couldn't understand (typed, voice note or photo) doesn't move the patient; only a reply DocDelay understood (e.g. offers on screen) moves them to the end (decided 2–3 Oct 2026). Someone already at the end (part-way through a choice) stays there.
 - Saved demo steps: voice notes and photos are saved with new first letters ("v", "p"); older saved demos still load.
 - REVIEW.md: the "Why we're not sure" text for photos (a patient may send a photo instead of describing a problem), the STOP/not-opted-in 108 line (we assumed a real emergency would call 108; not clinician-checked) and the Tamil/Hindi lines (written for the demo) was written by Claude from earlier notes. It's a table, in the order the items were given, and it points to `src/hms/mockHms.ts` for the stop-word list.
+
+- WhatsApp Part 3: "WhatsApp OK" shows on every opted-in patient's row, on every day, until DocDelay contacts them (affected, or a pushed patient once the heads-up is sent).
+- WhatsApp Part 3: "Answered by call / on WhatsApp" shows only for "WhatsApp OK" patients (for anyone else it can only be a call). It is taken from the log line that gave the current status (the latest line with a result, or the URGENT line), so a later photo or "confirmed the update" doesn't change it.
+- WhatsApp Part 3: "WhatsApp sent" shows for affected opted-in patients still waiting (the first message counts as sent). A patient who answered on a call shows no WhatsApp state until their update goes out.
+- WhatsApp Part 3: label wording and colours: "WhatsApp OK" small green pill; channel and WhatsApp state in one small grey line ("Answered on WhatsApp · Replied on WhatsApp"); Messages labels green (WhatsApp), grey (SMS), amber (fallback).
+- WhatsApp Part 3: on phones, "Open WhatsApp" sits just below the patient's card (a link can't sit inside the card's link), with the card's tint and red stripe.
+- WhatsApp Part 3: photo note wording "📷 WhatsApp: photo received — not read", or "📷 WhatsApp: 2 photos received — not read" for more than one.
+- WhatsApp Part 3: "holding [time]" also shows in the staff call list (not only on the rows), and in orange next to the badge. Another day shows the date too.
+- WhatsApp Part 3: the details panel shows the WhatsApp chat with the same bubbles as the WhatsApp screen (including "understood:" notes for staff).
+- WhatsApp Part 3: tour step 3's text was trimmed (dropped "and the banner shows how many", "is booked") to keep the tour around 2 minutes.
+- WhatsApp Part 3: tour step 8 first rings "Close" if the details panel is open (the WhatsApp screen's "Back to dashboard" opens it), and "Next" shows only once it's closed.
+- WhatsApp Part 3: the WhatsApp screen's "Back to dashboard" link now also carries the tour marker, so earlier steps can point at it too.
+- WhatsApp Part 3: README screenshots: whatsapp.png uses English patient Nikhil Khan at 375 px (2x); dashboard.png at the same size as before, with Nikhil answered on WhatsApp (his row is below the visible part; the visible rows show "WhatsApp sent" and "Open WhatsApp").
+- WhatsApp Part 3: `openingLine` in `src/hms/mockHms.ts` got a `channel` parameter (default "call") and the chat passes its channel to it: 3 small edits, wording only.
 
 ## Done
 

@@ -11,13 +11,21 @@
 import { useState, useTransition } from "react";
 import { whatsappAction } from "@/app/actions";
 import type { WhatsAppMedia } from "@/hms/types";
-import type { TapList } from "./whatsappMenu";
+import type { TapList, TapOption } from "./whatsappMenu";
 
 const MAX_LENGTH = 200; // same limit the server keeps
 
 // Every button here is at least 44 px tall (min-h-11), on every screen size.
 const smallButton =
   "min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-100 disabled:opacity-50";
+
+// Markers for the guided tour (tour/tourSteps.ts, the WhatsApp step):
+// "1 – Later today" on the menu, and the first time when times are offered.
+function tourMarker(option: TapOption): string | undefined {
+  if (option.label === "1 – Later today") return "whatsapp-later-today";
+  if (option.send === "A") return "whatsapp-offer-pick";
+  return undefined;
+}
 
 export default function WhatsAppBox({
   appointmentId,
@@ -57,6 +65,7 @@ export default function WhatsAppBox({
                 type="button"
                 disabled={isPending}
                 onClick={() => send(option.send)}
+                data-tour={tourMarker(option)}
                 className={`min-h-11 w-full rounded-lg border px-3 py-2 text-left text-sm font-medium wrap-break-word disabled:opacity-50 ${
                   option.unwell
                     ? "border-red-300 bg-red-50 text-red-800 hover:bg-red-100"

@@ -33,11 +33,12 @@ import {
   resetDemo,
   sendChatMessage,
   sendPendingUpdates,
+  sendWhatsAppMessage,
 } from "@/hms/mockHms";
 import { describeTimeChange } from "@/lib/status";
 import { interpretWithRules } from "@/lib/understanding";
 import { DEMO_PHRASES } from "@/app/calls/[id]/demoPhrases";
-import { TOUR_UNAVAILABLE } from "./tourSteps";
+import { TOUR_UNAVAILABLE, TOUR_WHATSAPP_APPOINTMENT } from "./tourSteps";
 
 // What the chat does with each message (same steps as chatAction in app/actions.ts).
 async function patientSays(appointmentId: string, text: string) {
@@ -108,17 +109,30 @@ describe.each(WHEN)("the tour at %s", (_label, isoTime) => {
       "was 9:30 AM, Dr. Meera Krishnan → now 9:30 AM, Dr. Karthik Raman",
     );
 
-    // Step 7: the staff call list shows the URGENT patient first
+    // Step 7: Revathi (Tamil, "WhatsApp OK") taps "1 – Later today" on WhatsApp
+    const revathiId = TOUR_WHATSAPP_APPOINTMENT;
+    const before = (await getAppointment(revathiId))!;
+    expect(before.patient.name).toBe("Revathi Krishnan");
+    expect(before.patient.preferredLanguage).toBe("Tamil");
+    expect(before.patient.whatsappOptIn).toBe(true);
+    expect(before.status).toBe("Affected – needs contact"); // still waiting after steps 4–6
+    expect(await sendWhatsAppMessage(revathiId, "1")).toBe("answered");
+    const fourth = (await getAppointment(revathiId))!;
+    expect(fourth.status).toBe("Rescheduled – later today");
+
+    // Step 8: the staff call list shows the URGENT patient first
     const staff = await getStaffCallList();
     expect(staff[0].id).toBe("appt-002");
 
-    // Step 8: two texts waiting (one each), sent when staff press "Send updates"
-    expect(await getPendingUpdates()).toHaveLength(2);
+    // Step 9: three updates waiting (one each), sent when staff press
+    // "Send updates" — all three on WhatsApp (they agreed to it)
+    expect(await getPendingUpdates()).toHaveLength(3);
     await sendPendingUpdates();
     const sent = await getMessages();
     expect(sent.map((m) => m.toName).sort()).toEqual(
-      [first.patient.name, third.patient.name].sort(),
+      [first.patient.name, third.patient.name, fourth.patient.name].sort(),
     );
+    expect(sent.map((m) => m.channel)).toEqual(["WhatsApp", "WhatsApp", "WhatsApp"]);
     expect(sent.find((m) => m.appointmentId === "appt-003")!.text).toContain(
       "डॉ. कार्तिक रमन (Dr. Karthik Raman)",
     );

@@ -224,3 +224,65 @@ export function anotherDoctorReply(language: Language, time: string, doctorName:
     Hindi: `धन्यवाद। आपकी नई अपॉइंटमेंट आज ${at} पर ${doctorName} के साथ है।`,
   }[language];
 }
+
+// ---------- WhatsApp: DocDelay's first message ----------
+// The same choices as the call, reworded for WhatsApp ("Reply 4…" instead of
+// "Press 4…", plus "Reply with a number or tap an option").
+//
+// PRIVACY (FRD 6.1): a WhatsApp preview can show on a locked phone, so this
+// message names ONLY the hospital, the doctor and the time. It never has:
+//   - the patient's name (there's no `patientName` here on purpose);
+//   - the doctor's real reason: it always uses the call's "Other" line
+//     ("has been unexpectedly called away"), whatever the reason was;
+//   - the reason for the visit.
+// ⚠️ The new Tamil and Hindi lines (opening, 4, 5, closing) are NOT yet
+// native-checked (BACKLOG.md). The rest is the call's own wording.
+export type WhatsAppScriptDetails = Omit<CallScriptDetails, "patientName" | "reason">;
+
+export function whatsappScript(details: WhatsAppScriptDetails): string {
+  const d = {
+    ...details,
+    appointmentTime: formatTimeFor(details.appointmentTime, details.language),
+    untilTime: formatTimeFor(details.untilTime, details.language),
+  };
+  switch (d.language) {
+    case "English":
+      return (
+        `Hello, this is a message from ${d.hospitalName}. ` +
+        `${d.doctorName} has been unexpectedly called away and won't be available at your ${d.appointmentTime} appointment. ` +
+        `The doctor expects to be back around ${d.untilTime}. ` +
+        `Would you like to: 1) wait for a later slot today, 2) move to another day, or 3) cancel? ` +
+        `Reply 4 to speak with our front desk.` +
+        (d.anotherDoctorToday
+          ? ` Reply 5 to see another doctor from the same department today.`
+          : "") +
+        ` Reply with a number or tap an option.`
+      );
+
+    case "Tamil":
+      return (
+        `வணக்கம், இது ${d.hospitalName} இலிருந்து செய்தி. ` +
+        `${d.doctorName} எதிர்பாராத விதமாக வெளியே செல்ல வேண்டியதாயிற்று. எனவே உங்கள் ${d.appointmentTime} சந்திப்பின் போது மருத்துவர் இருக்க மாட்டார். ` +
+        `மருத்துவர் சுமார் ${d.untilTime} மணிக்கு திரும்பி வருவார் என எதிர்பார்க்கப்படுகிறது. ` +
+        `நீங்கள் விரும்புவது: 1) இன்று பின்னர் வேறு நேரத்திற்கு காத்திருக்க, 2) வேறு நாளுக்கு மாற்ற, அல்லது 3) ரத்து செய்ய? ` +
+        `எங்கள் வரவேற்பு மேசையுடன் பேச 4 என பதிலளிக்கவும்.` +
+        (d.anotherDoctorToday
+          ? ` இன்றே அதே பிரிவைச் சேர்ந்த வேறு மருத்துவரைப் பார்க்க 5 என பதிலளிக்கவும்.`
+          : "") +
+        ` ஒரு எண்ணை அனுப்பவும் அல்லது ஒரு விருப்பத்தைத் தட்டவும்.`
+      );
+
+    case "Hindi":
+      return (
+        `नमस्ते, यह ${d.hospitalName} से संदेश है। ` +
+        `${d.doctorName} को अचानक किसी ज़रूरी काम से जाना पड़ा है, इसलिए आपकी ${d.appointmentTime} की अपॉइंटमेंट के समय डॉक्टर उपलब्ध नहीं हैं। ` +
+        `डॉक्टर के लगभग ${d.untilTime} तक वापस आने की उम्मीद है। ` +
+        `क्या आप: 1) आज बाद के किसी समय का इंतज़ार करना चाहेंगे, 2) किसी और दिन आना चाहेंगे, या 3) अपॉइंटमेंट रद्द करना चाहेंगे? ` +
+        `हमारे फ्रंट डेस्क से बात करने के लिए 4 भेजें।` +
+        (d.anotherDoctorToday
+          ? ` आज ही उसी विभाग के किसी दूसरे डॉक्टर से मिलने के लिए 5 भेजें।`
+          : "") +
+        ` कोई नंबर भेजें या कोई विकल्प चुनें।`
+      );
+  }
+}

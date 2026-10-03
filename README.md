@@ -11,6 +11,7 @@
 ![Call simulator calling an affected patient](docs/screenshots/call-simulator.png)
 ![Patient offered three other-day slots](docs/screenshots/another-day-offers.png)
 ![Messages page with pending updates](docs/screenshots/messages.png)
+<img src="docs/screenshots/whatsapp.png" alt="Simulated WhatsApp chat at phone width" width="320">
 
 ---
 
@@ -30,11 +31,23 @@ DocDelay plugs into the hospital's management system (HMS), finds the affected a
 - **Later-today rescheduling** — finds the patient a new slot after the doctor's return and tells them the new time on the call.
 - **Another-day rescheduling** — offers three open slots over the next week (A / B / C) and books the one they pick.
 - **Another doctor today** (button and chat mode) — offers up to three empty slots today with another doctor from the same department, only doctors the hospital has approved to cover. The patient's original slot is freed, the booking moves to the other doctor's schedule, and nobody else is moved. The text names the new doctor. In chat, patients can ask in their own words ("another doctor", "vera doctor", "doosre doctor"); the chat opening only mentions it when a slot is free.
+- **WhatsApp (simulated)** — patients who agreed to WhatsApp get the same choices there too, and can tap or type their answer. The dashboard shows who is "WhatsApp OK", how each patient answered (call or WhatsApp) and where their WhatsApp stands.
 - **One-text-per-patient outbox** — every patient whose time changed gets exactly one text with their *final* time, in their language, once staff press "Send updates".
 - **Chat mode** — instead of pressing buttons, type what the patient says ("Can I come Thursday after 4?", "naan wait panren", "cancel kar do"). With an Anthropic API key set, **Claude Haiku 4.5** handles the conversation, using tools (`checkFreeSlots`, `bookSlot`, and for another doctor `checkAnotherDoctorSlots`, `bookWithAnotherDoctor`) that apply all the hospital's rules — the AI only talks, it never decides, and any AI reply that sounds like a confirmation without a real booking is never shown (confirmations always use DocDelay's fixed wording). Without a key (as on the live demo) a free rule-based stand-in does the same job. If the AI fails, that message falls back to the stand-in.
 - **Health-concern safety net** — any mention of a symptom stops rescheduling at once, replies with a fixed "connecting you to staff / call 108" line, and puts the patient at the top of the dashboard as **URGENT – staff call now**. It never books or prioritises a slot, and never gives medical advice. Staff can mark false alarms.
 - **Demo clock** — the demo's clock is fixed at 9:00 AM (on today's date in India), shown on the dashboard as "Demo time: 9:00 AM (fixed)", so the demo works the same at any time of day. All code gets the time from one file, `src/lib/clock.ts`, which can be switched to the real time later.
 - **Full audit trail** — each appointment keeps a call log, the full chat, and a history of time changes (old time, new time, why). Click any row on the dashboard to see it.
+
+## WhatsApp (simulated)
+
+Alongside calls, DocDelay can reach patients on WhatsApp. Nothing is really sent: the WhatsApp screen is a phone-style chat in your browser, and you play the patient.
+
+- **Only patients marked "WhatsApp OK"** (they agreed to it) get WhatsApp messages. Everyone else is reached by call and text message.
+- **The first message names only the hospital, the doctor and the time.** No patient name, no visit reason and no details of why the doctor is away, because WhatsApp previews can show on a locked phone.
+- **Tap or type:** the patient taps an option (1–5) or types in their own words. Voice notes and photos can be tried too (demo): DocDelay reads what a voice note says, but never reads photos.
+- **The health check runs first** on every message: any health mention goes straight to staff as URGENT, just like on a call.
+- **STOP must be typed.** There is no STOP button. Typing STOP closes WhatsApp for that appointment; calls and text messages carry on.
+- **One update per patient**, by WhatsApp or SMS, never both. If a WhatsApp message can't be delivered, the update goes by SMS instead (the Messages page shows "WhatsApp not delivered → sent by SMS").
 
 ## Product decisions (and why)
 
@@ -85,8 +98,9 @@ Optional — to use the Claude-powered chat, create a `.env.local` file with `AN
 3. Press **1 – Later today** for the first patient — they get the first free slot after 11 AM.
 4. Press **2 – Another day** for the next patient and pick **A**, **B** or **C**.
 5. Press **5 – Another doctor today** for the next patient and pick a time with **Dr. Karthik Raman**, the hospital's second cardiologist.
-6. Open **Messages** to see the pending texts, then click **Send updates**.
-7. Click **Reset demo** (top right) to start over.
+6. Back on the dashboard, click **Open WhatsApp** on **Revathi Krishnan**'s row and tap **1 – Later today** (her messages are in Tamil; the buttons are in English).
+7. Open **Messages** to see the pending updates, then click **Send updates**.
+8. Click **Reset demo** (top right) to start over.
 
 The demo data is always relative to *today*, and the demo clock is fixed at 9:00 AM, so it works on any day and at any time.
 
@@ -106,10 +120,12 @@ src/
     chatReplies.ts       ← chat-only lines (incl. the fixed urgent line)
     callScript.ts        ← what the call says, in English / Tamil / Hindi
     smsText.ts           ← text-message wording
+    whatsappStatus.ts    ← the dashboard's WhatsApp labels (read-only)
   app/
     page.tsx             ← front-desk dashboard
     calls/[id]/          ← call simulator
-    messages/            ← SMS outbox (pending + sent)
+    messages/            ← outbox: WhatsApp and SMS updates (pending + sent)
+    whatsapp/[id]/       ← simulated WhatsApp chat
 ```
 
 ## Roadmap

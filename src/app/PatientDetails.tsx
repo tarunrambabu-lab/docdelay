@@ -1,5 +1,6 @@
 // The panel that opens when you click a patient's row on the dashboard:
-// status, time changes, the full call log and chat, and false alarms.
+// status, time changes, the full call log and chat, the WhatsApp chat
+// (with what DocDelay heard in each voice note), and false alarms.
 // (It's in the web address as &appt=<id>, so it can be linked and closed.)
 
 import Link from "next/link";
@@ -7,6 +8,7 @@ import type { AppointmentWithPatient, Doctor } from "@/hms/types";
 import { describeTimeChange, statusColors } from "@/lib/status";
 import { formatClock, formatWhen } from "@/lib/time";
 import ChatTranscript from "./ChatTranscript";
+import WhatsAppTranscript from "./whatsapp/[id]/WhatsAppTranscript";
 import FalseAlarmButton from "./FalseAlarmButton";
 import { TAP } from "./tapTarget";
 
@@ -36,6 +38,7 @@ export default function PatientDetails({
           <Link
             href={closeHref}
             scroll={false}
+            data-tour="close-details"
             className={`shrink-0 rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-slate-100 ${TAP}`}
           >
             Close ✕
@@ -75,6 +78,15 @@ export default function PatientDetails({
               Open WhatsApp chat (simulated) →
             </Link>
           </p>
+        )}
+
+        {a.whatsapp && a.whatsapp.length > 0 && (
+          <section className="mb-6">
+            <h3 className="mb-3 text-sm font-semibold text-slate-900">WhatsApp</h3>
+            <div className="rounded-xl bg-[#ece5dd] p-3">
+              <WhatsAppTranscript turns={a.whatsapp} language={a.patient.preferredLanguage} />
+            </div>
+          </section>
         )}
 
         {a.chat && a.chat.length > 0 && (

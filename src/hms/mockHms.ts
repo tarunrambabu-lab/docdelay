@@ -80,6 +80,7 @@ import {
   laterTodayReply,
   OFFER_LETTERS,
   otherDayOffersScript,
+  whatsappScript,
 } from "@/lib/callScript";
 import {
   askTodayOrAnotherDay,
@@ -1142,7 +1143,7 @@ function chatTurn(
   // The chat starts with what DocDelay said first.
   if (!appt[lines]?.length) {
     appt[lines] = [];
-    if (withOpening) say(openingLine(state, appt, unavailability));
+    if (withOpening) say(openingLine(state, appt, unavailability, channel));
   }
   appt[lines].push({
     at: when,
@@ -1359,7 +1360,13 @@ function chatTurn(
 // What DocDelay said first in a chat: the call script (with "Press 5 to see
 // another doctor…" only when an approved doctor has a free slot) — or, if the
 // patient was already looking at offers (e.g. from Buttons mode), those offers.
-function openingLine(state: HmsState, appt: Appointment, unavailability: Unavailability): string {
+// On WhatsApp: the WhatsApp wording (whatsappScript) — wording only, nothing else changes.
+function openingLine(
+  state: HmsState,
+  appt: Appointment,
+  unavailability: Unavailability,
+  channel: Channel = "call",
+): string {
   const patient = patients.find((p) => p.id === appt.patientId)!;
   const doctor = doctors.find((d) => d.id === appt.doctorId)!;
   const language = patient.preferredLanguage;
@@ -1368,7 +1375,7 @@ function openingLine(state: HmsState, appt: Appointment, unavailability: Unavail
       ? anotherDoctorOffersText(language, appt.offers)
       : otherDayOffersScript(language, appt.offers, appt.offersBecause === "no room today");
   }
-  return callScript({
+  const details = {
     language,
     patientName: patient.name,
     hospitalName: hospital.name,
@@ -1377,7 +1384,8 @@ function openingLine(state: HmsState, appt: Appointment, unavailability: Unavail
     appointmentTime: appt.startTime,
     untilTime: unavailability.untilTime,
     anotherDoctorToday: anotherDoctorSlotsIn(state, appt).length > 0,
-  });
+  };
+  return channel === "WhatsApp" ? whatsappScript(details) : callScript(details);
 }
 
 // ---------- WhatsApp (simulated) ----------

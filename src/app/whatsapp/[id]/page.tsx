@@ -22,9 +22,9 @@ import {
   getUnavailability,
 } from "@/hms/mockHms";
 import type { ChatTurn, Language } from "@/hms/types";
-import { anotherDoctorOffersScript, callScript, otherDayOffersScript } from "@/lib/callScript";
+import { anotherDoctorOffersScript, otherDayOffersScript, whatsappScript } from "@/lib/callScript";
 import { doctorNameFor } from "@/lib/names";
-import { describeTimeChange, statusColors } from "@/lib/status";
+import { ANSWERED_STATUSES, describeTimeChange, statusColors } from "@/lib/status";
 import { formatWhen } from "@/lib/time";
 import { TAP } from "@/app/tapTarget";
 import WhatsAppBox from "./WhatsAppBox";
@@ -57,13 +57,15 @@ export default async function WhatsAppScreen({ params }: PageProps<"/whatsapp/[i
     return d ? doctorNameFor(d, lang) : "";
   };
   const urgent = appt.status === "URGENT – staff call now";
+  const answered = ANSWERED_STATUSES.includes(appt.status);
   const waiting = appt.status === "Affected – needs contact" || appt.status === "No answer";
   // "5 – Another doctor" — the same check as the call.
   const anotherDoctorFree = (await getAnotherDoctorOptions(appt.id)).length > 0;
 
   // The conversation so far. Before the patient's first message, an affected
   // patient who hasn't answered sees DocDelay's first message (the same
-  // opening the hms module puts at the start of the chat).
+  // opening the hms module puts at the start of the chat). It names only the
+  // hospital, the doctor and the time (see whatsappScript).
   let turns: ChatTurn[] = appt.whatsapp ?? [];
   const unavailability = appt.unavailabilityId
     ? await getUnavailability(appt.unavailabilityId)
@@ -79,12 +81,10 @@ export default async function WhatsAppScreen({ params }: PageProps<"/whatsapp/[i
             })),
           )
         : otherDayOffersScript(language, appt.offers, appt.offersBecause === "no room today")
-      : callScript({
+      : whatsappScript({
           language,
-          patientName: patient.name,
           hospitalName: (await getHospital()).name,
           doctorName: nameFor(appt.doctorId, language),
-          reason: unavailability.reason,
           appointmentTime: appt.startTime,
           untilTime: unavailability.untilTime,
           anotherDoctorToday: anotherDoctorFree,
@@ -117,6 +117,8 @@ export default async function WhatsAppScreen({ params }: PageProps<"/whatsapp/[i
           <span className="text-slate-600">
             {appt.status === "Cancelled" ? "" : formatWhen(appt.dayOffset, appt.startTime)}
           </span>
+          {/* For the guided tour: the patient's answer is saved */}
+          {answered && <span data-tour="whatsapp-answered" className="sr-only">Answer saved</span>}
         </p>
         {urgent && (
           <p
@@ -184,7 +186,11 @@ export default async function WhatsAppScreen({ params }: PageProps<"/whatsapp/[i
 function Shell({ backHref, children }: { backHref: string; children: ReactNode }) {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
-      <Link href={backHref} className={`text-sm font-medium text-teal-700 hover:underline ${TAP}`}>
+      <Link
+        href={backHref}
+        data-tour="back-to-dashboard"
+        className={`text-sm font-medium text-teal-700 hover:underline ${TAP}`}
+      >
         ← Back to dashboard
       </Link>
       <h1 className="mb-4 mt-3 text-2xl font-semibold text-slate-900">WhatsApp chat</h1>

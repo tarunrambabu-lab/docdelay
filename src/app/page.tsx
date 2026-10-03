@@ -8,6 +8,9 @@
 // The header links to the simulated text messages (app/messages/page.tsx).
 // At the very top: the staff call list — URGENT patients first.
 // Clicking a patient's row opens their details (&appt=<id>): call log and chat.
+// WhatsApp (simulated): small labels under each row's status, and an "Open
+// WhatsApp" link for opted-in patients DocDelay has contacted (see
+// lib/whatsappStatus.ts).
 
 import Link from "next/link";
 import {
@@ -26,7 +29,8 @@ import {
 } from "@/hms/mockHms";
 import type { Language } from "@/hms/types";
 import { DAYS_TO_SEARCH } from "@/lib/reschedulingRules";
-import { callSummary, describeTimeChange, statusColors } from "@/lib/status";
+import { callSummary, describeTimeChange, holdingLabel, statusColors } from "@/lib/status";
+import { photoNote, whatsappRowInfo, type WhatsAppRowInfo } from "@/lib/whatsappStatus";
 import {
   clockLabel,
   dateForDayOffset,
@@ -40,6 +44,7 @@ import ClickableRow from "./ClickableRow";
 import FalseAlarmButton from "./FalseAlarmButton";
 import MarkUnavailableButton from "./MarkUnavailableButton";
 import PatientDetails from "./PatientDetails";
+import WhatsAppRowLink from "./WhatsAppRowLink";
 import { TAP } from "./tapTarget";
 import { TourStartButton } from "./tour/DemoTour";
 
@@ -71,6 +76,30 @@ function rowStripe(urgent: boolean, affected: boolean): string {
   if (urgent) return "shadow-[inset_4px_0_0_var(--color-red-700)]";
   if (affected) return "shadow-[inset_4px_0_0_var(--color-red-500)]";
   return "";
+}
+
+// WhatsApp labels under a row's status: small and muted, so the status badge
+// (and URGENT) stays the most visible thing on the row. A photo note is a
+// separate grey line: it never replaces the status or the orange note.
+function WhatsAppLabels({ info }: { info: WhatsAppRowInfo }) {
+  const line = [info.answeredBy, info.state].filter(Boolean).join(" · ");
+  return (
+    <>
+      {info.okLabel && (
+        <p className="mt-1">
+          <span className="whitespace-nowrap rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800 ring-1 ring-emerald-200">
+            WhatsApp OK
+          </span>
+        </p>
+      )}
+      {line && <p className="mt-1 text-xs text-slate-500">{line}</p>}
+      {info.photos > 0 && (
+        <p data-photo-note className="mt-1 text-xs text-slate-500">
+          {photoNote(info.photos)}
+        </p>
+      )}
+    </>
+  );
 }
 
 export default async function Home({ searchParams }: PageProps<"/">) {
@@ -107,7 +136,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   // Affected by today's doctor unavailability — including patients who have
   // since moved to another day. (Only shown on the Today view.)
   const affectedCount = selectedDay === 0 ? rows.filter(({ a }) => a.unavailabilityId).length : 0;
-  const messageCount = (await getMessages()).length;
+  const messages = await getMessages();
+  const messageCount = messages.length;
   const pendingUpdates = await getPendingUpdates();
   const demoNearlyFull = await isDemoNearlyFull();
   const staffCalls = await getStaffCallList(); // URGENT first
@@ -155,6 +185,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                     >
                       {c.status}
                     </span>
+                    {holdingLabel(c) && (
+                      <span className="mr-2 text-xs font-medium text-orange-800">
+                        · {holdingLabel(c)}
+                      </span>
+                    )}
                     <span className="font-medium wrap-break-word text-slate-900">
                       {c.patient.name}
                     </span>{" "}
@@ -360,6 +395,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
               {rows.map(({ a, movedAway: gone, time }) => {
                 const affected = a.status === "Affected – needs contact";
                 const urgent = a.status === "URGENT – staff call now";
+                const whatsapp = whatsappRowInfo(a, messages);
+                const holding = holdingLabel(a);
                 return (
                   <li key={a.id}>
                     <Link
@@ -375,10 +412,15 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                         >
                           {formatTime(time)}
                         </span>
-                        <span
-                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[a.status]}`}
-                        >
-                          {a.status}
+                        <span className="text-right">
+                          <span
+                            className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[a.status]}`}
+                          >
+                            {a.status}
+                          </span>
+                          {holding && (
+                            <span className="ml-1 text-xs font-medium text-orange-800">· {holding}</span>
+                          )}
                         </span>
                       </div>
                       <p
@@ -409,7 +451,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                           False alarms: {a.falseAlarms.length}
                         </p>
                       ) : null}
+                      <WhatsAppLabels info={whatsapp} />
                     </Link>
+                    {/* Just below the card (a link can't sit inside the card's link) */}
+                    {whatsapp.link && (
+                      <div className={`-mt-2 px-3 pb-1 ${rowTint(urgent, affected, gone)} ${rowStripe(urgent, affected)}`}>
+                        <WhatsAppRowLink appointmentId={a.id} />
+                      </div>
+                    )}
                   </li>
                 );
               })}
@@ -432,6 +481,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                     const affected = a.status === "Affected – needs contact";
                     const urgent = a.status === "URGENT – staff call now";
                     const details = `${here}&appt=${a.id}`;
+                    const whatsapp = whatsappRowInfo(a, messages);
+                    const holding = holdingLabel(a);
                     return (
                       <ClickableRow
                         key={a.id}
@@ -474,6 +525,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                           >
                             {a.status}
                           </span>
+                          {holding && (
+                            <span className="ml-1 whitespace-nowrap text-xs font-medium text-orange-800">
+                              · {holding}
+                            </span>
+                          )}
                           {/* If the time changed: first booked time → current time */}
                           {a.timeHistory && (
                             <p className="mt-1 whitespace-nowrap text-xs text-slate-600">
@@ -486,6 +542,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                               False alarms: {a.falseAlarms.length}
                             </p>
                           ) : null}
+                          <WhatsAppLabels info={whatsapp} />
+                          {whatsapp.link && <WhatsAppRowLink appointmentId={a.id} />}
                         </td>
                       </ClickableRow>
                     );

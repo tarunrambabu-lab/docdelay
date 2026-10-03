@@ -1,19 +1,28 @@
-// Messages: a pretend SMS outbox.
+// Messages: a pretend outbox for updates — WhatsApp and text messages (SMS).
 //
 // When a patient's appointment time changes (rescheduled or pushed back), the
 // hms module keeps ONE "pending update" for them with their latest time.
 // Pressing "Send updates" turns the pending updates into sent messages.
-// Nothing is really sent.
+// Nothing is really sent. Each sent update carries ONE channel label:
+// "WhatsApp", "SMS", or "WhatsApp not delivered → sent by SMS" — never both.
 
 import Link from "next/link";
 import { connection } from "next/server";
 import { getMessages, getPendingUpdates } from "@/hms/mockHms";
 import type { Language } from "@/hms/types";
 import { formatClock, formatTime, formatWhen } from "@/lib/time";
+import { messageChannelLabel, type MessageChannelLabel } from "@/lib/whatsappStatus";
 import { sendUpdatesAction } from "../actions";
 import { TAP } from "../tapTarget";
 
 const languageCodes: Record<Language, string> = { English: "en", Tamil: "ta", Hindi: "hi" };
+
+// Colours for each channel label: WhatsApp green, SMS grey, fallback amber.
+const channelColors: Record<MessageChannelLabel, string> = {
+  WhatsApp: "bg-emerald-100 text-emerald-800",
+  SMS: "bg-slate-100 text-slate-700",
+  "WhatsApp not delivered → sent by SMS": "bg-amber-100 text-amber-900",
+};
 
 export default async function MessagesPage() {
   // Always read the latest messages when the page is opened. (Without this, a
@@ -31,7 +40,7 @@ export default async function MessagesPage() {
       <header className="mb-6 mt-3">
         <h1 className="text-2xl font-semibold text-slate-900">Messages</h1>
         <p className="text-sm text-slate-500">
-          Simulated text messages — nothing is actually sent.
+          Simulated WhatsApp and text messages — nothing is actually sent.
         </p>
       </header>
 
@@ -101,27 +110,46 @@ export default async function MessagesPage() {
         </p>
       ) : (
         <ul className="space-y-3">
-          {messages.map((m) => (
-            <li key={m.id} data-tour="sent-message" className="rounded-xl border border-slate-200 bg-white p-4">
-              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
-                <p className="wrap-break-word">
-                  <span className="font-medium text-slate-900">To: {m.toName}</span>{" "}
-                  <span className="tabular-nums text-slate-500">{m.toPhone}</span>{" "}
-                  <span className="text-slate-400">· {m.language}</span>
-                </p>
-                <p className="text-xs text-slate-500">
-                  Sent{" "}
-                  {formatClock(m.sentAt, { seconds: true })}
-                </p>
-              </div>
-              <p
-                lang={languageCodes[m.language]}
-                className="rounded-lg bg-slate-50 px-3 py-2 text-sm leading-relaxed wrap-break-word text-slate-800"
+          {messages.map((m) => {
+            const channel = messageChannelLabel(m);
+            return (
+              <li
+                key={m.id}
+                data-tour="sent-message"
+                className="rounded-xl border border-slate-200 bg-white p-4"
               >
-                {m.text}
-              </p>
-            </li>
-          ))}
+                <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
+                  <p className="wrap-break-word">
+                    <span className="font-medium text-slate-900">To: {m.toName}</span>{" "}
+                    <span className="tabular-nums text-slate-500">{m.toPhone}</span>{" "}
+                    <span className="text-slate-400">· {m.language}</span>
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Sent {formatClock(m.sentAt, { seconds: true })}
+                  </p>
+                </div>
+                <p className="mb-2 text-xs">
+                  <span
+                    data-channel={channel}
+                    className={`inline-block rounded-full px-2 py-0.5 font-medium ${channelColors[channel]}`}
+                  >
+                    {channel}
+                  </span>
+                  {m.whatsappFailed && (
+                    <span className="ml-2 text-slate-500">
+                      (a real system waits 15 minutes first)
+                    </span>
+                  )}
+                </p>
+                <p
+                  lang={languageCodes[m.language]}
+                  className="rounded-lg bg-slate-50 px-3 py-2 text-sm leading-relaxed wrap-break-word text-slate-800"
+                >
+                  {m.text}
+                </p>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
