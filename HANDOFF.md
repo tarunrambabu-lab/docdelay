@@ -47,8 +47,9 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | New Tamil and Hindi WhatsApp lines | First native-speaker check done by my mom (2 Oct). Still needs a second native speaker and a clinician before real patients |
 | WhatsApp Part 2 of 3: WhatsApp screen at `/whatsapp/<appointment id>` (opened from the patient details panel), tap-list, typing, voice notes and photos (demo), call screen uses getCallQueue; 59 new tests | Done, live (2–3 Oct) |
 | Part 2's new Tamil and Hindi lines: "Sorry, I couldn't understand that…" and what "I'm unwell" sends | Checked by my mom (3 Oct), correct |
-| Tamil/Hindi "stop" words for pushed patients' voice notes | NOT yet native-checked (see REVIEW.md) |
-| WhatsApp Part 3: dashboard channel icons, Messages page WhatsApp/SMS, "Needs staff call · holding [time]", reword the first WhatsApp message, tour, README | Next (1st) |
+| REVIEW.md: decisions we're unsure about (7 items) | Created (3 Oct) |
+| Still to check by my mom | (1) the Tamil/Hindi "stop" words for pushed patients' voice notes (see REVIEW.md); (2) the new first WhatsApp message lines (see PLAN-whatsapp-part3.md). Neither is native-checked yet |
+| WhatsApp Part 3: dashboard channel icons, Messages page WhatsApp/SMS, "Needs staff call · holding [time]", reword the first WhatsApp message, tour, README | Next (1st). Plan written, NOT approved: waiting for my answers to questions a–d (see PLAN-whatsapp-part3.md) |
 | Waiting check (patients waiting 45+ min asked to keep waiting or reschedule; pushed patients asking for another day) | Next (2nd), details to discuss then |
 | Demo video v2 (4 doctors, demo clock, another doctor; no send-time blanking needed) | Next (3rd) |
 | Add the video to the README and portfolio | Next (4th) |
