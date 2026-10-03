@@ -51,7 +51,9 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | Still to check by my mom | (1) the Tamil/Hindi "stop" words for pushed patients' voice notes (see REVIEW.md); (2) the new first WhatsApp message lines: opening, option 4, option 5, closing line, and the "unexpectedly called away" line (listed in English letters in BACKLOG.md, "Native-speaker review list"). Neither is native-checked yet |
 | WhatsApp Part 3 of 3: dashboard labels ("WhatsApp OK", answered by call / on WhatsApp, WhatsApp state incl. "Update sent (WhatsApp)"), "Open WhatsApp" on rows, photo notes, "Needs staff call · holding [time]", WhatsApp chat in the details panel, Messages page channel labels, new first WhatsApp message (hospital, doctor and time only), tour step 7 of 10 (Revathi on WhatsApp), README section and screenshots; 42 new tests; checked at 320/375 px in Chrome and Safari engines | Done, live (3 Oct, f2c78bf). Plan and answers: PLAN-whatsapp-part3.md |
 | WhatsApp follow-up: the WhatsApp update always says "due to a schedule change" (SMS unchanged, see REVIEW.md); "Answered…" only when the patient made a choice, otherwise "Last reply by call / on WhatsApp"; "Open WhatsApp" kept on URGENT rows | Done (3 Oct) |
-| Waiting check (patients waiting 45+ min asked to keep waiting or reschedule; pushed patients asking for another day) | Next (1st), details to discuss then |
+| **WhatsApp: fully done** (Parts 1–3 plus follow-ups; 509 tests) | Done, live (3 Oct) |
+| Gap found: a picked slot taken meanwhile (same doctor): Buttons gets no "Sorry, that time was just taken"; chat/WhatsApp re-offer only other days even when today still has room | In BACKLOG.md ("To do"), not built |
+| Waiting check (patients waiting 45+ min asked to keep waiting or reschedule; pushed patients asking for another day) | Next (1st). Plan it together in Claude chat FIRST. Do NOT start planning it in Claude Code until I send a plan prompt |
 | Demo video v2 (4 doctors, demo clock, another doctor, WhatsApp; tour now has 10 steps; no send-time blanking needed) | Next (2nd) |
 | Add the video to the README and portfolio | Next (3rd) |
 | /wrap-up skill | Next (4th) |
