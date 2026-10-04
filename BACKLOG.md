@@ -243,6 +243,13 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Notes (4 Oct): the waiting-check row in HANDOFF.md became 5 rows (overview, steps 1–3, "decided"), because a table cell can't hold a bullet list.
 - Notes (4 Oct): the new waiting-check backlog items went under the existing "Next feature after WhatsApp: waiting check" heading; the older "Pushed patients asking for another day" item stays there unchanged, although HANDOFF's waiting-check rows no longer mention it.
 - Notes (4 Oct): the "Demo video v2" row in HANDOFF.md is unchanged (still "Next (2nd)").
+- Doctor-back plan (4 Oct, PLAN-doctor-back.md, not built): "(was 12:00 PM)" shows the time first entered; every change is in the history.
+- Doctor-back plan: the system check says "Is the doctor back?" instead of "Is she back?", because the data doesn't hold doctors' pronouns.
+- Doctor-back plan: history and "marked available" stamps show 9:00 AM in the demo, like every other stamp.
+- Doctor-back plan: a new expected time must be later than the absence's start; "Still away" must be later than the current expected time; the time can't be changed after the doctor is marked available.
+- Doctor-back plan: the dashboard doesn't refresh by itself to bring up the system check; it appears on the next page load (only matters in "real" clock mode).
+- Doctor-back plan: the "(Demo) Show the check" link is a marker in the page address, not saved; the staff list of patients inside the longer absence is read-only and English only.
+- Doctor-back plan: the three backlog items named in the plan prompt (waiting list, demo video shown time, earlier slots when the doctor is back early) were already under "Next feature after WhatsApp: waiting check", so nothing was added.
 
 ## Done
 
