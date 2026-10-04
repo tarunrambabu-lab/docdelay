@@ -32,7 +32,14 @@ Part 1 (data and booking rules, 1 Oct 2026), Part 2 (the WhatsApp screen, voice 
 
 ## Next feature after WhatsApp: waiting check
 
+Planned in Claude chat on 4 Oct 2026 and split into 3 steps (see HANDOFF.md, "Where things stand"). The items below are NOT to be built yet.
+
 - **Pushed patients asking for another day** go to staff for now ("Needs staff call – Replied to heads-up", booking kept). Decide self-service rebooking for them then.
+- **Waiting list (step 3):** when the doctor is marked available, show staff the checked-in patients who chose to keep waiting, in appointment order. Nobody is moved automatically.
+- **Demo video:** change the shown time just for the system-check screenshot (in `~/DocDelay-video`, not the app).
+- **Idea for later — doctor back early:** offer earlier slots to patients already waiting.
+- **Idea for later — if the HMS can't tell us who has arrived:** ask WhatsApp patients to "Reply HERE when you reach the hospital".
+- **Out of scope — ordinary slow clinic days (no surgery).** Ask clinics about them in Phase 2.
 
 ## Must do before real calls or laptop demos
 
@@ -233,6 +240,9 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - WhatsApp Part 3: the WhatsApp screen's "Back to dashboard" link now also carries the tour marker, so earlier steps can point at it too.
 - WhatsApp Part 3: README screenshots: whatsapp.png uses English patient Nikhil Khan at 375 px (2x); dashboard.png at the same size as before, with Nikhil answered on WhatsApp (his row is below the visible part; the visible rows show "WhatsApp sent" and "Open WhatsApp").
 - WhatsApp Part 3: `openingLine` in `src/hms/mockHms.ts` got a `channel` parameter (default "call") and the chat passes its channel to it: 3 small edits, wording only.
+- Notes (4 Oct): the waiting-check row in HANDOFF.md became 5 rows (overview, steps 1–3, "decided"), because a table cell can't hold a bullet list.
+- Notes (4 Oct): the new waiting-check backlog items went under the existing "Next feature after WhatsApp: waiting check" heading; the older "Pushed patients asking for another day" item stays there unchanged, although HANDOFF's waiting-check rows no longer mention it.
+- Notes (4 Oct): the "Demo video v2" row in HANDOFF.md is unchanged (still "Next (2nd)").
 
 ## Done
 

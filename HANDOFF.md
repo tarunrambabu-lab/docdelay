@@ -1,6 +1,6 @@
 # DocDelay — Handoff
 
-Last updated: 3 Oct 2026. Read this first when starting a new chat or a new Claude Code session.
+Last updated: 4 Oct 2026. Read this first when starting a new chat or a new Claude Code session.
 
 ## What DocDelay is
 
@@ -53,7 +53,11 @@ An add-on for hospital systems that reschedules a doctor's patients when the doc
 | WhatsApp follow-up: the WhatsApp update always says "due to a schedule change" (SMS unchanged, see REVIEW.md); "Answered…" only when the patient made a choice, otherwise "Last reply by call / on WhatsApp"; "Open WhatsApp" kept on URGENT rows | Done (3 Oct) |
 | **WhatsApp: fully done** (Parts 1–3 plus follow-ups; 509 tests) | Done, live (3 Oct) |
 | Gap found: a picked slot taken meanwhile (same doctor): Buttons gets no "Sorry, that time was just taken"; chat/WhatsApp re-offer only other days even when today still has room | In BACKLOG.md ("To do"), not built |
-| Waiting check (patients waiting 45+ min asked to keep waiting or reschedule; pushed patients asking for another day) | Next (1st). Plan it together in Claude chat FIRST. Do NOT start planning it in Claude Code until I send a plan prompt |
+| Waiting check | Split into 3 steps, planned in Claude chat (4 Oct). Next (1st) = step 1. The step 1 plan prompt will come from Claude chat: do NOT plan it in Claude Code until I send it |
+| Waiting check, step 1: knowing when the doctor is back | Next. "Change expected return time" at any time (earlier: nothing happens to any patient; later: recorded and shown). After the expected time passes, a system check: "Is Dr. Meera back?" → [Mark doctor available] / [Still away: new expected time]. "Mark doctor available" is pressed by a nurse when the doctor is physically back, and ends the absence. The demo shows the system check through a demo-only link; `CLOCK_MODE` stays "demo" and the booking clock never changes |
+| Waiting check, step 2: the waiting check itself | After step 1. Only for doctors back later than expected. Checked-in patients are asked to keep waiting or come another time ("If you've already seen the doctor, please ignore this message"). Patients not yet arrived whose times now fall inside the longer absence go through the normal DocDelay flow again (a second update is allowed). **Still open:** (1) how to reach checked-in patients: WhatsApp plus a front-desk alert, or a call; (2) when to ask: as soon as the later time is entered, or after they've actually waited 45 minutes |
+| Waiting check, step 3: a waiting list | Later. In BACKLOG.md, not built |
+| Waiting check, decided (4 Oct) | No staff-approval step before messages. "Seen the doctor" isn't needed while the doctor is away. The only new HMS information needed is "arrived: yes/no" |
 | Demo video v2 (4 doctors, demo clock, another doctor, WhatsApp; tour now has 10 steps; no send-time blanking needed) | Next (2nd) |
 | Add the video to the README and portfolio | Next (3rd) |
 | /wrap-up skill | Next (4th) |
