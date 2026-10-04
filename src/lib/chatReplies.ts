@@ -185,6 +185,28 @@ export function slotTakenPrefix(language: Language): string {
   }[language];
 }
 
+// Put in front of fresh offers when the chosen slot was refused because the
+// doctor's expected return time was made LATER after the slot was offered
+// (e.g. 12:30 picked, but the doctor is now back at 2:00). `backAt` is "HH:MM".
+// (If someone else booked the slot, slotTakenPrefix above is used instead.)
+// ⚠️ Tamil and Hindi are NOT yet checked by a native speaker (BACKLOG.md).
+//   Tamil: "Mannikkavum, [doctor] ippodhu [time] manikku thaan thirumbi
+//           varuvaar, enave andha neram ini kidaikkaadhu."
+//   Hindi: "Maaf kijiye, [doctor] ke ab [time] tak vaapas aane ki ummeed hai,
+//           isliye vah samay ab uplabdh nahin hai."
+export function doctorBackLaterPrefix(
+  language: Language,
+  doctorName: string,
+  backAt: string,
+): string {
+  const t = formatTimeFor(backAt, language);
+  return {
+    English: `Sorry, ${doctorName} will now be back at ${t}, so that time is no longer available.`,
+    Tamil: `மன்னிக்கவும், ${doctorName} இப்போது ${t} மணிக்குத் தான் திரும்பி வருவார், எனவே அந்த நேரம் இனி கிடைக்காது.`,
+    Hindi: `माफ़ कीजिए, ${doctorName} के अब ${t} तक वापस आने की उम्मीद है, इसलिए वह समय अब उपलब्ध नहीं है।`,
+  }[language];
+}
+
 // ---------- WhatsApp only ----------
 
 // The ONLY reply a patient gets on WhatsApp when they mention a health concern

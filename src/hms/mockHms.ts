@@ -94,6 +94,7 @@ import {
   dayFullPrefix,
   doctorBackNothingBeforePrefix,
   doctorBackIntro,
+  doctorBackLaterPrefix,
   doctorBackNoneTodayPrefix,
   emergencyOnlyReply,
   headsUpCancelQuestion,
@@ -549,7 +550,8 @@ function applyCall(state: HmsState, step: Extract<DemoStep, { kind: "call" }>): 
 
   const logEntry: CallLogEntry = { calledAt: new Date(at).toISOString(), result };
   appt.callLog = [...(appt.callLog ?? []), logEntry];
-  delete appt.slotJustTaken; // the "Sorry, that time was just taken" line has been heard
+  delete appt.slotJustTaken;
+  delete appt.doctorBackLater; // the "Sorry, that time was just taken" line has been heard
 
   if (result === "Wants another doctor today") {
     appt.offers = anotherDoctorOffers;
@@ -608,6 +610,7 @@ function applyOffer(
     delete appt.offers;
     delete appt.offersBecause;
     delete appt.slotJustTaken;
+    delete appt.doctorBackLater;
     log("None of these – call me");
     return "none";
   }
@@ -621,9 +624,20 @@ function applyOffer(
       // Taken meanwhile: fresh options if there are any, otherwise back to
       // the 1–4 menu. Either way the patient first hears "Sorry, that time
       // was just taken".
+      // (If the real reason is that the other doctor is away at that time,
+      // they hear "Sorry, Dr. … will now be back at …" instead.)
       const fresh = anotherDoctorSlotsIn(state, appt);
-      log(`Picked ${OFFER_LETTERS[choice]}, but it was just taken`);
-      appt.slotJustTaken = true;
+      const away = refusedBecauseAway(state, offer.doctorId!, offer);
+      if (away) {
+        const awayDoctor = doctors.find((d) => d.id === away.doctorId)!;
+        log(
+          `Picked ${OFFER_LETTERS[choice]}, but ${awayDoctor.name} is now back at ${formatTime(away.backAt)}`,
+        );
+        appt.doctorBackLater = away;
+      } else {
+        log(`Picked ${OFFER_LETTERS[choice]}, but it was just taken`);
+        appt.slotJustTaken = true;
+      }
       if (fresh.length > 0) {
         appt.offers = fresh;
       } else {
@@ -639,7 +653,18 @@ function applyOffer(
 
   // Book it — bookSlotIn re-checks every rule (e.g. nobody took it meanwhile).
   if (!bookSlotIn(state, appt, offer, at).ok) {
+    // Refused because the doctor's return time is now later than this slot:
+    // the patient hears the real reason first. (The fresh options are the
+    // same as before.)
+    const away = refusedBecauseAway(state, appt.doctorId, offer);
     offerOtherDays(state, appt, appt.offersBecause === "no room today" ? "no room today" : "asked");
+    if (away) {
+      const awayDoctor = doctors.find((d) => d.id === away.doctorId)!;
+      log(
+        `Picked ${OFFER_LETTERS[choice]}, but ${awayDoctor.name} is now back at ${formatTime(away.backAt)}`,
+      );
+      appt.doctorBackLater = away;
+    }
     return "taken";
   }
   log(`Picked ${OFFER_LETTERS[choice]}: ${formatWhen(offer.dayOffset, offer.startTime)}`);
@@ -810,6 +835,42 @@ function isAwayAt(state: HmsState, doctorId: string, startTime: string): boolean
   );
 }
 
+// WHY a picked slot was refused, when the reason is the doctor's return time:
+// the slot is today and starts while that doctor is away (usually because the
+// expected return time was made LATER after the slot was offered). Returns
+// which doctor and when bookings with them start again — or undefined if
+// that isn't the reason (then someone else took the slot).
+function refusedBecauseAway(
+  state: HmsState,
+  doctorId: string,
+  slot: SlotOffer,
+): { doctorId: string; backAt: string } | undefined {
+  if (slot.dayOffset !== 0) return undefined;
+  const absence = state.unavailabilities.find(
+    (u) =>
+      u.doctorId === doctorId &&
+      slot.startTime >= u.fromTime &&
+      slot.startTime < bookingsStartAt(u),
+  );
+  return absence && { doctorId, backAt: bookingsStartAt(absence) };
+}
+
+// The "Sorry, …" line a patient gets when the slot they picked was refused:
+// the real reason — "Dr. … will now be back at …" if the doctor is away at
+// that time, otherwise "that time was just taken". Wording only: which fresh
+// options follow is decided elsewhere and doesn't change.
+function refusedPrefix(
+  state: HmsState,
+  language: Language,
+  doctorId: string,
+  slot: SlotOffer,
+): string {
+  const away = refusedBecauseAway(state, doctorId, slot);
+  if (!away) return slotTakenPrefix(language);
+  const doctor = doctors.find((d) => d.id === away.doctorId)!;
+  return doctorBackLaterPrefix(language, doctorNameFor(doctor, language), away.backAt);
+}
+
 // "Another doctor from the same department can see you today: A) Dr. …, 9:30 AM, …"
 // in the patient's language, for offers with another doctor.
 function anotherDoctorOffersText(language: Language, offers: SlotOffer[]): string {
@@ -861,6 +922,7 @@ function bookWithAnotherDoctor(
   delete appt.offers;
   delete appt.offersBecause;
   delete appt.slotJustTaken;
+  delete appt.doctorBackLater;
   return true;
 }
 
@@ -1053,6 +1115,7 @@ function bookSlotIn(
   appt.status = today ? "Rescheduled – later today" : "Rescheduled – another day";
   delete appt.offers;
   delete appt.offersBecause;
+  delete appt.doctorBackLater;
   return { ok: true };
 }
 
@@ -1477,12 +1540,14 @@ function chatTurn(
           return true;
         }
         const fresh = anotherDoctorSlotsIn(state, appt);
+        // "…just taken", or the real reason if that doctor is away at that time.
+        const sorry = refusedPrefix(state, language, offer.doctorId!, offer);
         if (fresh.length > 0) {
           appt.offers = fresh;
-          say(`${slotTakenPrefix(language)} ${anotherDoctorOffersText(language, fresh)}`);
+          say(`${sorry} ${anotherDoctorOffersText(language, fresh)}`);
         } else {
           dropOffers();
-          say(`${slotTakenPrefix(language)} ${noOtherDoctorFreeReply(language)}`);
+          say(`${sorry} ${noOtherDoctorFreeReply(language)}`);
         }
         log("Wants another doctor today", "picked slot was just taken");
         return true;
@@ -1501,9 +1566,12 @@ function chatTurn(
         return true;
       }
       // Taken meanwhile — first one wins; this patient gets fresh options.
+      // (Or the doctor's return time is now later than the slot: then the
+      // line says so. Only the line differs.)
+      const sorry = refusedPrefix(state, language, appt.doctorId, offer);
       offerOtherDays(state, appt, appt.offersBecause === "no room today" ? "no room today" : "asked");
       say(
-        `${slotTakenPrefix(language)} ${
+        `${sorry} ${
           appt.offers
             ? otherDayOffersScript(language, appt.offers, false)
             : staffWillCallReply(language)
@@ -2108,6 +2176,10 @@ export interface AiTurn {
   allowedTimes(): Set<string>; // "HH:MM" times the reply may mention
   outcome(): AiAction | undefined;
   notUnderstood(): boolean; // the AI said it couldn't understand this message
+  // A picked slot was refused because the doctor is now back later: DocDelay's
+  // fixed "Sorry, Dr. … will now be back at …" line, which goes in front of
+  // the AI's reply (undefined if that didn't happen in this turn).
+  refusalLine(): string | undefined;
   save(text: string, reply: string): Promise<boolean>;
 }
 
@@ -2173,6 +2245,7 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
   const offered: SlotOffer[] = []; // slots offered in this turn
   let outcome: AiAction | undefined; // at most one per turn
   let unclear = false; // the AI couldn't understand this message
+  let refusalLine: string | undefined; // see AiTurn.refusalLine
   const times = new Set<string>([
     originalTimeOf(appt),
     bookingsStartAt(unavailability),
@@ -2243,7 +2316,21 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
       }
       const result = onCopy((copyState, copyAppt) => bookSlotIn(copyState, copyAppt, slot, at));
       if (!result.ok) {
-        return { ...result, hint: "Call check_free_slots again and only offer what it returns." };
+        const hint = "Call check_free_slots again and only offer what it returns.";
+        // The doctor's return time is now later than this slot: the patient
+        // gets DocDelay's fixed line with the real reason.
+        const away = refusedBecauseAway(state, appt.doctorId, slot);
+        if (away) {
+          times.add(away.backAt);
+          refusalLine = refusedPrefix(state, language, appt.doctorId, slot);
+          return {
+            ok: false,
+            reason: `The doctor is now back at ${formatTime(away.backAt)}, so that time is no longer available.`,
+            docdelay_says_first: refusalLine,
+            hint: `DocDelay tells the patient that line itself: do not repeat it. ${hint}`,
+          };
+        }
+        return { ...result, hint };
       }
       outcome = { kind: "book", ...slot };
       times.add(slot.startTime);
@@ -2329,6 +2416,24 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
       // re-checked by the hms rules when it's booked.
       const offer = anotherDoctorSlotsIn(state, appt).find((o) => o.startTime === startTime);
       if (!offer) {
+        // A slot that WAS offered, but that doctor is now away at that time:
+        // the patient gets DocDelay's fixed line with the real reason.
+        const earlier = [...(appt.offers ?? []), ...offered].find(
+          (o) => o.doctorId && o.dayOffset === 0 && o.startTime === startTime,
+        );
+        const away = earlier && refusedBecauseAway(state, earlier.doctorId!, earlier);
+        if (earlier && away) {
+          times.add(away.backAt);
+          refusalLine = refusedPrefix(state, language, earlier.doctorId!, earlier);
+          return {
+            ok: false,
+            reason: `That doctor is now back at ${formatTime(away.backAt)}, so that time is no longer available.`,
+            docdelay_says_first: refusalLine,
+            hint:
+              "DocDelay tells the patient that line itself: do not repeat it. " +
+              "Call check_another_doctor_slots again and offer the new options.",
+          };
+        }
         return {
           ok: false,
           reason: "That isn't one of the slots with another doctor.",
@@ -2369,6 +2474,7 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
     allowedTimes: () => times,
     outcome: () => outcome,
     notUnderstood: () => unclear,
+    refusalLine: () => refusalLine,
     // For a turn with an outcome, the reply is DocDelay's fixed confirmation
     // (added when the step is applied), so `reply` is ignored and not stored.
     async save(text, reply) {

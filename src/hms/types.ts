@@ -181,6 +181,11 @@ export interface Appointment {
   // Pressed 5, but the chosen slot was just taken and no other was left: back
   // to the 1–4 menu, which starts with "Sorry, that time was just taken".
   slotJustTaken?: boolean;
+  // Buttons: the slot they picked was refused because that doctor's expected
+  // return time is now later than the slot. The next thing they hear starts
+  // with "Sorry, Dr. … will now be back at [backAt], so that time is no
+  // longer available" (instead of "…just taken").
+  doctorBackLater?: { doctorId: string; backAt: string };
   chat?: ChatTurn[]; // the full chat, if the call was done in Chat mode
   unclearInARow?: number; // chat replies in a row that couldn't be understood
   // A time the patient gave without a day ("after 4"), kept while DocDelay

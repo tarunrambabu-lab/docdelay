@@ -102,7 +102,12 @@ export async function aiChatTurn(
   try {
     const result = await runClaudeTurn(turn, text);
     const usage = result.usage;
-    const reply = result.reply.replace(/\*\*/g, "").trim(); // plain text, no markdown bold
+    let reply = result.reply.replace(/\*\*/g, "").trim(); // plain text, no markdown bold
+    // A picked slot was refused because the doctor is now back later: DocDelay's
+    // own fixed line ("Sorry, Dr. … will now be back at …") goes first, so the
+    // patient always hears the real reason in the agreed wording.
+    const sorry = turn.refusalLine();
+    if (sorry && reply && !turn.outcome() && !reply.includes(sorry)) reply = `${sorry} ${reply}`;
     // The AI asked the patient to repeat without calling cannot_understand:
     // treat it as "couldn't understand" anyway, so it's COUNTED here.
     let detected = false;

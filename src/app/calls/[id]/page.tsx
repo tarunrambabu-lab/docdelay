@@ -43,7 +43,7 @@ import {
   laterTodayReply,
   otherDayOffersScript,
 } from "@/lib/callScript";
-import { slotTakenPrefix } from "@/lib/chatReplies";
+import { doctorBackLaterPrefix, slotTakenPrefix } from "@/lib/chatReplies";
 import { callSummary, describeTimeChange, statusColors } from "@/lib/status";
 import { formatTime } from "@/lib/time";
 import { doctorNameFor } from "@/lib/names";
@@ -131,7 +131,18 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
     : "";
   // Buttons: if the slot they picked with another doctor was just taken,
   // start with "Sorry, that time was just taken".
-  const buttonsOpening = current?.slotJustTaken ? `${slotTakenPrefix(language)} ${opening}` : opening;
+  // …or, if it was refused because that doctor's return time is now later
+  // than the slot, with the real reason: "Sorry, Dr. … will now be back at …".
+  const sorry = current?.doctorBackLater
+    ? doctorBackLaterPrefix(
+        language,
+        nameFor(current.doctorBackLater.doctorId, language),
+        current.doctorBackLater.backAt,
+      )
+    : current?.slotJustTaken
+      ? slotTakenPrefix(language)
+      : "";
+  const buttonsOpening = sorry ? `${sorry} ${opening}` : opening;
   const chatLabel =
     activeEngine() === "claude" ? "Chat (AI)" : "Chat (basic mode – AI coming soon)";
 
