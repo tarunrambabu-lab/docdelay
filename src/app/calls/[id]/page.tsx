@@ -53,6 +53,7 @@ import AnswerButtons from "./AnswerButtons";
 import ChatBox from "./ChatBox";
 import OfferButtons from "./OfferButtons";
 import { TAP } from "@/app/tapTarget";
+import { bookingsStartAt } from "@/lib/returnCheck";
 
 export default async function CallSimulator({ params, searchParams }: PageProps<"/calls/[id]">) {
   const { id } = await params;
@@ -124,7 +125,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
           doctorName: doctorNameFor(doctor, language),
           reason: unavailability.reason,
           appointmentTime: current.startTime,
-          untilTime: unavailability.untilTime,
+          untilTime: bookingsStartAt(unavailability),
           anotherDoctorToday,
         })
     : "";

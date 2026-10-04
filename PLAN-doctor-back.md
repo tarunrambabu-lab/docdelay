@@ -1,4 +1,6 @@
-> **PLAN ONLY — not approved.** Saved word for word from the planning session on 4 Oct 2026. Nothing below has been built.
+> **Approved 4 Oct 2026, and BUILT the same day.** The founder's answers are at the end ("Founder's answers"); where they differ from the plan, the answers win. This was first saved as "PLAN ONLY — not approved".
+>
+> Saved word for word from the planning session on 4 Oct 2026.
 
 # Waiting check, step 1: knowing when the doctor is back (plan)
 
@@ -137,3 +139,13 @@ The frozen chat and WhatsApp rules, the booking rules file, `CLOCK_MODE`, the on
 - The demo link is a marker in the page address, not saved.
 - The staff list is read-only and English only, like other staff screens.
 - The three BACKLOG items you named (waiting list, demo video shown time, earlier slots when the doctor is back early) were already there from this morning, so nothing was added.
+
+## Founder's answers (4 Oct 2026)
+
+- **1 + 2 + 5:** If the doctor is back early (an earlier expected time, or "Mark doctor available" pressed early), nothing changes for patients. It is shown and logged only. The booking rules never start earlier than the FIRST expected return time: they use whichever is later, the first expected time or the current one. So nobody is moved, patients not yet reached are contacted as before, there's no new WhatsApp message, and nobody who answers later gets an earlier time than someone who answered first. A LATER time does make new bookings start later, as in the plan. Prove both with tests, including that the push rule never moves patients not yet reached.
+- **3:** Step 1 can go live (fictional data). Show the "not contacted yet" list for staff. Also add a warning on "Send updates" when an unsent update names a time inside the current absence (staff screen only; the message wording doesn't change).
+- **4:** Yes, add the small filter: nobody is booked with a covering doctor during that doctor's own absence. Add tests.
+- **6:** Yes, a confirm question before "Mark doctor available" is saved.
+- **7:** Leave the tour unchanged.
+
+**What differs from the plan above:** "Change expected return time" no longer overwrites the one value the booking rules read. The booking rules (and what patients are told) now read "the later of the first and the current expected time" (`bookingsStartAt` in `src/lib/returnCheck.ts`), so the two "side effects of an EARLIER time" in point 2 can't happen, and the options in point 3 aren't needed.

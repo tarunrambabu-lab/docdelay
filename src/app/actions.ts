@@ -10,6 +10,9 @@ import {
   chooseOffer,
   getAppointment,
   getDoctor,
+  getUnavailability,
+  changeExpectedReturn,
+  markDoctorAvailable,
   markFalseAlarm,
   sendChatMessage,
   markDoctorUnavailable,
@@ -25,7 +28,7 @@ import {
   type UnavailabilityReason,
   type WhatsAppMedia,
 } from "@/hms/types";
-import { isValidTime } from "@/lib/time";
+import { formatTime, isValidTime } from "@/lib/time";
 import { activeEngine, interpretWithRules, mentionsHealth } from "@/lib/understanding";
 import { aiChatTurn } from "@/lib/understanding/aiChat";
 import { countOneAiMessage } from "@/lib/understanding/usage";
@@ -69,6 +72,49 @@ export async function markUnavailableAction(
 
   refresh(); // reload the page's data so the banner and statuses appear
   return { ok: true };
+}
+
+// "Change expected return time" (and "Still away: new expected time" in the
+// "is the doctor back?" check). The time is recorded and shown; no patient is
+// moved and no message is sent (see changeExpectedReturn in the hms module).
+export type ReturnTimeResult = { ok?: boolean; error?: string };
+
+export async function changeReturnTimeAction(
+  _previous: ReturnTimeResult,
+  formData: FormData,
+): Promise<ReturnTimeResult> {
+  const unavailabilityId = String(formData.get("unavailabilityId") ?? "");
+  const untilTime = String(formData.get("untilTime") ?? "");
+  const stillAway = formData.get("stillAway") === "1"; // sent from the check
+
+  const absence = await getUnavailability(unavailabilityId);
+  if (!absence) return { error: "Unknown absence." };
+  if (absence.markedAvailableAt) {
+    return { error: "This doctor has already been marked available." };
+  }
+  if (!isValidTime(untilTime)) return { error: "Please enter a time." };
+  if (untilTime <= absence.fromTime) {
+    return {
+      error: `The expected return time must be later than ${formatTime(absence.fromTime)}, when the absence started.`,
+    };
+  }
+  if (stillAway && untilTime <= absence.untilTime) {
+    return { error: `Please enter a time later than ${formatTime(absence.untilTime)}.` };
+  }
+  if (untilTime === absence.untilTime) return { ok: true }; // nothing to change
+
+  if (!(await changeExpectedReturn(unavailabilityId, untilTime))) {
+    return { error: "This demo has too much history. Press “Reset demo” to start again." };
+  }
+  refresh();
+  return { ok: true };
+}
+
+// "Mark doctor available": the doctor is physically back (pressed after the
+// confirm question). Ends the absence; nobody is moved.
+export async function markAvailableAction(unavailabilityId: string): Promise<void> {
+  await markDoctorAvailable(unavailabilityId);
+  refresh();
 }
 
 // Save the patient's answer from the call simulator.

@@ -29,6 +29,8 @@ import type {
   CallResult,
   Doctor,
   Hospital,
+  InsideAbsenceGroup,
+  InsideAbsenceRow,
   Patient,
   PendingUpdate,
   PendingUpdateWithDetails,
@@ -65,6 +67,7 @@ import {
   pickClosestPerDay,
   pickOffers,
   NORMAL_DAY_END,
+  OFFERS_TO_MAKE,
   planLaterToday,
   SLOT_MINUTES,
   type SlotQuery,
@@ -106,6 +109,7 @@ import {
   urgentReply,
 } from "@/lib/chatReplies";
 import { realTimestamp } from "@/lib/clock";
+import { bookingsStartAt } from "@/lib/returnCheck";
 import { describeUnderstanding } from "@/lib/understanding/describe";
 import { doctorNameFor } from "@/lib/names";
 import { interpretWithRules, mentionsHealth } from "@/lib/understanding";
@@ -176,6 +180,12 @@ function replay(steps: DemoStep[]): HmsState {
         break;
       case "book":
         applyBook(state, step);
+        break;
+      case "returnTime":
+        applyReturnTime(state, step);
+        break;
+      case "available":
+        applyAvailable(state, step);
         break;
       case "ai":
         applyAi(state, step);
@@ -381,6 +391,133 @@ function applyUnavailable(
   return unavailability;
 }
 
+// ---------- Knowing when the doctor is back (waiting check, step 1) ----------
+
+// Staff change a doctor's expected return time — earlier or later, at any
+// time until the doctor is marked available. It is recorded and shown, and
+// NOTHING else happens: no patient is moved and no message is sent.
+//   - LATER: new bookings start at the new time (see bookingsStartAt).
+//   - EARLIER: shown and logged only; bookings never start before the FIRST
+//     expected time.
+// Returns false if nothing was saved: unknown absence, doctor already marked
+// available, a time that isn't after the absence's start, the same time as
+// now, or the visitor's demo is full.
+export async function changeExpectedReturn(
+  unavailabilityId: string,
+  untilTime: string,
+): Promise<boolean> {
+  const steps = await readSteps();
+  const state = replay(steps);
+  const absence = state.unavailabilities.findIndex((u) => u.id === unavailabilityId);
+  const step: DemoStep = { kind: "returnTime", at: realTimestamp(), absence, untilTime };
+  if (!applyReturnTime(state, step)) return false;
+  return writeSteps([...steps, step]);
+}
+
+function applyReturnTime(state: HmsState, step: Extract<DemoStep, { kind: "returnTime" }>): boolean {
+  const unavailability = state.unavailabilities[step.absence];
+  if (!unavailability || unavailability.markedAvailableAt) return false;
+  if (!isValidTime(step.untilTime) || step.untilTime <= unavailability.fromTime) return false;
+  if (step.untilTime === unavailability.untilTime) return false; // nothing to change
+  unavailability.returnTimeChanges = [
+    ...(unavailability.returnTimeChanges ?? []),
+    {
+      changedAt: new Date(step.at).toISOString(),
+      oldTime: unavailability.untilTime,
+      newTime: step.untilTime,
+    },
+  ];
+  unavailability.untilTime = step.untilTime;
+  return true;
+}
+
+// Staff press "Mark doctor available" when the doctor is physically back.
+// It ends the absence: the "is the doctor back?" check stops and the expected
+// time can't be changed any more. No patient is moved, no message is sent,
+// and the booking rules don't change (even if it's pressed early).
+// Returns false if nothing was saved (unknown absence, or already marked).
+export async function markDoctorAvailable(unavailabilityId: string): Promise<boolean> {
+  const steps = await readSteps();
+  const state = replay(steps);
+  const absence = state.unavailabilities.findIndex((u) => u.id === unavailabilityId);
+  const step: DemoStep = { kind: "available", at: realTimestamp(), absence };
+  if (!applyAvailable(state, step)) return false;
+  return writeSteps([...steps, step]);
+}
+
+function applyAvailable(state: HmsState, step: Extract<DemoStep, { kind: "available" }>): boolean {
+  const unavailability = state.unavailabilities[step.absence];
+  if (!unavailability || unavailability.markedAvailableAt) return false;
+  unavailability.markedAvailableAt = new Date(step.at).toISOString();
+  return true;
+}
+
+// Patients whose time today is INSIDE this absence although DocDelay hasn't
+// contacted them about it — it happens when staff enter a LATER return time.
+// Read-only: a list for staff, earliest time first. Empty once the doctor is
+// marked available. (Patients still waiting to be contacted aren't listed:
+// they are simply offered times from the new return time.)
+export async function getInsideAbsence(unavailabilityId: string): Promise<InsideAbsenceRow[]> {
+  const state = await loadState();
+  const unavailability = state.unavailabilities.find((u) => u.id === unavailabilityId);
+  return unavailability ? insideAbsenceIn(state, unavailability) : [];
+}
+
+// The appointments with an update that is waiting to be sent and names a time
+// inside a doctor's current absence (for the warning next to "Send updates").
+export async function getUpdatesInsideAbsence(): Promise<string[]> {
+  const state = await loadState();
+  return state.unavailabilities
+    .flatMap((u) => insideAbsenceIn(state, u))
+    .filter((row) => row.unsentUpdate)
+    .map((row) => row.appointment.id);
+}
+
+function insideAbsenceIn(state: HmsState, unavailability: Unavailability): InsideAbsenceRow[] {
+  if (unavailability.markedAvailableAt) return [];
+  const inside = (doctorId: string, dayOffset: number, time: string) =>
+    dayOffset === 0 &&
+    doctorId === unavailability.doctorId &&
+    time >= unavailability.fromTime &&
+    time < unavailability.untilTime;
+  const groups: Partial<Record<AppointmentStatus, InsideAbsenceGroup>> = {
+    Scheduled: "Never contacted",
+    "Rescheduled – later today": "Rebooked by DocDelay",
+    "Rebooked – another doctor": "Rebooked by DocDelay",
+    "Time moved": "Pushed by DocDelay",
+  };
+
+  const rows: InsideAbsenceRow[] = [];
+  for (const appt of state.appointments) {
+    // Their time itself is inside the absence.
+    const group = groups[appt.status];
+    if (group && inside(appt.doctorId, appt.dayOffset, appt.startTime)) {
+      rows.push({
+        appointment: withPatient(appt),
+        group,
+        time: appt.startTime,
+        unsentUpdate: state.pendingUpdates.some((u) => u.appointmentId === appt.id),
+      });
+    }
+    // They are looking at an offer today (with this doctor) that is inside it.
+    // Picking it is refused by the booking check; staff should know anyway.
+    if (appt.unavailabilityId === unavailability.id && appt.status !== "Cancelled") {
+      const offer = [...(appt.offers ?? []), ...(appt.change?.offers ?? [])].find(
+        (o) => !o.doctorId && inside(unavailability.doctorId, o.dayOffset, o.startTime),
+      );
+      if (offer) {
+        rows.push({
+          appointment: withPatient(appt),
+          group: "Choosing a time",
+          time: offer.startTime,
+          unsentUpdate: false,
+        });
+      }
+    }
+  }
+  return rows.sort((a, b) => a.time.localeCompare(b.time));
+}
+
 // Save what a patient answered on a call: add a line to the appointment's
 // call log and change its status.
 //   - "Later today" finds a new time today straight away; if there's no room,
@@ -518,7 +655,7 @@ function rescheduleLaterToday(state: HmsState, appt: Appointment, at: number): s
   const todaysAppointments = state.appointments.filter(
     (a) => a.doctorId === appt.doctorId && a.dayOffset === 0,
   );
-  const plan = planLaterToday(appt, todaysAppointments, unavailability.untilTime);
+  const plan = planLaterToday(appt, todaysAppointments, bookingsStartAt(unavailability));
 
   if (plan.kind === "no room") return plan.why;
 
@@ -647,6 +784,9 @@ function coveringDoctorsFor(doctorId: string): Doctor[] {
 
 // The slots to offer this patient with another doctor today (see
 // findAnotherDoctorSlots in lib/reschedulingRules.ts for the rules).
+// A covering doctor's slot is left out if it starts inside that doctor's OWN
+// absence today (see isAwayAt) — so the list is filtered first, then cut to
+// OFFERS_TO_MAKE.
 function anotherDoctorSlotsIn(state: HmsState, appt: Appointment): SlotOffer[] {
   return findAnotherDoctorSlots(
     originalTimeOf(appt),
@@ -654,6 +794,19 @@ function anotherDoctorSlotsIn(state: HmsState, appt: Appointment): SlotOffer[] {
       doctorId: d.id,
       appointments: state.appointments.filter((a) => a.doctorId === d.id),
     })),
+    Infinity, // every empty slot; cut down below
+  )
+    .filter((o) => !isAwayAt(state, o.doctorId!, o.startTime))
+    .slice(0, OFFERS_TO_MAKE);
+}
+
+// Is this doctor away at this time today? True if the time is inside one of
+// the doctor's own absences: from its start until the time bookings may start
+// again (bookingsStartAt — the later of the first and the current expected
+// return time). Nobody is booked with a covering doctor at such a time.
+function isAwayAt(state: HmsState, doctorId: string, startTime: string): boolean {
+  return state.unavailabilities.some(
+    (u) => u.doctorId === doctorId && startTime >= u.fromTime && startTime < bookingsStartAt(u),
   );
 }
 
@@ -691,6 +844,8 @@ function bookWithAnotherDoctor(
   ).some((f) => f.startTime === offer.startTime);
   const approved = coveringDoctorsFor(appt.doctorId).some((d) => d.id === offer.doctorId);
   if (!stillFree || !approved) return false;
+  // Never during the covering doctor's own absence.
+  if (isAwayAt(state, offer.doctorId, offer.startTime)) return false;
 
   moveAppointment(
     state,
@@ -876,7 +1031,7 @@ function bookSlotIn(
   const free = listFreeSlots(
     state.appointments.filter((a) => a.doctorId === appt.doctorId),
     { days: [slot.dayOffset], ...wish },
-    { excludeAppointmentId: appt.id, todayFrom: unavailability.untilTime },
+    { excludeAppointmentId: appt.id, todayFrom: bookingsStartAt(unavailability) },
   );
   if (!free.some((f) => f.startTime === slot.startTime)) {
     return { ok: false, reason: "That slot isn't free any more (or it's outside the rules)." };
@@ -1024,7 +1179,9 @@ function findOffers(
     return { situation: note, offers, dayOffset: wish.dayOffset };
   }
   const time: TimeWish = { timeOfDay: wish.timeOfDay, after: wish.after, before: wish.before };
-  const back = state.unavailabilities.find((u) => u.id === appt.unavailabilityId)!.untilTime;
+  const back = bookingsStartAt(
+    state.unavailabilities.find((u) => u.id === appt.unavailabilityId)!,
+  );
   const doctorsAppointments = state.appointments.filter((a) => a.doctorId === appt.doctorId);
 
   // Outside clinic hours ("after 6", "before 8"): the closest slots,
@@ -1385,7 +1542,7 @@ function openingLine(
     doctorName: doctorNameFor(doctor, language),
     reason: unavailability.reason,
     appointmentTime: appt.startTime,
-    untilTime: unavailability.untilTime,
+    untilTime: bookingsStartAt(unavailability),
     anotherDoctorToday: anotherDoctorSlotsIn(state, appt).length > 0,
   };
   return channel === "WhatsApp" ? whatsappScript(details) : callScript(details);
@@ -2018,7 +2175,7 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
   let unclear = false; // the AI couldn't understand this message
   const times = new Set<string>([
     originalTimeOf(appt),
-    unavailability.untilTime,
+    bookingsStartAt(unavailability),
     DAY_START,
     NORMAL_DAY_END,
     ...(appt.offers ?? []).map((o) => o.startTime),
@@ -2199,7 +2356,7 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
       reason: unavailability.reason,
       originalTimeSay: formatTimeFor(originalTimeOf(appt), language),
       doctorNameSay: doctorNameFor(doctor, language),
-      doctorBackSay: formatTimeFor(unavailability.untilTime, language),
+      doctorBackSay: formatTimeFor(bookingsStartAt(unavailability), language),
       calendar: Array.from({ length: DAYS_TO_SEARCH + 1 }, (_, d) => ({
         day_offset: d,
         date: d === 0 ? `today (${formatDate(0)})` : formatDate(d),

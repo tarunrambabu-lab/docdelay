@@ -19,6 +19,9 @@
 //   p.12.…                     the same, a PHOTO (never read, so <text> is empty)
 //   f.12.mg3k2h33              staff marked appt-012's URGENT flag a false alarm
 //   b.12.3.1015.mg3k2i44       bookSlot tool: book appt-012 on day 3 at 10:15
+//   r.0.1400.mg3k2k66          expected return time of absence #0 (the first one
+//                              marked today) changed to 14:00
+//   m.0.mg3k2l77               absence #0: "Mark doctor available" was pressed
 //   a.12.b3-1615.<text>.<reply>.3-1600~4-1615.mg3k2j55
 //                              AI chat turn for appt-012: its outcome (here: book
 //                              day 3 at 16:15), the patient's text and the AI's
@@ -67,6 +70,11 @@ export type DemoStep =
       media?: WhatsAppMedia; // a voice note or a photo; left out = typed
     }
   | { kind: "falseAlarm"; at: number; appointmentId: string }
+  // Staff changed a doctor's expected return time. `absence` = which
+  // "doctor unavailable" event: 0 = the first one marked today, 1 = the next, …
+  | { kind: "returnTime"; at: number; absence: number; untilTime: string }
+  // Staff pressed "Mark doctor available" for that absence.
+  | { kind: "available"; at: number; absence: number }
   | { kind: "book"; at: number; appointmentId: string; dayOffset: number; startTime: string }
   | {
       kind: "ai";
@@ -233,6 +241,10 @@ export function encodeStep(step: DemoStep): string {
     }
     case "falseAlarm":
       return ["f", apptNumber(step.appointmentId), at].join(".");
+    case "returnTime":
+      return ["r", step.absence, hhmm(step.untilTime), at].join(".");
+    case "available":
+      return ["m", step.absence, at].join(".");
     case "book":
       return ["b", apptNumber(step.appointmentId), step.dayOffset, hhmm(step.startTime), at].join(
         ".",
@@ -307,6 +319,17 @@ export function decodeStep(code: string): DemoStep | null {
   }
   if (kind === "f" && parts.length === 2 && Number.isInteger(Number(parts[0]))) {
     return { kind: "falseAlarm", at, appointmentId: apptId(Number(parts[0])) };
+  }
+  if (kind === "r" && parts.length === 3) {
+    const absence = Number(parts[0]);
+    const untilTime = unHhmm(parts[1]);
+    if (!Number.isInteger(absence) || absence < 0 || !isValidTime(untilTime)) return null;
+    return { kind: "returnTime", at, absence, untilTime };
+  }
+  if (kind === "m" && parts.length === 2) {
+    const absence = Number(parts[0]);
+    if (!Number.isInteger(absence) || absence < 0) return null;
+    return { kind: "available", at, absence };
   }
   if (kind === "b" && parts.length === 4) {
     const startTime = unHhmm(parts[2]);

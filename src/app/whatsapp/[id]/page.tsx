@@ -27,6 +27,7 @@ import { doctorNameFor } from "@/lib/names";
 import { ANSWERED_STATUSES, describeTimeChange, statusColors } from "@/lib/status";
 import { formatWhen } from "@/lib/time";
 import { TAP } from "@/app/tapTarget";
+import { bookingsStartAt } from "@/lib/returnCheck";
 import WhatsAppBox from "./WhatsAppBox";
 import WhatsAppTranscript from "./WhatsAppTranscript";
 import { tapListFor } from "./whatsappMenu";
@@ -86,7 +87,7 @@ export default async function WhatsAppScreen({ params }: PageProps<"/whatsapp/[i
           hospitalName: (await getHospital()).name,
           doctorName: nameFor(appt.doctorId, language),
           appointmentTime: appt.startTime,
-          untilTime: unavailability.untilTime,
+          untilTime: bookingsStartAt(unavailability),
           anotherDoctorToday: anotherDoctorFree,
         });
     // (No saved time yet: the transcript shows the clock's time for it.)

@@ -15,6 +15,7 @@
 import Link from "next/link";
 import {
   getAffectedAppointments,
+  getInsideAbsence,
   getAppointment,
   getAppointmentsForDay,
   getAppointmentsMovedAwayFrom,
@@ -35,15 +36,23 @@ import {
   clockLabel,
   dateForDayOffset,
   formatDate,
+  formatClock,
   formatTime,
   formatWhen,
 } from "@/lib/time";
-import { CLOCK_MODE } from "@/lib/clock";
+import { CLOCK_MODE, hospitalTimeNow } from "@/lib/clock";
+import {
+  bookingsStartAt,
+  firstExpectedReturn,
+  isReturnCheckDue,
+  returnCheckCode,
+} from "@/lib/returnCheck";
 import { resetDemoAction } from "./actions";
 import ClickableRow from "./ClickableRow";
 import FalseAlarmButton from "./FalseAlarmButton";
 import MarkUnavailableButton from "./MarkUnavailableButton";
 import PatientDetails from "./PatientDetails";
+import { ChangeReturnTimeButton, MarkAvailableButton, StillAwayForm } from "./ReturnTimeControls";
 import WhatsAppRowLink from "./WhatsAppRowLink";
 import { TAP } from "./tapTarget";
 import { TourStartButton } from "./tour/DemoTour";
@@ -107,7 +116,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const doctors = await getDoctors();
 
   // Which doctor and day are selected? Default to the first doctor, today.
-  const { doctor, day, appt } = await searchParams;
+  const { doctor, day, appt, check } = await searchParams;
   const selected = doctors.find((d) => d.id === doctor) ?? doctors[0];
   const dayNumber = Number(day);
   const selectedDay =
@@ -131,6 +140,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     (await getUnavailabilities()).map(async (u) => ({
       ...u,
       appointments: await getAffectedAppointments(u.id),
+      // After a LATER return time: patients whose time is now inside the absence.
+      inside: await getInsideAbsence(u.id),
     })),
   );
   // Affected by today's doctor unavailability — including patients who have
@@ -229,39 +240,175 @@ export default async function Home({ searchParams }: PageProps<"/">) {
               (p) => p.appointment.doctorId === u.doctorId,
             ).length;
             const summary = callSummary(statuses); // "" until someone is called
+            // ----- When is the doctor back? (waiting check, step 1) -----
+            const first = firstExpectedReturn(u); // the time first entered
+            const back = Boolean(u.markedAvailableAt);
+            const changed = u.untilTime !== first;
+            // The "is the doctor back?" check: due once the expected time has
+            // passed — or shown by the demo-only link, because the demo clock
+            // is fixed at 9:00 AM. The link only SHOWS the check; it never
+            // changes any time used for bookings.
+            const checkShown =
+              !back && (isReturnCheckDue(u, hospitalTimeNow()) || check === returnCheckCode(u));
+            const here = `/?doctor=${selected.id}&day=${selectedDay}`;
+            const bannerButton = `rounded-lg border border-white/70 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-700 ${TAP}`;
             return (
-              <div
-                key={u.id}
-                role="alert"
-                data-tour="banner"
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-600 px-4 py-3 text-sm text-white shadow-sm"
-              >
-                <div>
-                  <p className="font-medium">
-                    {doctorName} unavailable from {formatTime(u.fromTime)} to{" "}
-                    {formatTime(u.untilTime)} ({u.reason}). {u.affectedCount}{" "}
-                    {u.affectedCount === 1 ? "patient" : "patients"} affected.
-                  </p>
-                  {summary && (
-                    <p className="mt-0.5 text-red-100">
-                      {summary}
-                      {stillToCall > 0 && ` · ${stillToCall} still to call`}
+              <div key={u.id} className="space-y-2">
+                <div
+                  role="alert"
+                  data-tour="banner"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-600 px-4 py-3 text-sm text-white shadow-sm"
+                >
+                  <div>
+                    <p className="font-medium">
+                      {back ? (
+                        <>
+                          {doctorName} — back (marked available). Was away from{" "}
+                          {formatTime(u.fromTime)} ({u.reason}).
+                        </>
+                      ) : changed ? (
+                        <>
+                          {doctorName} — away, expected back {formatTime(u.untilTime)} (was{" "}
+                          {formatTime(first)}). Away from {formatTime(u.fromTime)} ({u.reason}).
+                        </>
+                      ) : (
+                        <>
+                          {doctorName} unavailable from {formatTime(u.fromTime)} to{" "}
+                          {formatTime(u.untilTime)} ({u.reason}).
+                        </>
+                      )}{" "}
+                      {u.affectedCount} {u.affectedCount === 1 ? "patient" : "patients"} affected.
                     </p>
-                  )}
-                  {waiting > 0 && (
-                    <Link href="/messages" className={`mt-0.5 block text-red-100 underline ${TAP}`}>
-                      ✉ {waiting} {waiting === 1 ? "update" : "updates"} waiting to be sent
+                    {/* Early return: say clearly that nothing changes for patients. */}
+                    {(back || u.untilTime < first) && (
+                      <p data-return="note" className="mt-0.5 text-red-100">
+                        Nothing changes for patients: new times today are still offered from{" "}
+                        {formatTime(bookingsStartAt(u))}.
+                      </p>
+                    )}
+                    {summary && (
+                      <p className="mt-0.5 text-red-100">
+                        {summary}
+                        {stillToCall > 0 && ` · ${stillToCall} still to call`}
+                      </p>
+                    )}
+                    {waiting > 0 && (
+                      <Link
+                        href="/messages"
+                        className={`mt-0.5 block text-red-100 underline ${TAP}`}
+                      >
+                        ✉ {waiting} {waiting === 1 ? "update" : "updates"} waiting to be sent
+                      </Link>
+                    )}
+                    {/* History: every change of the expected time, and "available". */}
+                    {(u.returnTimeChanges || back) && (
+                      <ul data-return="history" className="mt-1 text-xs text-red-100">
+                        {u.returnTimeChanges?.map((c) => (
+                          <li key={c.changedAt}>
+                            {formatClock(c.changedAt)} · Expected back changed from{" "}
+                            {formatTime(c.oldTime)} to {formatTime(c.newTime)}
+                          </li>
+                        ))}
+                        {u.markedAvailableAt && (
+                          <li>{formatClock(u.markedAvailableAt)} · Marked available by staff</li>
+                        )}
+                      </ul>
+                    )}
+                    {!back && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <ChangeReturnTimeButton
+                          unavailabilityId={u.id}
+                          doctorName={doctorName ?? ""}
+                          untilTime={u.untilTime}
+                          className={bannerButton}
+                        />
+                        <MarkAvailableButton
+                          unavailabilityId={u.id}
+                          doctorName={doctorName ?? ""}
+                          className={bannerButton}
+                        />
+                        {CLOCK_MODE === "demo" && (
+                          <Link
+                            href={checkShown ? here : `${here}&check=${returnCheckCode(u)}`}
+                            data-return="demo-check"
+                            className={`text-xs text-red-100 underline ${TAP}`}
+                          >
+                            {checkShown
+                              ? "(Demo) Hide the check"
+                              : `(Demo) Show the ${formatTime(u.untilTime)} check`}
+                          </Link>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {stillToCall > 0 && (
+                    <Link
+                      href={`/calls/${u.id}`}
+                      data-tour="start-calling"
+                      className={`rounded-lg bg-white px-3 py-1.5 font-medium text-red-700 shadow-sm hover:bg-red-50 ${TAP}`}
+                    >
+                      Start calling patients
                     </Link>
                   )}
                 </div>
-                {stillToCall > 0 && (
-                  <Link
-                    href={`/calls/${u.id}`}
-                    data-tour="start-calling"
-                    className={`rounded-lg bg-white px-3 py-1.5 font-medium text-red-700 shadow-sm hover:bg-red-50 ${TAP}`}
+
+                {/* The system check: is the doctor back? */}
+                {checkShown && (
+                  <section
+                    data-return="check"
+                    className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm"
                   >
-                    Start calling patients
-                  </Link>
+                    <p className="mb-3 font-medium">
+                      {doctorName} was expected back at {formatTime(u.untilTime)}. Is the doctor
+                      back?
+                    </p>
+                    <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+                      <MarkAvailableButton
+                        unavailabilityId={u.id}
+                        doctorName={doctorName ?? ""}
+                        className={`rounded-lg bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 ${TAP}`}
+                      />
+                      <StillAwayForm unavailabilityId={u.id} />
+                    </div>
+                  </section>
+                )}
+
+                {/* After a LATER return time: who is now booked while the doctor is away. */}
+                {u.inside.length > 0 && (
+                  <section
+                    data-return="inside"
+                    className="rounded-xl border border-amber-300 bg-white px-4 py-3 text-sm shadow-sm"
+                  >
+                    <h2 className="font-semibold text-slate-900">
+                      Times inside the longer absence — not contacted yet ({u.inside.length})
+                    </h2>
+                    <p className="mb-2 mt-0.5 text-slate-600">
+                      {doctorName} is now expected back at {formatTime(u.untilTime)}. These patients
+                      have a time before that. DocDelay has not told them: please call them.
+                    </p>
+                    <ul className="divide-y divide-slate-100">
+                      {u.inside.map((row) => (
+                        <li
+                          key={`${row.appointment.id}-${row.group}`}
+                          className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1.5"
+                        >
+                          <span className="font-medium tabular-nums text-slate-900">
+                            {formatTime(row.time)}
+                          </span>
+                          <span className="text-slate-900">{row.appointment.patient.name}</span>
+                          <span className="whitespace-nowrap tabular-nums text-slate-500">
+                            {row.appointment.patient.phone}
+                          </span>
+                          <span className="text-xs text-slate-500">{row.group}</span>
+                          {row.unsentUpdate && (
+                            <span className="text-xs font-medium text-amber-800">
+                              ⚠ update not sent yet
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
                 )}
               </div>
             );

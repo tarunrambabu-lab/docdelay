@@ -93,8 +93,41 @@ export interface Unavailability {
   doctorId: string;
   reason: UnavailabilityReason;
   fromTime: string; // "HH:MM"
-  untilTime: string; // "HH:MM" — the doctor's expected return time
+  // "HH:MM" — the doctor's CURRENT expected return time (staff can change it).
+  // ⚠️ Bookings don't read this directly: they use bookingsStartAt() in
+  // lib/returnCheck.ts, which never goes earlier than the FIRST expected time.
+  untilTime: string;
   affectedCount: number; // how many appointments fell inside the window
+  // Every time staff changed the expected return time, oldest first. The
+  // first line's `oldTime` is the time first entered.
+  returnTimeChanges?: ReturnTimeChange[];
+  // Staff pressed "Mark doctor available" (the doctor is physically back):
+  // when it was pressed (ISO date-time). This ends the absence.
+  markedAvailableAt?: string;
+}
+
+// One line in an absence's history: the expected return time was changed.
+export interface ReturnTimeChange {
+  changedAt: string; // ISO date-time
+  oldTime: string; // "HH:MM"
+  newTime: string; // "HH:MM"
+}
+
+// Step 1 of the waiting check: after staff enter a LATER return time, these
+// are the patients whose time today now falls inside the longer absence.
+// DocDelay only LISTS them for staff — nobody is contacted or moved.
+export type InsideAbsenceGroup =
+  | "Never contacted" // booked in the extra time; DocDelay hasn't contacted them
+  | "Rebooked by DocDelay" // already given a new time, which is now inside the absence
+  | "Pushed by DocDelay" // pushed back to a time that is now inside the absence
+  | "Choosing a time"; // looking at an offer today that is now inside the absence
+
+export interface InsideAbsenceRow {
+  appointment: AppointmentWithPatient;
+  group: InsideAbsenceGroup;
+  time: string; // "HH:MM" — the time that is inside the absence
+  // An update naming this time is waiting to be sent ("Send updates").
+  unsentUpdate: boolean;
 }
 
 export interface Hospital {

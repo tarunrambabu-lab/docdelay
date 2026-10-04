@@ -12,6 +12,7 @@
 ![Patient offered three other-day slots](docs/screenshots/another-day-offers.png)
 ![Messages page with pending updates](docs/screenshots/messages.png)
 <img src="docs/screenshots/whatsapp.png" alt="Simulated WhatsApp chat at phone width" width="320">
+<img src="docs/screenshots/return-check.png" alt="The dashboard asking whether the doctor is back" width="320">
 
 ---
 
@@ -28,6 +29,7 @@ DocDelay plugs into the hospital's management system (HMS), finds the affected a
 - **Front-desk dashboard** — pick a doctor and a day (today + the next 7 days) and see every appointment with a colour-coded status.
 - **"Mark doctor unavailable"** — choose a reason and a time window; every appointment inside it is flagged and a red banner shows how many patients are affected.
 - **Simulated patient calls in English, Tamil and Hindi** — a phone-style call simulator reads each patient a message in their preferred language. The operator plays the patient: *1 – Later today, 2 – Another day, 3 – Cancel, 4 – Talk to a person, 5 – Another doctor today* (only when one is free), or *Didn't pick up*.
+- **Knowing when the doctor is back** — staff can change the doctor's expected return time at any time, and press "Mark doctor available" when the doctor is physically back (after a confirm question). Every change is shown in the red banner and kept in its history. A *later* time makes new bookings start later, and staff get a list of patients whose times now fall inside the longer absence. An *earlier* time, or an early "available", is shown and logged only: bookings never start before the first expected return time, so nobody who answers later gets an earlier time than someone who answered first. Once the expected time has passed, the dashboard asks "Is the doctor back?"; in the demo (clock fixed at 9:00 AM) a "(Demo) Show the check" link shows it.
 - **Later-today rescheduling** — finds the patient a new slot after the doctor's return and tells them the new time on the call.
 - **Another-day rescheduling** — offers three open slots over the next week (A / B / C) and books the one they pick.
 - **Another doctor today** (button and chat mode) — offers up to three empty slots today with another doctor from the same department, only doctors the hospital has approved to cover. The patient's original slot is freed, the booking moves to the other doctor's schedule, and nobody else is moved. The text names the new doctor. In chat, patients can ask in their own words ("another doctor", "vera doctor", "doosre doctor"); the chat opening only mentions it when a slot is free.

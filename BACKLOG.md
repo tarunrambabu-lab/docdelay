@@ -5,7 +5,7 @@ Ideas and known gaps to pick up later.
 ## To do
 
 - **Before switching the clock to "real" (`CLOCK_MODE` in `src/lib/clock.ts`):** the booking rules ("later today", "5 – Another doctor today", other-day offers) need a "not before now" check. They don't look at the time today; with the fixed demo clock (9:00 AM, the first slot) nothing can be in the past, but with the real time a patient could be offered — and booked into — a slot that has already gone (e.g. 9:30 at 11 AM).
-- **"Another doctor" edge case:** if the covering doctor (Dr. Karthik) is later marked unavailable too, patients rebooked to him are affected like anyone else, and the 45-minute rule measures from their original time with Dr. Meera. Check this is what we want.
+- **"Another doctor" edge case:** if the covering doctor (Dr. Karthik) is later marked unavailable too, patients rebooked to him are affected like anyone else, and the 45-minute rule measures from their original time with Dr. Meera. Check this is what we want. (Since 4 Oct 2026, nobody is NEWLY booked with him during his own absence.)
 - **A second "doctor unavailable" window on the same day:** the empty-slot search should avoid it. Right now, if a doctor has two absences in one day, a "later today" patient can be given a slot inside the second absence.
 - **Before switching the AI on for the public:** move the site-wide AI message counter to a shared store (e.g. Redis) — on Vercel each server instance has its own memory, so today's in-memory counter isn't a reliable site-wide limit — and set a monthly spend limit for the API key in the Anthropic Console.
 - **After Phase 2 (planned, don't build yet): a lighter safety net.** Red-flag phrases set by a clinician → straight to staff. Any other health mention → the 108 line, normal rebooking, and a note. Detecting EVERY health mention still matters under this plan, so the health-check tests stay required.
@@ -40,6 +40,8 @@ Planned in Claude chat on 4 Oct 2026 and split into 3 steps (see HANDOFF.md, "Wh
 - **Idea for later — doctor back early:** offer earlier slots to patients already waiting.
 - **Idea for later — if the HMS can't tell us who has arrived:** ask WhatsApp patients to "Reply HERE when you reach the hospital".
 - **Out of scope — ordinary slow clinic days (no surgery).** Ask clinics about them in Phase 2.
+- **Wasted opportunity — doctor back early:** when the doctor returns before the expected time, the free time until the first expected time isn't used for bookings (decided 4 Oct 2026: nothing changes for patients if the doctor is early). Revisit with the waiting list (step 3): e.g. offer that time to checked-in patients who chose to keep waiting.
+- **Step 1 is built (4 Oct 2026); these are left for step 2 or later:** (1) after a LATER return time, patients in the extra time are only listed for staff, not contacted; (2) patients called before a change heard the old return time; (3) an offer shown before a later time, then picked, gets "Sorry, that time was just taken" (the real reason is that the doctor is still away; same gap as the 3 Oct item in "To do"); (4) "Mark doctor available" has no undo, only a confirm question; (5) the dashboard doesn't refresh by itself to bring up the "Is the doctor back?" check (only matters once the clock is "real"); (6) the expected time moved later and then earlier again (12:00 → 2:00 → 1:00): bookings start at 1:00, so a later answerer can get an earlier time than someone who answered while it said 2:00.
 
 ## Must do before real calls or laptop demos
 
@@ -250,6 +252,18 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Doctor-back plan: the dashboard doesn't refresh by itself to bring up the system check; it appears on the next page load (only matters in "real" clock mode).
 - Doctor-back plan: the "(Demo) Show the check" link is a marker in the page address, not saved; the staff list of patients inside the longer absence is read-only and English only.
 - Doctor-back plan: the three backlog items named in the plan prompt (waiting list, demo video shown time, earlier slots when the doctor is back early) were already under "Next feature after WhatsApp: waiting check", so nothing was added.
+- Doctor back (built 4 Oct): patients are TOLD the same time the bookings use (the later of the first and the current expected time), on calls, in chat, on WhatsApp and to the AI. The staff banner shows the current expected time.
+- Doctor back: a covering doctor's "own absence" runs from its start to the time his bookings start again (the later of his first and current expected time), also after he is marked available.
+- Doctor back: the banner keeps its old sentence ("unavailable from 9:00 AM to 12:00 PM") until the time is changed or the doctor is marked available; then it reads "— away, expected back … (was …)" or "— back (marked available)".
+- Doctor back: after an earlier time or "available", the banner adds "Nothing changes for patients: new times today are still offered from [time]."
+- Doctor back: the "not contacted yet" list has four labels: Never contacted, Rebooked by DocDelay, Pushed by DocDelay, Choosing a time. It hides once the doctor is marked available, and so does the "Send updates" warning.
+- Doctor back: the list doesn't include patients still to be contacted, or those already with staff (Needs staff call, No answer, URGENT).
+- Doctor back: the demo link's marker in the page address names the absence and its current time, so the check goes away by itself after "Still away"; "(Demo) Hide the check" removes it.
+- Doctor back: the confirm question reads "Is [doctor] physically back? This ends the absence, and it can't be undone."
+- Doctor back: the calls page header (staff) still shows the absence's current "from – to" times.
+- Doctor back: README got one new screenshot (the check at 375 px); the older dashboard screenshot wasn't retaken, so it doesn't show the two new banner buttons.
+- Doctor back: two new saved demo steps ("r" = return time changed, "m" = marked available), which name the absence by its position (first one marked today = 0).
+- Tests: "the first WhatsApp message … every doctor, every reason" (an older test) timed out twice in about 12 full runs while the laptop was busy; it passes on its own in under 1 second, with and without the 4 Oct changes. Not changed.
 
 ## Done
 

@@ -8,7 +8,7 @@
 
 import Link from "next/link";
 import { connection } from "next/server";
-import { getMessages, getPendingUpdates } from "@/hms/mockHms";
+import { getMessages, getPendingUpdates, getUpdatesInsideAbsence } from "@/hms/mockHms";
 import type { Language } from "@/hms/types";
 import { formatClock, formatTime, formatWhen } from "@/lib/time";
 import { messageChannelLabel, type MessageChannelLabel } from "@/lib/whatsappStatus";
@@ -31,6 +31,10 @@ export default async function MessagesPage() {
 
   const pending = await getPendingUpdates();
   const messages = await getMessages(); // newest first
+  // Updates that name a time when the doctor is still expected to be away
+  // (staff entered a later return time after the patient was given that time).
+  const insideAbsence = new Set(await getUpdatesInsideAbsence());
+  const warnings = pending.filter((u) => insideAbsence.has(u.appointmentId)).length;
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
@@ -63,6 +67,19 @@ export default async function MessagesPage() {
           )}
         </div>
 
+        {/* Staff only: the message wording itself doesn't change. */}
+        {warnings > 0 && (
+          <p
+            role="alert"
+            data-return="send-warning"
+            className="mb-3 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800"
+          >
+            ⚠ {warnings} of these {warnings === 1 ? "updates names" : "updates name"} a time when
+            the doctor is still expected to be away (marked ⚠ below). Check with the patient before
+            you send.
+          </p>
+        )}
+
         {pending.length === 0 ? (
           <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500">
             Nothing waiting. Patients appear here when their appointment time changes.
@@ -92,6 +109,11 @@ export default async function MessagesPage() {
                     <span className="font-semibold text-slate-900">
                       {show(u.newDayOffset, u.newStartTime)}
                     </span>
+                    {insideAbsence.has(u.appointmentId) && (
+                      <span className="ml-2 whitespace-nowrap text-xs font-medium text-red-700">
+                        ⚠ doctor still away then
+                      </span>
+                    )}
                   </p>
                 </li>
               );
