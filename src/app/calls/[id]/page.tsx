@@ -43,7 +43,7 @@ import {
   laterTodayReply,
   otherDayOffersScript,
 } from "@/lib/callScript";
-import { doctorBackLaterPrefix, slotTakenPrefix } from "@/lib/chatReplies";
+import { doctorBackLaterPrefix, slotTakenPrefix, timePassedPrefix } from "@/lib/chatReplies";
 import { callSummary, describeTimeChange, statusColors } from "@/lib/status";
 import { formatTime } from "@/lib/time";
 import { doctorNameFor } from "@/lib/names";
@@ -53,7 +53,7 @@ import AnswerButtons from "./AnswerButtons";
 import ChatBox from "./ChatBox";
 import OfferButtons from "./OfferButtons";
 import { TAP } from "@/app/tapTarget";
-import { bookingsStartAt } from "@/lib/returnCheck";
+import { doctorBackAt } from "@/lib/returnCheck";
 
 export default async function CallSimulator({ params, searchParams }: PageProps<"/calls/[id]">) {
   const { id } = await params;
@@ -125,7 +125,7 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
           doctorName: doctorNameFor(doctor, language),
           reason: unavailability.reason,
           appointmentTime: current.startTime,
-          untilTime: bookingsStartAt(unavailability),
+          untilTime: doctorBackAt(unavailability),
           anotherDoctorToday,
         })
     : "";
@@ -139,9 +139,11 @@ export default async function CallSimulator({ params, searchParams }: PageProps<
         nameFor(current.doctorBackLater.doctorId, language),
         current.doctorBackLater.backAt,
       )
-    : current?.slotJustTaken
-      ? slotTakenPrefix(language)
-      : "";
+    : current?.timePassed
+      ? timePassedPrefix(language) // …or because its time has already passed
+      : current?.slotJustTaken
+        ? slotTakenPrefix(language)
+        : "";
   const buttonsOpening = sorry ? `${sorry} ${opening}` : opening;
   const chatLabel =
     activeEngine() === "claude" ? "Chat (AI)" : "Chat (basic mode – AI coming soon)";

@@ -15,6 +15,7 @@
 // make new bookings start later.
 
 import type { Unavailability } from "@/hms/types";
+import { fromMinutes, toMinutes } from "@/lib/time";
 
 type ReturnTimes = Pick<Unavailability, "untilTime" | "returnTimeChanges">;
 
@@ -23,29 +24,43 @@ export function firstExpectedReturn(unavailability: ReturnTimes): string {
   return unavailability.returnTimeChanges?.[0]?.oldTime ?? unavailability.untilTime;
 }
 
-// The earliest time today that a patient may be booked with this doctor — and
-// the return time patients are told. Every booking rule reads THIS, never
-// `untilTime` directly. ("HH:MM" text compares correctly: "12:00" < "14:00".)
-export function bookingsStartAt(unavailability: ReturnTimes): string {
+// When the doctor is back, as far as patients and bookings are concerned:
+// the LATER of the first and the current expected return time. This is what
+// patients are TOLD ("the doctor expects to be back around …"), and it never
+// includes "now": at 1:07 PM a doctor expected at 12:00 is still "back at
+// 12:00", not "back at 1:15". ("HH:MM" text compares correctly.)
+export function doctorBackAt(unavailability: ReturnTimes): string {
   const first = firstExpectedReturn(unavailability);
   return unavailability.untilTime > first ? unavailability.untilTime : first;
 }
 
+// A time rounded UP to the next quarter hour — slots start on the quarter
+// hour: "10:07" → "10:15"; "10:00" stays "10:00".
+export function nextQuarterHour(time: string): string {
+  return fromMinutes(Math.ceil(toMinutes(time) / 15) * 15);
+}
+
+// The earliest time today that a patient may be booked with this doctor.
+// Every booking rule reads THIS, never `untilTime` directly.
+//   - never before the doctor is back (doctorBackAt);
+//   - never before NOW (`now` = the hospital's time, "HH:MM"), rounded up to
+//     the next quarter hour: the "not before now" check. A slot that starts
+//     exactly now can still be booked.
+// (Without `now`, it's just when the doctor is back.)
+export function bookingsStartAt(unavailability: ReturnTimes, now?: string): string {
+  const back = doctorBackAt(unavailability);
+  if (!now) return back;
+  const soonest = nextQuarterHour(now);
+  return soonest > back ? soonest : back;
+}
+
 // Should the dashboard ask "is the doctor back?" — the expected return time
 // has passed (`now` is the hospital's time, "HH:MM") and nobody has marked
-// the doctor available. With the fixed demo clock (9:00 AM) this is never
-// true by itself; the demo shows the check through a demo-only link.
+// the doctor available. In the demo it comes up by itself once the visitor
+// moves the demo time to the expected return time or later.
 export function isReturnCheckDue(
   unavailability: Pick<Unavailability, "untilTime" | "markedAvailableAt">,
   now: string,
 ): boolean {
   return !unavailability.markedAvailableAt && now >= unavailability.untilTime;
-}
-
-// The marker the "(Demo) Show the … check" link puts in the page address.
-// It names the absence AND its current expected time, so the check goes away
-// by itself once staff enter a new time. It only decides whether the check is
-// SHOWN: it is never saved and never reaches the booking rules.
-export function returnCheckCode(unavailability: Pick<Unavailability, "id" | "untilTime">): string {
-  return `${unavailability.id}_${unavailability.untilTime.replace(":", "")}`;
 }

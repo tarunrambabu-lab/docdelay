@@ -22,6 +22,7 @@
 //   r.0.1400.mg3k2k66          expected return time of absence #0 (the first one
 //                              marked today) changed to 14:00
 //   m.0.mg3k2l77               absence #0: "Mark doctor available" was pressed
+//   t.1300.mg3k2m88            the visitor set the demo time to 13:00
 //   a.12.b3-1615.<text>.<reply>.3-1600~4-1615.mg3k2j55
 //                              AI chat turn for appt-012: its outcome (here: book
 //                              day 3 at 16:15), the patient's text and the AI's
@@ -75,6 +76,8 @@ export type DemoStep =
   | { kind: "returnTime"; at: number; absence: number; untilTime: string }
   // Staff pressed "Mark doctor available" for that absence.
   | { kind: "available"; at: number; absence: number }
+  // The visitor moved the demo's "time now" (the picker on the dashboard).
+  | { kind: "time"; at: number; time: string }
   | { kind: "book"; at: number; appointmentId: string; dayOffset: number; startTime: string }
   | {
       kind: "ai";
@@ -245,6 +248,8 @@ export function encodeStep(step: DemoStep): string {
       return ["r", step.absence, hhmm(step.untilTime), at].join(".");
     case "available":
       return ["m", step.absence, at].join(".");
+    case "time":
+      return ["t", hhmm(step.time), at].join(".");
     case "book":
       return ["b", apptNumber(step.appointmentId), step.dayOffset, hhmm(step.startTime), at].join(
         ".",
@@ -325,6 +330,11 @@ export function decodeStep(code: string): DemoStep | null {
     const untilTime = unHhmm(parts[1]);
     if (!Number.isInteger(absence) || absence < 0 || !isValidTime(untilTime)) return null;
     return { kind: "returnTime", at, absence, untilTime };
+  }
+  if (kind === "t" && parts.length === 2) {
+    const time = unHhmm(parts[0]);
+    if (!isValidTime(time)) return null;
+    return { kind: "time", at, time };
   }
   if (kind === "m" && parts.length === 2) {
     const absence = Number(parts[0]);

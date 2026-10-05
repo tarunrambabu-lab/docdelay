@@ -13,6 +13,7 @@ import {
   getUnavailability,
   changeExpectedReturn,
   markDoctorAvailable,
+  setDemoTime,
   markFalseAlarm,
   sendChatMessage,
   markDoctorUnavailable,
@@ -146,6 +147,13 @@ export async function chooseOfferAction(
     const appt = await getAppointment(appointmentId);
     redirect(`/calls/${appt?.unavailabilityId}?answered=${appointmentId}`);
   }
+  refresh();
+}
+
+// DEMO ONLY: the visitor picked a later demo time on the dashboard. The hms
+// module checks it (forward only, on the quarter hour, 9:00 AM – 5:00 PM).
+export async function setDemoTimeAction(time: string): Promise<void> {
+  await setDemoTime(String(time));
   refresh();
 }
 

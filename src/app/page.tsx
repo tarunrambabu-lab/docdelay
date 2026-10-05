@@ -16,6 +16,7 @@ import Link from "next/link";
 import {
   getAffectedAppointments,
   getInsideAbsence,
+  getTimeNow,
   getAppointment,
   getAppointmentsForDay,
   getAppointmentsMovedAwayFrom,
@@ -40,15 +41,16 @@ import {
   formatTime,
   formatWhen,
 } from "@/lib/time";
-import { CLOCK_MODE, hospitalTimeNow } from "@/lib/clock";
+import { CLOCK_MODE } from "@/lib/clock";
 import {
   bookingsStartAt,
   firstExpectedReturn,
   isReturnCheckDue,
-  returnCheckCode,
 } from "@/lib/returnCheck";
 import { resetDemoAction } from "./actions";
 import ClickableRow from "./ClickableRow";
+import DemoTimePicker from "./DemoTimePicker";
+import { isTimePassed } from "./demoTimes";
 import FalseAlarmButton from "./FalseAlarmButton";
 import MarkUnavailableButton from "./MarkUnavailableButton";
 import PatientDetails from "./PatientDetails";
@@ -116,7 +118,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const doctors = await getDoctors();
 
   // Which doctor and day are selected? Default to the first doctor, today.
-  const { doctor, day, appt, check } = await searchParams;
+  const { doctor, day, appt } = await searchParams;
+  // The hospital's time now: in the demo, this visitor's demo time.
+  const now = await getTimeNow();
   const selected = doctors.find((d) => d.id === doctor) ?? doctors[0];
   const dayNumber = Number(day);
   const selectedDay =
@@ -153,6 +157,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const demoNearlyFull = await isDemoNearlyFull();
   const staffCalls = await getStaffCallList(); // URGENT first
   const here = `/?doctor=${selected.id}&day=${selectedDay}`; // this view, for links
+  // A small grey "Time passed" label next to today's appointments whose time
+  // is before now. A label only: no status changes, and the row keeps its
+  // colour (a red "needs contact" patient still needs contact).
+  const timePassed = (a: Parameters<typeof isTimePassed>[0], movedAway: boolean) =>
+    selectedDay === 0 && !movedAway && isTimePassed(a, now);
   const opened = typeof appt === "string" ? await getAppointment(appt) : undefined;
 
   // Today's date in the hospital (from the clock), e.g. "Thursday, 1 October 2026".
@@ -244,13 +253,10 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             const first = firstExpectedReturn(u); // the time first entered
             const back = Boolean(u.markedAvailableAt);
             const changed = u.untilTime !== first;
-            // The "is the doctor back?" check: due once the expected time has
-            // passed — or shown by the demo-only link, because the demo clock
-            // is fixed at 9:00 AM. The link only SHOWS the check; it never
-            // changes any time used for bookings.
-            const checkShown =
-              !back && (isReturnCheckDue(u, hospitalTimeNow()) || check === returnCheckCode(u));
-            const here = `/?doctor=${selected.id}&day=${selectedDay}`;
+            // The "is the doctor back?" check: comes up by itself once the
+            // expected return time has passed (in the demo: once the visitor
+            // moves the demo time that far).
+            const checkShown = !back && isReturnCheckDue(u, now);
             const bannerButton = `rounded-lg border border-white/70 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-700 ${TAP}`;
             return (
               <div key={u.id} className="space-y-2">
@@ -283,7 +289,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                     {(back || u.untilTime < first) && (
                       <p data-return="note" className="mt-0.5 text-red-100">
                         Nothing changes for patients: new times today are still offered from{" "}
-                        {formatTime(bookingsStartAt(u))}.
+                        {formatTime(bookingsStartAt(u, now))}.
                       </p>
                     )}
                     {summary && (
@@ -327,17 +333,6 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                           doctorName={doctorName ?? ""}
                           className={bannerButton}
                         />
-                        {CLOCK_MODE === "demo" && (
-                          <Link
-                            href={checkShown ? here : `${here}&check=${returnCheckCode(u)}`}
-                            data-return="demo-check"
-                            className={`text-xs text-red-100 underline ${TAP}`}
-                          >
-                            {checkShown
-                              ? "(Demo) Hide the check"
-                              : `(Demo) Show the ${formatTime(u.untilTime)} check`}
-                          </Link>
-                        )}
                       </div>
                     )}
                   </div>
@@ -425,18 +420,15 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-sm text-slate-600">{today}</p>
-          {/* The clock (lib/clock.ts): fixed in the demo, so say so clearly. */}
-          <p
-            title={
-              CLOCK_MODE === "demo"
-                ? "The demo clock is fixed at this time, so the demo works the same whenever you visit."
-                : undefined
-            }
-            className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-900"
-          >
-            {clockLabel()}
-            {CLOCK_MODE === "demo" && <span className="font-normal"> (fixed)</span>}
-          </p>
+          {/* The clock: in the demo, a picker the visitor can move FORWARD
+              (each visitor's own demo); with the real clock, just the time. */}
+          {CLOCK_MODE === "demo" ? (
+            <DemoTimePicker now={now} />
+          ) : (
+            <p className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-900">
+              {clockLabel()}
+            </p>
+          )}
           <TourStartButton
             className={`rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 ${TAP}`}
           />
@@ -527,7 +519,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             </p>
           </div>
           {/* Doctors can only be marked unavailable for today */}
-          {selectedDay === 0 && <MarkUnavailableButton doctor={selected} />}
+          {selectedDay === 0 && <MarkUnavailableButton doctor={selected} now={now} />}
         </div>
 
         {closed ? (
@@ -559,6 +551,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                         >
                           {formatTime(time)}
                         </span>
+                        {timePassed(a, gone) && (
+                          <span data-time-passed className="mr-auto text-xs text-slate-500">
+                            Time passed
+                          </span>
+                        )}
                         <span className="text-right">
                           <span
                             className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[a.status]}`}
@@ -645,6 +642,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                           } ${rowStripe(urgent, affected)}`}
                         >
                           {formatTime(time)}
+                          {timePassed(a, gone) && (
+                            <span data-time-passed className="block text-xs font-normal text-slate-500">
+                              Time passed
+                            </span>
+                          )}
                         </td>
                         <td className="px-5 py-3">
                           <Link

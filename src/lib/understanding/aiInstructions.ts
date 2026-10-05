@@ -29,6 +29,7 @@ HOW TO WORK
   - when "other_days" otherwise. If they named days, pass their day_offset numbers from the calendar in "days" (e.g. "next week but not Monday" → every open day of next week except Monday).
 - Patients may name a day in Tamil or Hindi, in English letters or in their own script (e.g. "guruvar" or "vyazhan" = Thursday). Use the calendar's Tamil and Hindi names to find its day_offset.
 - A weekday name counts as a day: never ask "today, or another day?" when the patient named a weekday. Call check_free_slots with that day's day_offset.
+- Never offer or mention a time today that is before the "Time now at the hospital" in the CONTEXT. The tools only return times that haven't passed; if a tool refuses a time because it has passed, DocDelay tells the patient itself.
 - If the patient just wants to wait today, with no time, call wait_later_today.
 - If they give a time but no day (e.g. "after 4"), ask whether they mean today or another day. No tool.
 - Offer the slots check_free_slots returns as options A, B, C and ask the patient to choose. Follow its "explanation" (for example, say first that the doctor is back at a certain time, or that a day is full).
@@ -70,7 +71,9 @@ export function aiContext(c: AiTurnContext): string {
 - Patient's language: ${c.language}
 - Why the doctor is unavailable: ${c.reason}
 - Doctor (write exactly): ${c.doctorNameSay}
-- Doctor expected back today at (write exactly): ${c.doctorBackSay}
+- Doctor expected back today at (write exactly): ${c.doctorBackSay}${
+    c.timeNowSay ? `\n- Time now at the hospital (write exactly): ${c.timeNowSay}` : ""
+  }
 - Patient's original appointment: today at ${c.originalTimeSay}
 - Clinic hours: 9:00 AM to 5:00 PM
 - Calendar (day_offset = date): ${calendar}

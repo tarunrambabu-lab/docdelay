@@ -4,8 +4,9 @@ import { CLOCK_MODE, hospitalTimeNow } from "@/lib/clock";
 import {
   bookingsStartAt,
   firstExpectedReturn,
+  doctorBackAt,
   isReturnCheckDue,
-  returnCheckCode,
+  nextQuarterHour,
 } from "@/lib/returnCheck";
 
 const change = (oldTime: string, newTime: string) => ({
@@ -61,15 +62,49 @@ describe("the “is the doctor back?” check", () => {
     expect(isReturnCheckDue(absence, "15:30")).toBe(false);
   });
 
-  it("the clock is still the fixed demo clock, so the check never comes up by itself", () => {
+  it("the demo starts at 9:00 AM, so the check isn't due until the demo time is moved", () => {
     expect(CLOCK_MODE).toBe("demo");
     expect(hospitalTimeNow()).toBe("09:00");
     expect(isReturnCheckDue({ untilTime: "12:00" }, hospitalTimeNow())).toBe(false);
   });
+});
 
-  it("the demo link's marker names the absence and its current expected time", () => {
-    expect(returnCheckCode({ id: "unavail-1", untilTime: "12:00" })).toBe("unavail-1_1200");
-    // A new expected time gives a new marker, so an old link no longer shows the check.
-    expect(returnCheckCode({ id: "unavail-1", untilTime: "14:00" })).not.toBe("unavail-1_1200");
+describe("not before now: bookings never start at a time that has passed", () => {
+  const absence = { untilTime: "12:00" };
+
+  it("rounds now UP to the next quarter hour; a time on the quarter stays", () => {
+    expect(nextQuarterHour("10:00")).toBe("10:00");
+    expect(nextQuarterHour("10:01")).toBe("10:15");
+    expect(nextQuarterHour("10:07")).toBe("10:15");
+    expect(nextQuarterHour("10:15")).toBe("10:15");
+    expect(nextQuarterHour("12:59")).toBe("13:00");
+  });
+
+  it("before the doctor is back: bookings start when the doctor is back", () => {
+    expect(bookingsStartAt(absence, "09:00")).toBe("12:00");
+    expect(bookingsStartAt(absence, "11:59")).toBe("12:00");
+    expect(bookingsStartAt(absence, "12:00")).toBe("12:00");
+  });
+
+  it("after the doctor is back: bookings start at now, rounded up", () => {
+    expect(bookingsStartAt(absence, "12:01")).toBe("12:15");
+    expect(bookingsStartAt(absence, "13:00")).toBe("13:00");
+    expect(bookingsStartAt(absence, "13:07")).toBe("13:15");
+  });
+
+  it("the latest of the first expected time, the current one, and now", () => {
+    const later = { untilTime: "14:00", returnTimeChanges: [change("12:00", "14:00")] };
+    const earlier = { untilTime: "10:00", returnTimeChanges: [change("12:00", "10:00")] };
+    expect(bookingsStartAt(later, "13:00")).toBe("14:00");
+    expect(bookingsStartAt(later, "15:20")).toBe("15:30");
+    expect(bookingsStartAt(earlier, "10:30")).toBe("12:00");
+    expect(bookingsStartAt(earlier, "12:40")).toBe("12:45");
+  });
+
+  it("when the doctor is back (what patients are told) never includes now", () => {
+    const later = { untilTime: "14:00", returnTimeChanges: [change("12:00", "14:00")] };
+    expect(doctorBackAt(absence)).toBe("12:00");
+    expect(doctorBackAt(later)).toBe("14:00");
+    expect(bookingsStartAt(absence)).toBe("12:00"); // without a time now: the same
   });
 });

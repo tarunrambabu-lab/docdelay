@@ -19,6 +19,7 @@ import {
   getAppointment,
   getDoctors,
   getHospital,
+  getTimeNow,
   getUnavailability,
 } from "@/hms/mockHms";
 import type { ChatTurn, Language } from "@/hms/types";
@@ -27,7 +28,8 @@ import { doctorNameFor } from "@/lib/names";
 import { ANSWERED_STATUSES, describeTimeChange, statusColors } from "@/lib/status";
 import { formatWhen } from "@/lib/time";
 import { TAP } from "@/app/tapTarget";
-import { bookingsStartAt } from "@/lib/returnCheck";
+import { doctorBackAt } from "@/lib/returnCheck";
+import { CLOCK_MODE, demoMoment } from "@/lib/clock";
 import WhatsAppBox from "./WhatsAppBox";
 import WhatsAppTranscript from "./WhatsAppTranscript";
 import { tapListFor } from "./whatsappMenu";
@@ -87,11 +89,13 @@ export default async function WhatsAppScreen({ params }: PageProps<"/whatsapp/[i
           hospitalName: (await getHospital()).name,
           doctorName: nameFor(appt.doctorId, language),
           appointmentTime: appt.startTime,
-          untilTime: bookingsStartAt(unavailability),
+          untilTime: doctorBackAt(unavailability),
           anotherDoctorToday: anotherDoctorFree,
         });
     // (No saved time yet: the transcript shows the clock's time for it.)
-    turns = [{ at: "", from: "docdelay", text: opening }];
+    // (Not saved yet: in the demo it shows the demo time now.)
+    const at = CLOCK_MODE === "demo" ? demoMoment(await getTimeNow()) : "";
+    turns = [{ at, from: "docdelay", text: opening }];
   }
 
   // The offers on screen (A / B / C), to name the doctor on each button.

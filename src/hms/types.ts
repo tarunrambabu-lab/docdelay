@@ -186,6 +186,10 @@ export interface Appointment {
   // with "Sorry, Dr. … will now be back at [backAt], so that time is no
   // longer available" (instead of "…just taken").
   doctorBackLater?: { doctorId: string; backAt: string };
+  // Buttons: the slot they picked was refused because its time has already
+  // passed. The next thing they hear starts with "Sorry, that time has
+  // already passed" (instead of "…just taken").
+  timePassed?: boolean;
   chat?: ChatTurn[]; // the full chat, if the call was done in Chat mode
   unclearInARow?: number; // chat replies in a row that couldn't be understood
   // A time the patient gave without a day ("after 4"), kept while DocDelay

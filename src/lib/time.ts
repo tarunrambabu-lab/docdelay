@@ -3,7 +3,6 @@
 import type { Language } from "@/hms/types";
 import {
   CLOCK_MODE,
-  DEMO_TIME,
   HOSPITAL_TIME_ZONE,
   hospitalTimeNow,
   hospitalToday,
@@ -76,8 +75,10 @@ export function formatWhen(dayOffset: number, time: string): string {
     : `${formatDate(dayOffset)}, ${formatTime(time)}`;
 }
 
-// A stored stamp, as shown on screen — for logs and "Sent" times.
-//   Demo clock: always the demo time ("9:00 AM"), to match "Demo time: 9:00 AM".
+// A stored stamp, as shown on screen — for logs and "Sent" times: the
+// hospital's time at that moment.
+//   Demo clock: the demo time it happened at, e.g. "9:00 AM" or "1:15 PM"
+//   (never seconds; the hms module stores that moment — see demoMoment).
 //   Real clock: "2026-09-27T05:10:00.000Z" → "10:40 am" (hospital time), with
 //   seconds if asked.
 export function formatClock(
@@ -85,7 +86,15 @@ export function formatClock(
   options: { seconds?: boolean } = {},
   mode: ClockMode = CLOCK_MODE,
 ): string {
-  if (mode === "demo") return formatTime(DEMO_TIME);
+  if (mode === "demo") {
+    const time = new Date(isoDateTime).toLocaleTimeString("en-GB", {
+      timeZone: HOSPITAL_TIME_ZONE,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    });
+    return formatTime(time);
+  }
   return new Date(isoDateTime).toLocaleTimeString("en-IN", {
     timeZone: HOSPITAL_TIME_ZONE,
     hour: "numeric",

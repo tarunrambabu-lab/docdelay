@@ -1,4 +1,6 @@
-> **PLAN ONLY — not approved.** Saved word for word from the planning session on 6 Oct 2026. Nothing below has been built.
+> **Approved 6 Oct 2026, built.** The founder's answers are at the end ("Founder's answers, 6 Oct 2026"); where they differ from the plan, the answers win. This was first saved as "PLAN ONLY — not approved".
+>
+> Saved word for word from the planning session on 6 Oct 2026.
 
 # The clock fix: "not before now" check and a demo time picker (plan)
 
@@ -156,3 +158,25 @@ It already starts at "the clock's time now, rounded up"; with the fixed clock th
 - In "real" mode each step would use the hospital time of the moment it happened; not switched on.
 - The dashboard date is still today's real date in India in both modes.
 - The AI's daily message limits keep using the real date and time.
+
+## Founder's answers, 6 Oct 2026
+
+1. Forward only; "Reset demo" is the way back.
+2. Yes: small grey "Time passed" label next to the time; don't grey out rows.
+3. Yes: the "Is the doctor back?" check comes up by itself; remove the "(Demo) Show the check" link and its 2 tests.
+4. "Mark doctor unavailable" "from" follows the demo time; the tour keeps 9:00 AM – 12:00 PM.
+5. Add the new fixed line "Sorry, that time has already passed." in English, Tamil and Hindi, as one more narrow exception to the frozen rules (this line only). Add the Tamil and Hindi lines, in English letters with the English meaning, to the "Native-speaker review list" in BACKLOG.md. Keep "Sorry, that time was just taken" for when someone else booked it, and the refused-offer line for when the doctor is back later.
+6. Yes: switch the picker off while the tour runs.
+7. A slot starting exactly now can be booked for the MVP. Add to BACKLOG under "must be solved before real patients": a travel-notice rule (e.g. no slot starting within 30 minutes of now for patients not in the hospital).
+8. Yes: logs and "Sent" times show the demo time they happened at.
+9. Yes: change the AI's instructions now; re-check with the real AI later (about $0.10). The AI stays off for laptop demos.
+
+## What was built, and what differed from the plan (6 Oct 2026)
+
+- Built as planned: the per-visitor time now (a saved step), the "not before now" check on every path, the picker, the "Time passed" label, the system check coming up by itself, "from" following the demo time, the new "already passed" line, stamps showing the demo time, and the AI's new fact and instruction line.
+- Tests: 613 in total (571 before). 44 new, 2 removed (the demo link's), 5 rewritten (4 for "Mark doctor unavailable" defaults, 1 for stamps). Fewer tests needed changing than the plan listed: the other clock tests and the WhatsApp "9:00 AM" test pass unchanged, because a demo that hasn't moved its time still runs at 9:00 AM.
+- Safari ignores the height of a plain drop-down, so the picker draws its own ▾ to be tall enough to tap on phones.
+- When a picked time is refused for two reasons at once (the doctor is back later AND the time has passed), the patient hears the doctor line.
+- On phone cards, a row with the "Time passed" label shows its status badge on the next line.
+- Not done: the real AI was not run; the README's dashboard screenshot was not retaken.
+

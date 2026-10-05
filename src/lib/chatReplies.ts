@@ -207,6 +207,19 @@ export function doctorBackLaterPrefix(
   }[language];
 }
 
+// Put in front of fresh offers when the chosen slot was refused because its
+// time has already passed (it was offered earlier, and it's later now).
+// ⚠️ Tamil and Hindi are NOT yet checked by a native speaker (BACKLOG.md).
+//   Tamil: "Mannikkavum, andha neram erkanave kadandhuvittadhu."
+//   Hindi: "Maaf kijiye, vah samay ab nikal chuka hai."
+export function timePassedPrefix(language: Language): string {
+  return {
+    English: "Sorry, that time has already passed.",
+    Tamil: "மன்னிக்கவும், அந்த நேரம் ஏற்கனவே கடந்துவிட்டது.",
+    Hindi: "माफ़ कीजिए, वह समय अब निकल चुका है।",
+  }[language];
+}
+
 // ---------- WhatsApp only ----------
 
 // The ONLY reply a patient gets on WhatsApp when they mention a health concern

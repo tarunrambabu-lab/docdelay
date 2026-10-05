@@ -95,6 +95,7 @@ import {
   doctorBackNothingBeforePrefix,
   doctorBackIntro,
   doctorBackLaterPrefix,
+  timePassedPrefix,
   doctorBackNoneTodayPrefix,
   emergencyOnlyReply,
   headsUpCancelQuestion,
@@ -109,8 +110,15 @@ import {
   unclearReply,
   urgentReply,
 } from "@/lib/chatReplies";
-import { realTimestamp } from "@/lib/clock";
-import { bookingsStartAt } from "@/lib/returnCheck";
+import {
+  CLOCK_MODE,
+  DEMO_LATEST_TIME,
+  demoMoment,
+  hospitalTimeAt,
+  hospitalTimeNow,
+  realTimestamp,
+} from "@/lib/clock";
+import { bookingsStartAt, doctorBackAt, nextQuarterHour } from "@/lib/returnCheck";
 import { describeUnderstanding } from "@/lib/understanding/describe";
 import { doctorNameFor } from "@/lib/names";
 import { interpretWithRules, mentionsHealth } from "@/lib/understanding";
@@ -141,6 +149,10 @@ interface HmsState {
   unavailabilities: Unavailability[];
   pendingUpdates: PendingUpdate[]; // texts waiting to be sent (one per appointment)
   messages: SmsMessage[]; // simulated update messages that were "sent" (SMS or WhatsApp)
+  // The hospital's time NOW, "HH:MM". In the demo it starts at 9:00 AM and
+  // moves only when the visitor picks a later time (a saved step), so
+  // rebuilding the demo gives every step the time it really happened at.
+  now: string;
 }
 
 function startingState(): HmsState {
@@ -150,6 +162,7 @@ function startingState(): HmsState {
     unavailabilities: [],
     pendingUpdates: [],
     messages: [],
+    now: hospitalTimeNow(),
   };
 }
 
@@ -157,6 +170,8 @@ function startingState(): HmsState {
 function replay(steps: DemoStep[]): HmsState {
   const state = startingState();
   for (const step of steps) {
+    // Real clock: each step happened at its own (stored) moment.
+    if (CLOCK_MODE === "real") state.now = hospitalTimeAt(step.at);
     switch (step.kind) {
       case "unavailable":
         applyUnavailable(state, step);
@@ -188,12 +203,36 @@ function replay(steps: DemoStep[]): HmsState {
       case "available":
         applyAvailable(state, step);
         break;
+      case "time":
+        applyTime(state, step);
+        break;
       case "ai":
         applyAi(state, step);
         break;
     }
   }
+  // Real clock: whatever happens next, happens now.
+  if (CLOCK_MODE === "real") state.now = hospitalTimeNow();
   return state;
+}
+
+// The moment to STORE in a log line, a history line or a "Sent" line for
+// something that happened in a step: shown later as the hospital's time.
+// In the demo that's the demo time when it happened (see demoMoment).
+function stampFor(state: HmsState, at: number): string {
+  return CLOCK_MODE === "demo" ? demoMoment(state.now, at) : stampFor(state, at);
+}
+
+// The earliest time today a patient of this absence may be booked: not before
+// the doctor is back, and not before NOW (see bookingsStartAt).
+function startFor(state: HmsState, unavailability: Unavailability): string {
+  return bookingsStartAt(unavailability, state.now);
+}
+
+// Has this slot's time already passed? (Only today's slots can; a slot that
+// starts exactly now hasn't.)
+function hasPassed(state: HmsState, slot: SlotOffer): boolean {
+  return slot.dayOffset === 0 && slot.startTime < nextQuarterHour(state.now);
 }
 
 // This visitor's current state.
@@ -423,12 +462,44 @@ function applyReturnTime(state: HmsState, step: Extract<DemoStep, { kind: "retur
   unavailability.returnTimeChanges = [
     ...(unavailability.returnTimeChanges ?? []),
     {
-      changedAt: new Date(step.at).toISOString(),
+      changedAt: stampFor(state, step.at),
       oldTime: unavailability.untilTime,
       newTime: step.untilTime,
     },
   ];
   unavailability.untilTime = step.untilTime;
+  return true;
+}
+
+// ---------- The demo's "time now" ----------
+
+// The hospital's time now for this visitor, "HH:MM": in the demo, 9:00 AM
+// until they pick a later time.
+export async function getTimeNow(): Promise<string> {
+  return (await loadState()).now;
+}
+
+// DEMO ONLY: the visitor moves the demo time forward (the picker on the
+// dashboard). Nobody is moved and nothing is sent — from then on, no time
+// today before it is offered or booked. Forward only ("Reset demo" is the way
+// back), on the quarter hour, up to 5:00 PM.
+// Returns false if nothing was saved.
+export async function setDemoTime(time: string): Promise<boolean> {
+  if (CLOCK_MODE !== "demo") return false;
+  const steps = await readSteps();
+  const step: DemoStep = { kind: "time", at: realTimestamp(), time };
+  if (!applyTime(replay(steps), step)) return false;
+  // Several time changes in a row: only the last one needs keeping.
+  const kept = steps.at(-1)?.kind === "time" ? steps.slice(0, -1) : steps;
+  return writeSteps([...kept, step]);
+}
+
+function applyTime(state: HmsState, step: Extract<DemoStep, { kind: "time" }>): boolean {
+  if (CLOCK_MODE !== "demo") return false;
+  const { time } = step;
+  if (!isValidTime(time) || nextQuarterHour(time) !== time) return false;
+  if (time <= state.now || time > DEMO_LATEST_TIME) return false; // forward only
+  state.now = time;
   return true;
 }
 
@@ -449,7 +520,7 @@ export async function markDoctorAvailable(unavailabilityId: string): Promise<boo
 function applyAvailable(state: HmsState, step: Extract<DemoStep, { kind: "available" }>): boolean {
   const unavailability = state.unavailabilities[step.absence];
   if (!unavailability || unavailability.markedAvailableAt) return false;
-  unavailability.markedAvailableAt = new Date(step.at).toISOString();
+  unavailability.markedAvailableAt = stampFor(state, step.at);
   return true;
 }
 
@@ -548,10 +619,11 @@ function applyCall(state: HmsState, step: Extract<DemoStep, { kind: "call" }>): 
     result === "Wants another doctor today" ? anotherDoctorSlotsIn(state, appt) : [];
   if (result === "Wants another doctor today" && anotherDoctorOffers.length === 0) return false;
 
-  const logEntry: CallLogEntry = { calledAt: new Date(at).toISOString(), result };
+  const logEntry: CallLogEntry = { calledAt: stampFor(state, at), result };
   appt.callLog = [...(appt.callLog ?? []), logEntry];
   delete appt.slotJustTaken;
-  delete appt.doctorBackLater; // the "Sorry, that time was just taken" line has been heard
+  delete appt.doctorBackLater;
+  delete appt.timePassed; // the "Sorry, that time was just taken" line has been heard
 
   if (result === "Wants another doctor today") {
     appt.offers = anotherDoctorOffers;
@@ -598,7 +670,7 @@ function applyOffer(
     (appt.callLog = [
       ...(appt.callLog ?? []),
       {
-        calledAt: new Date(at).toISOString(),
+        calledAt: stampFor(state, at),
         result: anotherDoctor ? "Wants another doctor today" : "Wants another day",
         detail,
       },
@@ -611,6 +683,7 @@ function applyOffer(
     delete appt.offersBecause;
     delete appt.slotJustTaken;
     delete appt.doctorBackLater;
+    delete appt.timePassed;
     log("None of these – call me");
     return "none";
   }
@@ -634,6 +707,9 @@ function applyOffer(
           `Picked ${OFFER_LETTERS[choice]}, but ${awayDoctor.name} is now back at ${formatTime(away.backAt)}`,
         );
         appt.doctorBackLater = away;
+      } else if (hasPassed(state, offer)) {
+        log(`Picked ${OFFER_LETTERS[choice]}, but that time had already passed`);
+        appt.timePassed = true;
       } else {
         log(`Picked ${OFFER_LETTERS[choice]}, but it was just taken`);
         appt.slotJustTaken = true;
@@ -664,6 +740,10 @@ function applyOffer(
         `Picked ${OFFER_LETTERS[choice]}, but ${awayDoctor.name} is now back at ${formatTime(away.backAt)}`,
       );
       appt.doctorBackLater = away;
+    } else if (hasPassed(state, offer)) {
+      // …or its time has already passed: they hear that first.
+      log(`Picked ${OFFER_LETTERS[choice]}, but that time had already passed`);
+      appt.timePassed = true;
     }
     return "taken";
   }
@@ -680,7 +760,7 @@ function rescheduleLaterToday(state: HmsState, appt: Appointment, at: number): s
   const todaysAppointments = state.appointments.filter(
     (a) => a.doctorId === appt.doctorId && a.dayOffset === 0,
   );
-  const plan = planLaterToday(appt, todaysAppointments, bookingsStartAt(unavailability));
+  const plan = planLaterToday(appt, todaysAppointments, startFor(state, unavailability));
 
   if (plan.kind === "no room") return plan.why;
 
@@ -759,7 +839,7 @@ function moveAppointment(
   at: number, // when it happened (the step's time)
   newDoctorId?: string, // only when the patient moves to a different doctor
 ): void {
-  const now = new Date(at).toISOString();
+  const now = stampFor(state, at);
   const doctorChange =
     newDoctorId && newDoctorId !== appt.doctorId
       ? { oldDoctorId: appt.doctorId, newDoctorId }
@@ -814,7 +894,7 @@ function coveringDoctorsFor(doctorId: string): Doctor[] {
 // OFFERS_TO_MAKE.
 function anotherDoctorSlotsIn(state: HmsState, appt: Appointment): SlotOffer[] {
   return findAnotherDoctorSlots(
-    originalTimeOf(appt),
+    anotherDoctorFrom(state, appt),
     coveringDoctorsFor(appt.doctorId).map((d) => ({
       doctorId: d.id,
       appointments: state.appointments.filter((a) => a.doctorId === d.id),
@@ -825,13 +905,21 @@ function anotherDoctorSlotsIn(state: HmsState, appt: Appointment): SlotOffer[] {
     .slice(0, OFFERS_TO_MAKE);
 }
 
+// "Another doctor today" slots start at or after the patient's original
+// time — and never before NOW (rounded up to the next quarter hour).
+function anotherDoctorFrom(state: HmsState, appt: Appointment): string {
+  const original = originalTimeOf(appt);
+  const soonest = nextQuarterHour(state.now);
+  return soonest > original ? soonest : original;
+}
+
 // Is this doctor away at this time today? True if the time is inside one of
 // the doctor's own absences: from its start until the time bookings may start
 // again (bookingsStartAt — the later of the first and the current expected
 // return time). Nobody is booked with a covering doctor at such a time.
 function isAwayAt(state: HmsState, doctorId: string, startTime: string): boolean {
   return state.unavailabilities.some(
-    (u) => u.doctorId === doctorId && startTime >= u.fromTime && startTime < bookingsStartAt(u),
+    (u) => u.doctorId === doctorId && startTime >= u.fromTime && startTime < doctorBackAt(u),
   );
 }
 
@@ -850,14 +938,15 @@ function refusedBecauseAway(
     (u) =>
       u.doctorId === doctorId &&
       slot.startTime >= u.fromTime &&
-      slot.startTime < bookingsStartAt(u),
+      slot.startTime < doctorBackAt(u),
   );
-  return absence && { doctorId, backAt: bookingsStartAt(absence) };
+  return absence && { doctorId, backAt: doctorBackAt(absence) };
 }
 
 // The "Sorry, …" line a patient gets when the slot they picked was refused:
 // the real reason — "Dr. … will now be back at …" if the doctor is away at
-// that time, otherwise "that time was just taken". Wording only: which fresh
+// that time; "that time has already passed" if it has; otherwise "that time
+// was just taken". Wording only: which fresh
 // options follow is decided elsewhere and doesn't change.
 function refusedPrefix(
   state: HmsState,
@@ -866,7 +955,7 @@ function refusedPrefix(
   slot: SlotOffer,
 ): string {
   const away = refusedBecauseAway(state, doctorId, slot);
-  if (!away) return slotTakenPrefix(language);
+  if (!away) return hasPassed(state, slot) ? timePassedPrefix(language) : slotTakenPrefix(language);
   const doctor = doctors.find((d) => d.id === away.doctorId)!;
   return doctorBackLaterPrefix(language, doctorNameFor(doctor, language), away.backAt);
 }
@@ -901,7 +990,7 @@ function bookWithAnotherDoctor(
   const stillFree = listFreeSlots(
     state.appointments.filter((a) => a.doctorId === offer.doctorId),
     { days: [0] },
-    { todayFrom: originalTimeOf(appt) },
+    { todayFrom: anotherDoctorFrom(state, appt) },
   ).some((f) => f.startTime === offer.startTime);
   const approved = coveringDoctorsFor(appt.doctorId).some((d) => d.id === offer.doctorId);
   if (!stillFree || !approved) return false;
@@ -923,6 +1012,7 @@ function bookWithAnotherDoctor(
   delete appt.offersBecause;
   delete appt.slotJustTaken;
   delete appt.doctorBackLater;
+  delete appt.timePassed;
   return true;
 }
 
@@ -944,7 +1034,7 @@ export async function sendPendingUpdates(): Promise<number> {
 }
 
 function applySend(state: HmsState, step: Extract<DemoStep, { kind: "send" }>): number {
-  const now = new Date(step.at).toISOString();
+  const now = stampFor(state, step.at);
 
   for (const update of state.pendingUpdates) {
     const appt = state.appointments.find((a) => a.id === update.appointmentId)!;
@@ -1019,10 +1109,14 @@ export async function checkFreeSlots(
   options: { excludeAppointmentId?: string; todayFrom?: string } = {},
 ): Promise<SlotOffer[]> {
   const state = await loadState();
+  // Today's slots never start before now (rounded up to the quarter hour).
+  const soonest = nextQuarterHour(state.now);
+  const todayFrom =
+    options.todayFrom && soonest > options.todayFrom ? soonest : options.todayFrom;
   return listFreeSlots(
     state.appointments.filter((a) => a.doctorId === doctorId),
     query,
-    options,
+    { ...options, todayFrom },
   );
 }
 
@@ -1060,7 +1154,7 @@ function applyBook(
     appt.callLog = [
       ...(appt.callLog ?? []),
       {
-        calledAt: new Date(step.at).toISOString(),
+        calledAt: stampFor(state, step.at),
         detail: `Booked ${formatWhen(slot.dayOffset, slot.startTime)}`,
       },
     ];
@@ -1093,7 +1187,7 @@ function bookSlotIn(
   const free = listFreeSlots(
     state.appointments.filter((a) => a.doctorId === appt.doctorId),
     { days: [slot.dayOffset], ...wish },
-    { excludeAppointmentId: appt.id, todayFrom: bookingsStartAt(unavailability) },
+    { excludeAppointmentId: appt.id, todayFrom: startFor(state, unavailability) },
   );
   if (!free.some((f) => f.startTime === slot.startTime)) {
     return { ok: false, reason: "That slot isn't free any more (or it's outside the rules)." };
@@ -1116,6 +1210,7 @@ function bookSlotIn(
   delete appt.offers;
   delete appt.offersBecause;
   delete appt.doctorBackLater;
+  delete appt.timePassed;
   return { ok: true };
 }
 
@@ -1242,9 +1337,11 @@ function findOffers(
     return { situation: note, offers, dayOffset: wish.dayOffset };
   }
   const time: TimeWish = { timeOfDay: wish.timeOfDay, after: wish.after, before: wish.before };
-  const back = bookingsStartAt(
-    state.unavailabilities.find((u) => u.id === appt.unavailabilityId)!,
-  );
+  const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId)!;
+  // `back` = when the doctor is back (what the patient is told). `from` = the
+  // earliest slot that may be offered today: also never before now.
+  const back = doctorBackAt(unavailability);
+  const from = startFor(state, unavailability);
   const doctorsAppointments = state.appointments.filter((a) => a.doctorId === appt.doctorId);
 
   // Outside clinic hours ("after 6", "before 8"): the closest slots,
@@ -1254,7 +1351,7 @@ function findOffers(
     const free = listFreeSlots(
       doctorsAppointments,
       { days: everyDay },
-      { excludeAppointmentId: appt.id, todayFrom: back },
+      { excludeAppointmentId: appt.id, todayFrom: from },
     );
     return {
       situation: "outside hours",
@@ -1266,7 +1363,7 @@ function findOffers(
   // (slots start at the doctor's return), and its end is never passed:
   // "before 11" never offers 11:00 or later.
   const beforeReturn = toMinutes(wishStartsAt(time)) < toMinutes(back);
-  const todaySlots = emptySlotsToday(doctorsAppointments, back, time, appt.id);
+  const todaySlots = emptySlotsToday(doctorsAppointments, from, time, appt.id);
   if (todaySlots.length > 0) {
     return {
       situation: beforeReturn ? "today, doctor back" : "today",
@@ -1348,7 +1445,7 @@ function chatTurn(
   const doctor = doctors.find((d) => d.id === appt.doctorId)!;
   const language = patient.preferredLanguage;
   const doctorName = doctorNameFor(doctor, language); // e.g. "டாக்டர் மீரா கிருஷ்ணன் (Dr. Meera Krishnan)"
-  const when = new Date(step.at).toISOString();
+  const when = stampFor(state, step.at);
   const u = step.understanding;
   const say = (text: string) => appt[lines]!.push({ at: when, from: "docdelay", text });
   const log = (result: CallResult | undefined, detail: string) =>
@@ -1610,7 +1707,7 @@ function openingLine(
     doctorName: doctorNameFor(doctor, language),
     reason: unavailability.reason,
     appointmentTime: appt.startTime,
-    untilTime: bookingsStartAt(unavailability),
+    untilTime: doctorBackAt(unavailability),
     anotherDoctorToday: anotherDoctorSlotsIn(state, appt).length > 0,
   };
   return channel === "WhatsApp" ? whatsappScript(details) : callScript(details);
@@ -1777,7 +1874,7 @@ function applyWhatsApp(
   if (!appt || !(appt.unavailabilityId || appt.timeHistory?.length)) return "ignored";
   const patient = patients.find((p) => p.id === appt.patientId)!;
   const language = patient.preferredLanguage;
-  const when = new Date(step.at).toISOString();
+  const when = stampFor(state, step.at);
   const u = step.understanding;
   const typed = step.text.trim().toLowerCase();
   const media = step.media; // a voice note or a photo; undefined = typed
@@ -2165,6 +2262,7 @@ export interface AiTurnContext {
   originalTimeSay: string; // their original appointment time, in their language
   doctorNameSay: string; // e.g. "डॉ. मीरा कृष्णन (Dr. Meera Krishnan)"
   doctorBackSay: string; // when the doctor is expected back
+  timeNowSay?: string; // the time now at the hospital (no time today before it is offered)
   calendar: { day_offset: number; date: string; closed: boolean }[]; // today … +7 days
   currentOffers: AiSlot[]; // offers the patient is already looking at
   history: { from: "patient" | "docdelay"; text: string }[]; // earlier chat (without the opening)
@@ -2248,7 +2346,8 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
   let refusalLine: string | undefined; // see AiTurn.refusalLine
   const times = new Set<string>([
     originalTimeOf(appt),
-    bookingsStartAt(unavailability),
+    doctorBackAt(unavailability),
+    state.now,
     DAY_START,
     NORMAL_DAY_END,
     ...(appt.offers ?? []).map((o) => o.startTime),
@@ -2326,6 +2425,16 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
           return {
             ok: false,
             reason: `The doctor is now back at ${formatTime(away.backAt)}, so that time is no longer available.`,
+            docdelay_says_first: refusalLine,
+            hint: `DocDelay tells the patient that line itself: do not repeat it. ${hint}`,
+          };
+        }
+        // Its time has already passed: DocDelay's fixed line, too.
+        if (hasPassed(state, slot)) {
+          refusalLine = timePassedPrefix(language);
+          return {
+            ok: false,
+            reason: "That time has already passed.",
             docdelay_says_first: refusalLine,
             hint: `DocDelay tells the patient that line itself: do not repeat it. ${hint}`,
           };
@@ -2434,6 +2543,18 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
               "Call check_another_doctor_slots again and offer the new options.",
           };
         }
+        // …or its time has already passed.
+        if (earlier && hasPassed(state, earlier)) {
+          refusalLine = timePassedPrefix(language);
+          return {
+            ok: false,
+            reason: "That time has already passed.",
+            docdelay_says_first: refusalLine,
+            hint:
+              "DocDelay tells the patient that line itself: do not repeat it. " +
+              "Call check_another_doctor_slots again and offer the new options.",
+          };
+        }
         return {
           ok: false,
           reason: "That isn't one of the slots with another doctor.",
@@ -2461,7 +2582,8 @@ export async function startAiTurn(appointmentId: string): Promise<AiTurn | undef
       reason: unavailability.reason,
       originalTimeSay: formatTimeFor(originalTimeOf(appt), language),
       doctorNameSay: doctorNameFor(doctor, language),
-      doctorBackSay: formatTimeFor(bookingsStartAt(unavailability), language),
+      doctorBackSay: formatTimeFor(doctorBackAt(unavailability), language),
+      timeNowSay: formatTimeFor(state.now, language),
       calendar: Array.from({ length: DAYS_TO_SEARCH + 1 }, (_, d) => ({
         day_offset: d,
         date: d === 0 ? `today (${formatDate(0)})` : formatDate(d),
@@ -2502,7 +2624,7 @@ function applyAi(state: HmsState, step: Extract<DemoStep, { kind: "ai" }>): bool
   const unavailability = state.unavailabilities.find((u) => u.id === appt.unavailabilityId);
   if (!unavailability) return false;
   const language = patients.find((p) => p.id === appt.patientId)!.preferredLanguage;
-  const when = new Date(step.at).toISOString();
+  const when = stampFor(state, step.at);
   const action = step.action;
   const log = (result: CallResult | undefined, detail: string) =>
     (appt.callLog = [
@@ -2621,7 +2743,7 @@ function applyFalseAlarm(
 ): boolean {
   const appt = state.appointments.find((a) => a.id === step.appointmentId);
   if (!appt || appt.status !== "URGENT – staff call now") return false;
-  const when = new Date(step.at).toISOString();
+  const when = stampFor(state, step.at);
   // A patient who had already answered (URGENT came from a later WhatsApp
   // message) goes back to the status they had, with their booking as it was.
   const back = appt.statusBeforeUrgent ?? "Affected – needs contact";

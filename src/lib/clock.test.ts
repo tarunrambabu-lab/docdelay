@@ -1,10 +1,11 @@
 // Tests for the clock (run with: npm test).
 // The computer's clock is faked to different real times; the demo clock must
-// always say 9:00 AM, on today's date IN INDIA.
+// always START at 9:00 AM, on today's date IN INDIA. (A visitor can move their
+// own demo time forward: that is kept with their demo — hms/notBeforeNow.test.ts.)
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CLOCK_MODE, hospitalTimeNow, hospitalToday, realTimestamp } from "./clock";
+import { CLOCK_MODE, demoMoment, hospitalTimeNow, hospitalToday, realTimestamp } from "./clock";
 import { clockLabel, dateForDayOffset, formatClock } from "./time";
 
 // Pretend the real time is `iso` (UTC).
@@ -40,11 +41,17 @@ describe("demo clock", () => {
     });
   }
 
-  it("shows every stored stamp as 9:00 AM, but keeps the stamp itself real", () => {
-    realTimeIs("2026-10-01T18:20:00Z"); // 11:50 PM in India
-    expect(realTimestamp()).toBe(Date.parse("2026-10-01T18:20:00Z"));
-    expect(formatClock("2026-10-01T18:20:00Z")).toBe("9:00 AM");
-    expect(formatClock("2026-10-01T18:20:05Z", { seconds: true })).toBe("9:00 AM");
+  it("a step's own stamp stays real; what is SHOWN is the demo time it happened at", () => {
+    realTimeIs("2026-10-01T18:20:05Z"); // 11:50 PM in India
+    expect(realTimestamp()).toBe(Date.parse("2026-10-01T18:20:05Z"));
+    // Something that happened while the demo time was 9:00 AM, then 1:15 PM:
+    const atNine = demoMoment("09:00", realTimestamp());
+    const afterLunch = demoMoment("13:15", realTimestamp());
+    expect(formatClock(atNine)).toBe("9:00 AM");
+    expect(formatClock(afterLunch)).toBe("1:15 PM");
+    expect(formatClock(afterLunch, { seconds: true })).toBe("1:15 PM"); // never seconds
+    // It's a moment on India's date today, with the real seconds (to keep stamps apart).
+    expect(afterLunch).toBe("2026-10-01T07:45:05.000Z");
   });
 });
 
