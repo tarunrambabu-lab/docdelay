@@ -143,6 +143,7 @@ Reused, so no new wording: the hospital name at the start (as in other updates),
 1. **The counter after moving to another day and back:** a patient who moves to another day (counter 0), then changes their answer back to today, starts again at 0, so they could be contacted up to 4 times in one day. Accept this (it should be rare), or keep the day's count if they come back to today?
 2. **"Are you sure?" when the new time catches nobody:** save straight away, as today (my recommendation), or always ask?
 3. **"Already passed":** is a patient booked at exactly the time now counted as in the hospital? My assumption: yes.
+   - Leaning yes (6 Oct): booked exactly now = already passed, consistent with the clock fix allowing a slot that starts exactly now.
 4. **Patients still red from the first absence whose time has passed:** I read answer 9 as "they get the waiting-check message, counted as their 2nd contact, and no phone call". Please confirm when re-checking.
 
 ## Assumptions
