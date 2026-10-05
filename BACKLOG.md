@@ -276,6 +276,10 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Waiting check plan (4 Oct, PLAN-waiting-check.md, not built): its minor assumptions are listed at the end of that file.
 - Waiting check plan (4 Oct, updated with the founder's answers): the REVIEW.md row for round-two answer order was added once (97414cd), not twice. Three earlier questions stay open in the plan (counter after moving to another day and back; "Are you sure?" when nobody is caught; how to read answer 9), plus one new one (is a patient booked at exactly the time now "already passed"?).
 - HANDOFF (wrap-up): "Last updated" says 5 Oct 2026 because the 4 Oct session ended after midnight; the work is dated 4 Oct.
+- Clock plan (6 Oct, PLAN-clock.md, not built): the time now is kept in each visitor's saved steps (several changes in a row keep only the last); rounding is up to the next quarter hour, and a time exactly on the quarter stays.
+- Clock plan: the picker is a drop-down that saves on change, 9:00 AM to 5:00 PM only; the time now is added to the times the AI's reply may mention.
+- Clock plan: in "real" mode each step would use the hospital time of the moment it happened (not switched on); the dashboard date and the AI's daily limits keep using the real date.
+- Clock plan: the recording scripts in ~/DocDelay-video were only read, not changed.
 
 ## Done
 
