@@ -207,3 +207,26 @@ Answers to the questions (9 Oct 2026; the plan is still PLAN ONLY — not approv
 - **Q5.** A LATER expected return time must be after now. Staff see "That time has already passed. Please pick a later time." (staff screen only). Earlier corrections stay shown and logged only.
 
 Earlier answers (to the questions about point 8, same day): an unsent update or heads-up for a patient who turns red is dropped; the second contact reuses the existing opening with the patient's current time; round-two times go in answer order (REVIEW.md row); a pushed patient who turns red loses the 45-minute protection; the three WhatsApp exceptions (after the second contact "1" means "1 – Later today" again, the second round doesn't count against the 2 changes of answer, a second proactive WhatsApp message in the same chat); "2nd update" label on the Messages page.
+
+## Build prompt (GO given 11 Oct 2026)
+
+Read HANDOFF.md, CLAUDE.md, BACKLOG.md, REVIEW.md and PLAN-waiting-check.md first.
+
+The founder has said GO for waiting check step 2 (option A), exactly as written in PLAN-waiting-check.md (all 5 questions answered: Q1 = B, Q2 = A, Q3–Q5 as written). Remove the "PLAN ONLY — not approved" note and mark the plan approved (11 Oct 2026).
+
+Rules for this build:
+1. Work on a new LOCAL branch called waiting-check-step2, made from main. Never push this branch to GitHub. Never commit to main until I say "merge".
+2. Build in stages, and run npm test after each one:
+   a) the shared "doctor is late" counter (per patient per date) and "probably in the hospital" (booked time strictly before now, worked out once when a LATER return time is saved);
+   b) the trigger, and the "Are you sure?" summary (only when the new time catches someone; otherwise save straight away). Q5: a LATER time must be after now, otherwise "That time has already passed. Please pick a later time." Check this only when staff save, NOT when saved demo steps are replayed, so an old saved demo never loses a step;
+   c) the waiting-check WhatsApp message, the tap-list "1 – Keep waiting / 2 – Come another time", and the new small reader file for replies (the frozen keyword file stays untouched); "keep waiting" books exactly what "1 – Later today" would;
+   d) the front-desk panel "Patients probably in the waiting area", the same rows in the staff call list, and [Keeps waiting] / [Wants another time] for staff;
+   e) everyone else turning red and being contacted again (section 8 of the plan), "2nd update" on the Messages page, "Needs staff call – Doctor delayed again"; remove the step 1 "not contacted yet" box.
+3. Tests: about 70 new tests as listed in the plan, section 10. The only existing tests you may change are the two named in the plan (the "not contacted yet" list and "a later time sends nothing"). Every other existing test must pass unchanged.
+4. Tour unchanged. CLOCK_MODE stays "demo". WhatsApp stays basic mode only.
+5. Add the 2 new Tamil/Hindi lines and the word lists to BACKLOG.md's "Native-speaker review list" (in English letters), marked NOT native-checked.
+6. README: one feature line, three lines in the WhatsApp section, one screenshot of the front-desk panel.
+7. Browser check at 320 and 375 px (Chrome and Safari engines), server started with ANTHROPIC_API_KEY= (empty), Chat tab showing "basic mode". Walk through Kiran and Nikhil: move the demo time to 12:30, change the return time 12:00 → 2:00, check the "Are you sure?" numbers, answer on WhatsApp, check the panel and the call list.
+8. If anything in the plan clashes with the code, STOP and ask me rather than guessing.
+9. The "Branches (11 Oct 2026)" rule is already in HANDOFF.md; leave it as it is.
+10. At the end: commit on the branch, update HANDOFF.md "Where things stand", and report in simple words, with the test count and assumptions in the two CLAUDE.md groups. Then wait for my "merge" before touching main.

@@ -13,6 +13,7 @@ Ideas and known gaps to pick up later.
 - **After Phase 2 (planned, don't build yet): a lighter safety net.** Red-flag phrases set by a clinician → straight to staff. Any other health mention → the 108 line, normal rebooking, and a note. Detecting EVERY health mention still matters under this plan, so the health-check tests stay required.
 - **A picked slot that was taken meanwhile (same doctor) — found 3 Oct 2026, not built.** Checked with a test run (basic mode, key hidden): (1) **Buttons:** the patient silently gets a fresh list — no "Sorry, that time was just taken" (`slotJustTaken` is only set on the another-doctor path in `applyOffer`), and nothing goes in the call log. (2) **Chat and WhatsApp:** the "Sorry…" line is there, but the fresh options are always OTHER DAYS (`offerOtherDays` → `findOtherDaySlots` never searches today), and the patient's wish is lost. Example: "today after 3" → A) 3:00, B) 3:45, C) 4:00 PM today; 3:00 gets booked by someone else; picking A gives three morning slots on other days, although 3:45, 4:00 and 4:15 PM today were still free. Not logged either. (Buttons offers for the same doctor are always other days, so (2) can't happen there.) No existing test covers the same-doctor case; only the another-doctor case is tested. **Suggested fix:** in `applyOffer`, set `slotJustTaken` and log "Picked A, but it was just taken" (the call screen already shows the sorry line when it's set). For chat/WhatsApp, keep the patient's request with the offers and, when a pick is taken, re-run the same search (`findOffers`: same day, same time window, empty slots only, so nobody moves); fall back to other days only if nothing is left, saying so. Add tests for Buttons, chat and WhatsApp (today and another day). Chat rules are frozen for the MVP, so decide first.
 - **Native-speaker review:** the Tamil and Hindi call wording, text messages, chat replies and the chat keyword lists (`src/lib/understanding/rules.ts`) must be checked by native speakers before real use.
+- **Design refresh (decided 9 Oct 2026, parked 11 Oct 2026):** decisions in HANDOFF.md, item 1. Build on its own branch when we come back to it.
 
 ## WhatsApp channel (simulated) — to revisit
 
@@ -292,6 +293,8 @@ Logged from reports (see the rule in CLAUDE.md). Fine for now; revisit if they c
 - Clock fix: the README's dashboard screenshot was not retaken, so it still shows the old "(fixed)" badge and no picker.
 - Clock fix: in "real" mode (not switched on) a new step uses the hospital's time at the moment the page asked, which could differ by a minute from the step's own stamp.
 - Clock fix: 5 existing tests were rewritten and 2 removed, fewer than the plan listed; the WhatsApp "every message time is 9:00 AM" test passes unchanged.
+- Wrap-up 11 Oct: in "To do", the design refresh title is in bold, to match the other lines.
+- Wrap-up 11 Oct: in HANDOFF.md, the waiting check step 2 row keeps its "In short" summary, restored after the new opening.
 
 ## Done
 
