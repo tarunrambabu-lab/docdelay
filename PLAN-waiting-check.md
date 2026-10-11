@@ -22,17 +22,17 @@ Staff enter a later return time (12:00 → 2:00 PM). At that moment, for every p
 
 ## The counter: at most 2 "doctor is late" contacts
 
-- One shared counter per appointment. It counts every time DocDelay contacts the patient because the doctor is late: the first absence, each later return time that catches their time, and each waiting-room question.
+- One shared counter per patient per date. It counts every time DocDelay contacts the patient because the doctor is late: the first absence, each later return time that catches their time, and each waiting-room question.
 - "Come another time" and the choices that follow belong to the same contact; they don't add one.
 - A push (the heads-up) doesn't count.
 - On a 3rd: no message. The patient becomes "Needs staff call – Doctor delayed again", plus a front-desk alert if they're probably in the hospital.
-- The counter covers today's appointment only. Moving to another day resets it to 0 for the new appointment. Moving to another doctor today keeps the count.
+- The count is kept per patient per date. Moving to another day and back to today does not reset it: the patient keeps today's count. A genuinely new day's appointment starts at 0. Moving to another doctor today keeps the count.
 - What follows from this: a patient from the first absence already has 1 contact, so they can be contacted about a later time only once more. A patient who was never contacted can be contacted twice.
 
 ## 1. "Probably in the hospital"
 
 - There is no check-in tracking: no "arrived: yes/no" mark and no "Mark checked in" button. The HMS is asked for nothing new.
-- A patient counts as "probably in the hospital" if their booked time has already passed at the moment the later return time is saved. Everyone else gets the normal flow.
+- A patient counts as "probably in the hospital" if their booked time has already passed at the moment the later return time is saved. "Already passed" means strictly before now: a patient booked at exactly the time now is not counted. Everyone else gets the normal flow.
 - It is worked out once, when the later time is saved; it is not stored as a fact about the patient.
 - This needs the app to know the time now, so it depends on the clock fix (see the note at the top).
 - Known gap, accepted for now: a patient who is counted as in the hospital but is actually late just gets the WhatsApp message. If they have no WhatsApp, they get no contact (BACKLOG: must be solved before real patients).
@@ -42,6 +42,8 @@ Staff enter a later return time (12:00 → 2:00 PM). At that moment, for every p
 As soon as a later return time is saved, from "Change expected return time" or "Still away" in the system check. No moving clock; `CLOCK_MODE` stays "demo". There is no staff-approval step for the waiting-check message.
 
 The safeguard against a mistyped time: before anything is saved, the pop-up asks "Are you sure?" with a summary: "This will message X patients in the waiting room, alert the front desk about Y, and turn Z red." Nothing happens until staff confirm. If nobody is caught by the new time, it saves as it does today.
+
+A LATER expected return time must be after now. Otherwise nothing is saved and staff see "That time has already passed. Please pick a later time." (staff screen only). Earlier corrections stay shown and logged only.
 
 ## 3. Who is asked
 
@@ -134,17 +136,22 @@ Reused, so no new wording: the hospital name at the start (as in other updates),
 
 - **Tour:** unchanged.
 - **README:** one feature line, three lines in the WhatsApp section, and one screenshot of the front-desk alert.
-- **New tests (about 70):** who counts as "probably in the hospital" (booked time passed or not, at the moment of saving); the trigger (later only); the "Are you sure?" numbers; who is asked (the 45-minute line); WhatsApp only for "WhatsApp OK" and never after STOP; an alert for every patient asked; no phone call; the message in 3 languages with no name or reason; each kind of reply, with the health check first; "keep waiting" booking exactly what "1 – Later today" would; the shared counter (2 contacts, then the staff call; a push not counted; another day resets it; another doctor today keeps it); patients turning red; unsent updates dropped; "1" meaning "later today" again; the change counter; "another doctor" from the current time; the "2nd update" label; saved steps surviving a refresh; `CLOCK_MODE` still "demo".
+- **New tests (about 70):** who counts as "probably in the hospital" (booked time passed or not, at the moment of saving); the trigger (later only); the "Are you sure?" numbers; who is asked (the 45-minute line); WhatsApp only for "WhatsApp OK" and never after STOP; an alert for every patient asked; no phone call; the message in 3 languages with no name or reason; each kind of reply, with the health check first; "keep waiting" booking exactly what "1 – Later today" would; the shared counter (2 contacts, then the staff call; a push not counted; kept per patient per date, so another day and back to today does not reset it; a new day's appointment starts at 0; another doctor today keeps it); patients turning red; unsent updates dropped; "1" meaning "later today" again; the change counter; "another doctor" from the current time; the "2nd update" label; saved steps surviving a refresh; `CLOCK_MODE` still "demo".
 - **Existing tests that must change:** the step 1 tests for the "not contacted yet" list (removed with the box), and the step 1 test "a later time sends nothing" (it will now turn patients red). Every other existing test must pass unchanged.
 - Browser checks at 320 and 375 px with the API key hidden and the Chat tab on "basic mode".
 
-## Open questions (to settle when this plan is re-checked after the clock fix)
+## Questions (all 5 answered; the plan is still PLAN ONLY — not approved)
 
 1. **The counter after moving to another day and back:** a patient who moves to another day (counter 0), then changes their answer back to today, starts again at 0, so they could be contacted up to 4 times in one day. Accept this (it should be rare), or keep the day's count if they come back to today?
+   - **ANSWERED (Q1 = B):** keep the day's count. The count is kept per patient per date, so moving to another day and back to today does not reset it; a genuinely new day's appointment starts at 0.
 2. **"Are you sure?" when the new time catches nobody:** save straight away, as today (my recommendation), or always ask?
-3. **"Already passed":** is a patient booked at exactly the time now counted as in the hospital? My assumption: yes.
-   - Leaning yes (6 Oct): booked exactly now = already passed, consistent with the clock fix allowing a slot that starts exactly now.
-4. **Patients still red from the first absence whose time has passed:** I read answer 9 as "they get the waiting-check message, counted as their 2nd contact, and no phone call". Please confirm when re-checking.
+   - **ANSWERED (Q2 = A):** save straight away; no "Are you sure?" pop-up when nobody is caught.
+3. **"Already passed":** is a patient booked at exactly the time now counted as in the hospital?
+   - **ANSWERED (Q3):** no. A patient booked at exactly the time now is NOT "already passed". Only a booked time strictly before now counts as "probably in the hospital".
+4. **Patients still red from the first absence whose time has passed:** I read answer 9 as "they get the waiting-check message, counted as their 2nd contact, and no phone call".
+   - **ANSWERED (Q4):** confirmed. Patients still red and in the call queue whose time has passed get the waiting-check message plus a front-desk alert, counted as their 2nd contact, and no more phone calls. Patients already with staff ("No answer", "Needs staff call", URGENT) are unchanged.
+5. **A later expected return time that has already passed:** can staff save a LATER return time that is not after now?
+   - **ANSWERED (Q5):** no. A LATER expected return time must be after now. Staff see "That time has already passed. Please pick a later time." (staff screen only). Earlier corrections stay shown and logged only.
 
 ## Assumptions
 
@@ -179,7 +186,7 @@ Reused, so no new wording: the hospital name at the start (as in other updates),
 2. Yes: hospital name at the start, "Reply 1 to keep waiting, 2 to come another time" at the end, and a matching tap-list.
 3. "Keep waiting" books the next fair slot today from the new return time, exactly like "1 – Later today" (same rules: empty slot first, then push within 45 minutes, 7 PM limit; no room → other days offered). The patient is told the time.
 4. Nothing for patients in the hospital who would wait 45 minutes or less.
-5. No: "come another time" and its follow-up choices are part of the same round. The counter only covers the current day's appointment: when a patient moves to ANOTHER DAY, it resets to 0. Moving to another doctor TODAY keeps the count.
+5. No: "come another time" and its follow-up choices are part of the same round. The count is kept per patient per date: moving to ANOTHER DAY and back to today does not reset it, and a genuinely new day's appointment starts at 0 (updated by Q1 = B, below). Moving to another doctor TODAY keeps the count.
 6. No: a push doesn't count as a round.
 7. One shared counter: at most 2 "doctor is late" contacts per patient in total. On a 3rd: no message; "Needs staff call – Doctor delayed again", plus a front-desk alert if they're probably in the hospital.
 8. Yes, search from the patient's current time.
@@ -190,5 +197,13 @@ Reused, so no new wording: the hospital name at the start (as in other updates),
 Yes to both extra rule changes: patients who turn red again lose their old answer and are contacted (and phoned) again, and a pushed patient's replies are read against the normal menu once they turn red.
 
 IMPORTANT: point 11 needs time to pass, which the fixed demo clock can't show. So step 2 will be built AFTER a new step: the "not before now" check plus a demo time picker.
+
+Answers to the questions (9 Oct 2026; the plan is still PLAN ONLY — not approved):
+
+- **Q1 = B.** Keep the day's count per patient per date, so moving to another day and back does not reset it.
+- **Q2 = A.** Save straight away when the new time catches nobody; no "Are you sure?" pop-up.
+- **Q3.** A patient booked at exactly the time now is NOT "already passed". Only a booked time strictly before now counts as "probably in the hospital".
+- **Q4.** Confirmed. Patients still red and in the call queue whose time has passed get the waiting-check message plus a front-desk alert, counted as their 2nd contact, and no more phone calls. Patients already with staff ("No answer", "Needs staff call", URGENT) are unchanged.
+- **Q5.** A LATER expected return time must be after now. Staff see "That time has already passed. Please pick a later time." (staff screen only). Earlier corrections stay shown and logged only.
 
 Earlier answers (to the questions about point 8, same day): an unsent update or heads-up for a patient who turns red is dropped; the second contact reuses the existing opening with the patient's current time; round-two times go in answer order (REVIEW.md row); a pushed patient who turns red loses the 45-minute protection; the three WhatsApp exceptions (after the second contact "1" means "1 – Later today" again, the second round doesn't count against the 2 changes of answer, a second proactive WhatsApp message in the same chat); "2nd update" label on the Messages page.
