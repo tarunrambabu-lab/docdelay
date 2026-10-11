@@ -5,7 +5,7 @@ Last updated: 11 Oct 2026 (the app is unchanged since 6 Oct; decisions for the d
 ## App decisions since 6 Oct (nothing built yet)
 
 1. **Design refresh (look only):** keep "Affected" red but quiet (thin red bar, small label, no fill; the banner becomes a white card with a red bar); URGENT the loudest (solid red pill, bold, thicker bar); tour text unchanged; teal brand colour #0F766E; neutral call-screen buttons; grey language tags; cleaner header; even rows; all tests unchanged. Build on a branch called design-refresh, never push to main, and confirm Vercel only deploys main. No branch exists yet.
-2. **Waiting check step 2:** all 5 questions answered. Q1 = B (count per patient per date: a patient who moves to another day and back to today keeps that day's count). Q2 = A (save straight away when the new time catches nobody, no "Are you sure?" pop-up). Q3–Q5 are already in the FRD. Q1/Q2 still need adding to the FRD. Plan not yet approved; build on a branch only after my "go".
+2. **Waiting check step 2:** all 5 questions answered. Q1 = B (count per patient per date: a patient who moves to another day and back to today keeps that day's count). Q2 = A (save straight away when the new time catches nobody, no "Are you sure?" pop-up). Q3–Q5 are already in the FRD. The FRD is updated to match (11 Oct). Plan not yet approved; build on a branch only after my "go".
 
 ## What DocDelay is
 

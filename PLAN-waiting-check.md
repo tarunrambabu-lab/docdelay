@@ -1,6 +1,6 @@
 > **PLAN ONLY — not approved.** First saved word for word from the planning session on 4 Oct 2026, then updated the same day with the founder's answers (they are at the end, "Founder's answers"). Nothing below has been built.
 >
-> **Not buildable yet.** Point 1 ("probably in the hospital") needs time to pass, which the fixed demo clock can't show. Step 2 will be built AFTER the clock fix (the "not before now" check plus a demo time picker), and this plan must be re-checked against that fix first.
+> The clock fix it depended on is built (6 Oct, c200c8f), and this plan was re-checked against it the same day. All 5 questions are answered. Still PLAN ONLY: do not build until the founder says go.
 
 # Waiting check, step 2 (option A): plan
 
